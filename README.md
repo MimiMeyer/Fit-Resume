@@ -1,36 +1,70 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Career Companion
 
-## Getting Started
+Career Companion is an AI-powered job search assistant designed to automate the most painful parts of finding a job. It scrapes job listings from multiple platforms, analyzes your match fit using AI, and automatically tailors your resume for each role.
 
-First, run the development server:
+## ✨ Features (planned)
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+### Keyword-Driven Scraping
+- User-provided keywords drive scraping across job boards (Indeed, LinkedIn, etc.).
+- Normalize metadata (title, company, salary, stack, location) and refresh on a schedule.
+- Match hints via keywords/embeddings and simple rules.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Profile-Driven Tailoring
+- About Me page to maintain summary, skills, and experience.
+- Tailoring pulls from profile and job description; cover letters later.
+- Fixed resume template for consistent exports (PDF/Markdown planned).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Saved Jobs Workspace
+- Save promising roles and track status.
+- Generate a tailored resume per saved job and download it.
+- Job details, notes, and match hints in one view.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Dashboard UI
+- Modern Next.js + Tailwind interface.
+- Pages: Overview, Job Search, Saved Jobs, Resume Template, About Me, Settings.
+- Accessible, light-only theme with keyboard-friendly focus styles.
 
-## Learn More
+### Agentic Automation
+- Built with OpenAI Codex CLI for project automation.
+- Automatic code suggestions, diffs, and improvements with approval workflow.
+- Linting, formatting, and CI-friendly architecture.
 
-To learn more about Next.js, take a look at the following resources:
+## Current State
+- Static UI scaffold only; no live scraping, persistence, or export wiring yet.
+- Placeholder data for Job Search, Saved Jobs, About Me, and Resume Template preview.
+- Next steps: add a mock data layer/server actions, then real DB (Prisma + Postgres) and scraper integration.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 🧰 Tech Stack
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Frontend
+- Next.js (App Router)
+- React
+- Tailwind CSS
+- shadcn/ui + Radix UI
+- TypeScript
 
-## Deploy on Vercel
+### Backend
+- Next.js API Routes + Server Actions
+- Node.js
+- OpenAI SDK (GPT-5.1, embeddings, text analysis)
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Database
+- PostgreSQL (Neon / Supabase / PlanetScale)
+- Prisma ORM
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### Infrastructure & Automation
+- Vercel (hosting)
+- Vercel Cron Jobs or node-cron
+- Codex CLI (development agent)
+- GitHub for version control
+- ESLint + Prettier
+
+### Future Enhancements
+- Multi-board scraping (LinkedIn, ZipRecruiter, Indeed)
+- Browser extension for 1-click “analyze this job”
+- OAuth login (Clerk/Auth.js)
+- ML-based match ranking
+
+## 🎯 Purpose
+
+To give job seekers a fast, intelligent, and automated way to discover the best jobs and submit a perfectly tailored resume — effortlessly.
