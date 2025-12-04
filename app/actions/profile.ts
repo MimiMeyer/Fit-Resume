@@ -1,6 +1,7 @@
 "use server";
 
 import { Prisma } from "@prisma/client";
+import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 
 export type ExperienceInput = {
@@ -97,6 +98,7 @@ export async function updateProfileDetails(formData: FormData) {
       websiteUrl,
     },
   });
+  revalidatePath("/about");
 }
 
 export async function addExperience(formData: FormData) {
@@ -107,12 +109,25 @@ export async function addExperience(formData: FormData) {
   const impact = (formData.get("impact") as string | null)?.trim() || null;
   if (!profileId || !role || !company) return;
   await prisma.experience.create({ data: { profileId, role, company, period, impact } });
+  revalidatePath("/about");
 }
 
 export async function deleteExperience(formData: FormData) {
   const id = Number(formData.get("id"));
   if (!id) return;
   await prisma.experience.delete({ where: { id } });
+  revalidatePath("/about");
+}
+
+export async function updateExperience(formData: FormData) {
+  const id = Number(formData.get("id"));
+  const role = (formData.get("role") as string | null)?.trim();
+  const company = (formData.get("company") as string | null)?.trim();
+  const period = (formData.get("period") as string | null)?.trim() || null;
+  const impact = (formData.get("impact") as string | null)?.trim() || null;
+  if (!id || !role || !company) return;
+  await prisma.experience.update({ where: { id }, data: { role, company, period, impact } });
+  revalidatePath("/about");
 }
 
 export async function addProject(formData: FormData) {
@@ -124,12 +139,26 @@ export async function addProject(formData: FormData) {
   const technologies = technologiesRaw.split(",").map((t) => t.trim()).filter(Boolean);
   if (!profileId || !title) return;
   await prisma.project.create({ data: { profileId, title, description, link, technologies } });
+  revalidatePath("/about");
 }
 
 export async function deleteProject(formData: FormData) {
   const id = Number(formData.get("id"));
   if (!id) return;
   await prisma.project.delete({ where: { id } });
+  revalidatePath("/about");
+}
+
+export async function updateProject(formData: FormData) {
+  const id = Number(formData.get("id"));
+  const title = (formData.get("title") as string | null)?.trim();
+  const description = (formData.get("description") as string | null)?.trim() || null;
+  const link = (formData.get("link") as string | null)?.trim() || null;
+  const technologiesRaw = (formData.get("technologies") as string | null) || "";
+  const technologies = technologiesRaw.split(",").map((t) => t.trim()).filter(Boolean);
+  if (!id || !title) return;
+  await prisma.project.update({ where: { id }, data: { title, description, link, technologies } });
+  revalidatePath("/about");
 }
 
 export async function addEducation(formData: FormData) {
@@ -144,12 +173,30 @@ export async function addEducation(formData: FormData) {
   await prisma.education.create({
     data: { profileId, institution, degree, field, startYear, endYear, details },
   });
+  revalidatePath("/about");
 }
 
 export async function deleteEducation(formData: FormData) {
   const id = Number(formData.get("id"));
   if (!id) return;
   await prisma.education.delete({ where: { id } });
+  revalidatePath("/about");
+}
+
+export async function updateEducation(formData: FormData) {
+  const id = Number(formData.get("id"));
+  const institution = (formData.get("institution") as string | null)?.trim();
+  const degree = (formData.get("degree") as string | null)?.trim() || null;
+  const field = (formData.get("field") as string | null)?.trim() || null;
+  const startYear = Number(formData.get("startYear")) || null;
+  const endYear = Number(formData.get("endYear")) || null;
+  const details = (formData.get("details") as string | null)?.trim() || null;
+  if (!id || !institution) return;
+  await prisma.education.update({
+    where: { id },
+    data: { institution, degree, field, startYear, endYear, details },
+  });
+  revalidatePath("/about");
 }
 
 export async function addCertification(formData: FormData) {
@@ -162,27 +209,44 @@ export async function addCertification(formData: FormData) {
   await prisma.certification.create({
     data: { profileId, name, issuer, issuedYear, credentialUrl },
   });
+  revalidatePath("/about");
 }
 
 export async function deleteCertification(formData: FormData) {
   const id = Number(formData.get("id"));
   if (!id) return;
   await prisma.certification.delete({ where: { id } });
+  revalidatePath("/about");
+}
+
+export async function updateCertification(formData: FormData) {
+  const id = Number(formData.get("id"));
+  const name = (formData.get("name") as string | null)?.trim();
+  const issuer = (formData.get("issuer") as string | null)?.trim() || null;
+  const issuedYear = Number(formData.get("issuedYear")) || null;
+  const credentialUrl = (formData.get("credentialUrl") as string | null)?.trim() || null;
+  if (!id || !name) return;
+  await prisma.certification.update({
+    where: { id },
+    data: { name, issuer, issuedYear, credentialUrl },
+  });
+  revalidatePath("/about");
 }
 
 export async function addSkill(formData: FormData) {
   const profileId = Number(formData.get("profileId"));
   const name = (formData.get("name") as string | null)?.trim();
-  const category = (formData.get("category") as string | null)?.trim() || undefined;
+  const category = (formData.get("category") as string | null)?.trim()?.toUpperCase() || undefined;
   if (!profileId || !name) return;
+
   const skill = await prisma.skill.upsert({
     where: { name },
     update: {
-      category: category ? (category.toUpperCase() as Prisma.SkillCategory) : undefined,
+      category,
     },
     create: {
       name,
-      category: category ? (category.toUpperCase() as Prisma.SkillCategory) : undefined,
+      category,
     },
   });
   await prisma.profileSkill.upsert({
@@ -190,6 +254,7 @@ export async function addSkill(formData: FormData) {
     update: {},
     create: { profileId, skillId: skill.id },
   });
+  revalidatePath("/about");
 }
 
 export async function deleteSkill(formData: FormData) {
@@ -199,10 +264,25 @@ export async function deleteSkill(formData: FormData) {
   await prisma.profileSkill.delete({
     where: { profileId_skillId: { profileId, skillId } },
   });
+  revalidatePath("/about");
+}
+
+export async function updateSkill(formData: FormData) {
+  const profileId = Number(formData.get("profileId"));
+  const skillId = Number(formData.get("skillId"));
+  const name = (formData.get("name") as string | null)?.trim();
+  const category = (formData.get("category") as string | null)?.trim()?.toUpperCase() || undefined;
+  if (!profileId || !skillId || !name) return;
+  
+  await prisma.skill.update({
+    where: { id: skillId },
+    data: { name, category },
+  });
+  revalidatePath("/about");
 }
 
 export async function getProfile() {
-  return prisma.profile.findFirst({
+  let profile = await prisma.profile.findFirst({
     include: {
       experiences: true,
       projects: true,
@@ -212,6 +292,24 @@ export async function getProfile() {
     },
     orderBy: { createdAt: "desc" },
   });
+
+  // Create a default profile if none exists
+  if (!profile) {
+    profile = await prisma.profile.create({
+      data: {
+        fullName: "Your Name",
+      },
+      include: {
+        experiences: true,
+        projects: true,
+        educations: true,
+        certs: true,
+        skills: { include: { skill: true } },
+      },
+    });
+  }
+
+  return profile;
 }
 
 export async function upsertProfile(input: ProfileInput) {

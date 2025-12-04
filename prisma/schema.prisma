@@ -7,20 +7,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum SkillCategory {
-  LANGUAGE
-  FRAMEWORK
-  FRONTEND
-  BACKEND
-  DEVOPS
-  CLOUD
-  DATABASE
-  DATA
-  MAINFRAME
-  TOOLING
-  OTHER
-}
-
 model Profile {
   id          Int             @id @default(autoincrement())
   fullName    String
@@ -70,7 +56,7 @@ model Project {
 model Skill {
   id       Int            @id @default(autoincrement())
   name     String         @unique
-  category SkillCategory?
+  category String?
   profiles ProfileSkill[]
 }
 
