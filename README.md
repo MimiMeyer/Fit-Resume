@@ -1,70 +1,32 @@
 # Career Companion
 
-Career Companion is an AI-powered job search assistant designed to automate the most painful parts of finding a job. It scrapes job listings from multiple platforms, analyzes your match fit using AI, and automatically tailors your resume for each role.
+Career Companion is an AI-powered job search assistant: add keywords to scrape boards, save promising roles, and generate tailored resumes with a fixed template powered by your maintained profile.
 
 ## ✨ Features (planned)
+- **Keyword-driven scraping** across boards (Indeed, LinkedIn, etc.) with normalized metadata and match hints.
+- **Profile-driven tailoring**: About Me stores summary, skills (with categories), experience, projects, education, certifications; tailoring uses this + job descriptions to fill a fixed resume template.
+- **Saved jobs workspace**: track roles, statuses, and notes; generate/download a tailored resume per job.
+- **Dashboard UI**: Overview, Job Search, Saved Jobs, Resume Template, About Me, Settings; accessible light-only theme.
+- **Agentic automation**: OpenAI Codex CLI driven workflow, linting/formatting/CI-friendly setup.
 
-### Keyword-Driven Scraping
-- User-provided keywords drive scraping across job boards (Indeed, LinkedIn, etc.).
-- Normalize metadata (title, company, salary, stack, location) and refresh on a schedule.
-- Match hints via keywords/embeddings and simple rules.
-
-### Profile-Driven Tailoring
-- About Me page to maintain summary, skills, and experience.
-- Tailoring pulls from profile and job description; cover letters later.
-- Fixed resume template for consistent exports (PDF/Markdown planned).
-
-### Saved Jobs Workspace
-- Save promising roles and track status.
-- Generate a tailored resume per saved job and download it.
-- Job details, notes, and match hints in one view.
-
-### Dashboard UI
-- Modern Next.js + Tailwind interface.
-- Pages: Overview, Job Search, Saved Jobs, Resume Template, About Me, Settings.
-- Accessible, light-only theme with keyboard-friendly focus styles.
-
-### Agentic Automation
-- Built with OpenAI Codex CLI for project automation.
-- Automatic code suggestions, diffs, and improvements with approval workflow.
-- Linting, formatting, and CI-friendly architecture.
+## Database Setup
+- Uses PostgreSQL via Prisma.
+- Copy `.env.example` to `.env` and set `DATABASE_URL`.
+- Install deps: `pnpm install`.
+- Generate client and apply schema: `pnpm db:generate && pnpm db:push` (or `pnpm db:migrate` once migrations are defined).
+- Prisma schema: `prisma/schema.prisma`; client helper: `lib/prisma.ts`.
+  - Models include Profile (contact/title), Experience, Project, Education, Certification, Skill (with category), Job, SavedJob (Profile-Skill join).
 
 ## Current State
-- Static UI scaffold only; no live scraping, persistence, or export wiring yet.
-- Placeholder data for Job Search, Saved Jobs, About Me, and Resume Template preview.
-- Next steps: add a mock data layer/server actions, then real DB (Prisma + Postgres) and scraper integration.
+- UI is mostly static placeholders; About Me page reads live profile data from Prisma. Other pages are not yet wired to the database.
+- Prisma schema and server action stubs exist for profile and jobs.
+- Next step: connect remaining UI to Prisma actions and add CRUD flows.
 
-## 🧰 Tech Stack
+## Getting Started
+```bash
+pnpm install
+pnpm db:generate && pnpm db:push   # once DATABASE_URL is set
+pnpm dev
+```
 
-### Frontend
-- Next.js (App Router)
-- React
-- Tailwind CSS
-- shadcn/ui + Radix UI
-- TypeScript
-
-### Backend
-- Next.js API Routes + Server Actions
-- Node.js
-- OpenAI SDK (GPT-5.1, embeddings, text analysis)
-
-### Database
-- PostgreSQL (Neon / Supabase / PlanetScale)
-- Prisma ORM
-
-### Infrastructure & Automation
-- Vercel (hosting)
-- Vercel Cron Jobs or node-cron
-- Codex CLI (development agent)
-- GitHub for version control
-- ESLint + Prettier
-
-### Future Enhancements
-- Multi-board scraping (LinkedIn, ZipRecruiter, Indeed)
-- Browser extension for 1-click “analyze this job”
-- OAuth login (Clerk/Auth.js)
-- ML-based match ranking
-
-## 🎯 Purpose
-
-To give job seekers a fast, intelligent, and automated way to discover the best jobs and submit a perfectly tailored resume — effortlessly.
+Visit http://localhost:3000 to view the UI.
