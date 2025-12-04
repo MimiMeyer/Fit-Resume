@@ -22,7 +22,6 @@ const navLinks = [
   { href: "/", label: "Overview" },
   { href: "/job-search", label: "Job Search" },
   { href: "/saved-jobs", label: "Saved Jobs" },
-  { href: "/resume-builder", label: "Resume Template" },
   { href: "/about", label: "About Me" },
   { href: "/settings", label: "Settings" },
 ];
