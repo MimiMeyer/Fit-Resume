@@ -229,7 +229,7 @@ export default async function AboutPage() {
                   </p>
                   <p className="text-xs text-zinc-600">
                     {exp.company}
-                    {exp.period ? ` • ${exp.period}` : ""}
+                    {exp.period ? ` - ${exp.period}` : ""}
                   </p>
                   {exp.impact && (
                     <p className="text-sm text-zinc-700">{exp.impact}</p>
@@ -474,7 +474,7 @@ export default async function AboutPage() {
                     </p>
                     <p className="text-xs text-zinc-600">
                       {edu.degree}
-                      {edu.field ? ` — ${edu.field}` : ""}
+                      {edu.field ? ` - ${edu.field}` : ""}
                     </p>
                     {(edu.startYear || edu.endYear) && (
                       <p className="text-xs text-zinc-600">
@@ -593,7 +593,7 @@ export default async function AboutPage() {
                     <p className="font-semibold text-zinc-900">{cert.name}</p>
                     <p className="text-xs text-zinc-600">
                       {cert.issuer ?? "Issuer not set"}
-                      {cert.issuedYear ? ` • ${cert.issuedYear}` : ""}
+                      {cert.issuedYear ? ` - ${cert.issuedYear}` : ""}
                     </p>
                   </div>
                   <form action={deleteCertification}>
@@ -715,3 +715,4 @@ export default async function AboutPage() {
     </div>
   );
 }
+
