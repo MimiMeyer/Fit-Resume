@@ -21,7 +21,7 @@ model Profile {
   websiteUrl  String?
   experiences Experience[]
   projects    Project[]
-  skills      ProfileSkill[]
+  skills      Skill[]
   educations  Education[]
   certs       Certification[]
   savedJobs   SavedJob[]
@@ -54,19 +54,12 @@ model Project {
 }
 
 model Skill {
-  id       Int            @id @default(autoincrement())
-  name     String         @unique
-  category String?
-  profiles ProfileSkill[]
-}
-
-model ProfileSkill {
-  profile   Profile @relation(fields: [profileId], references: [id])
-  profileId Int
-  skill     Skill   @relation(fields: [skillId], references: [id])
-  skillId   Int
-
-  @@id([profileId, skillId])
+  id         Int       @id @default(autoincrement())
+  name       String    @unique
+  categoryId Int?
+  category   Category? @relation(fields: [categoryId], references: [id])
+  profile    Profile   @relation(fields: [profileId], references: [id])
+  profileId  Int
 }
 
 model Education {
@@ -118,6 +111,14 @@ model SavedJob {
   profileId Int
   job       Job      @relation(fields: [jobId], references: [id])
   jobId     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Category {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  skills    Skill[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }

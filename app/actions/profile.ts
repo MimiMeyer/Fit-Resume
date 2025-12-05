@@ -1,6 +1,5 @@
 "use server";
 
-import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 
@@ -56,6 +55,18 @@ export type SkillInput = {
   name: string;
   category?: string;
 };
+
+async function getOrCreateCategory(name?: string | null) {
+  const normalized = name?.trim();
+  if (!normalized) return null;
+  const upper = normalized.toUpperCase();
+  const category = await prisma.category.upsert({
+    where: { name: upper },
+    update: {},
+    create: { name: upper },
+  });
+  return category;
+}
 
 export async function updateProfileDetails(formData: FormData) {
   const fullName = (formData.get("fullName") as string | null)?.trim();
@@ -236,47 +247,44 @@ export async function updateCertification(formData: FormData) {
 export async function addSkill(formData: FormData) {
   const profileId = Number(formData.get("profileId"));
   const name = (formData.get("name") as string | null)?.trim();
-  const category = (formData.get("category") as string | null)?.trim()?.toUpperCase() || undefined;
+  const categoryName = (formData.get("category") as string | null)?.trim();
   if (!profileId || !name) return;
+
+  const category = await getOrCreateCategory(categoryName);
 
   const skill = await prisma.skill.upsert({
     where: { name },
     update: {
-      category,
+      categoryId: category?.id ?? null,
+      profileId,
     },
     create: {
       name,
-      category,
+      categoryId: category?.id ?? null,
+      profileId,
     },
-  });
-  await prisma.profileSkill.upsert({
-    where: { profileId_skillId: { profileId, skillId: skill.id } },
-    update: {},
-    create: { profileId, skillId: skill.id },
   });
   revalidatePath("/about");
 }
 
 export async function deleteSkill(formData: FormData) {
-  const profileId = Number(formData.get("profileId"));
   const skillId = Number(formData.get("skillId"));
-  if (!profileId || !skillId) return;
-  await prisma.profileSkill.delete({
-    where: { profileId_skillId: { profileId, skillId } },
-  });
+  if (!skillId) return;
+  await prisma.skill.delete({ where: { id: skillId } });
   revalidatePath("/about");
 }
 
 export async function updateSkill(formData: FormData) {
-  const profileId = Number(formData.get("profileId"));
   const skillId = Number(formData.get("skillId"));
   const name = (formData.get("name") as string | null)?.trim();
-  const category = (formData.get("category") as string | null)?.trim()?.toUpperCase() || undefined;
-  if (!profileId || !skillId || !name) return;
+  const categoryName = (formData.get("category") as string | null)?.trim();
+  if (!skillId || !name) return;
+
+  const category = await getOrCreateCategory(categoryName);
   
   await prisma.skill.update({
     where: { id: skillId },
-    data: { name, category },
+    data: { name, categoryId: category?.id ?? null },
   });
   revalidatePath("/about");
 }
@@ -288,23 +296,20 @@ export async function getProfile() {
       projects: true,
       educations: true,
       certs: true,
-      skills: { include: { skill: true } },
+      skills: { include: { category: true } },
     },
     orderBy: { createdAt: "desc" },
   });
 
-  // Create a default profile if none exists
   if (!profile) {
     profile = await prisma.profile.create({
-      data: {
-        fullName: "Your Name",
-      },
+      data: { fullName: "Your Name" },
       include: {
         experiences: true,
         projects: true,
         educations: true,
         certs: true,
-        skills: { include: { skill: true } },
+        skills: { include: { category: true } },
       },
     });
   }
@@ -346,47 +351,44 @@ export async function upsertProfile(input: ProfileInput) {
     if (input.skills) {
       const normalized = input.skills
         .map((skill) => {
-          const category = skill.category
-            ? (skill.category.trim().toUpperCase() as Prisma.SkillCategory)
-            : undefined;
-          return { name: skill.name?.trim(), category };
+          const category = skill.category?.trim();
+          return {
+            name: skill.name?.trim(),
+            category: category ? category.toUpperCase() : null,
+          };
         })
-        .filter(
-          (skill): skill is { name: string; category?: Prisma.SkillCategory } =>
-            Boolean(skill.name),
-        );
+        .filter((skill): skill is { name: string; category: string | null } => Boolean(skill.name));
 
-      const names = normalized.map((s) => s.name);
-      if (names.length) {
-        const existingSkills = await tx.skill.findMany({
-          where: { name: { in: names } },
+      const categoryNames = Array.from(
+        new Set(normalized.map((s) => s.category).filter((c): c is string => Boolean(c))),
+      );
+
+      if (categoryNames.length) {
+        await tx.category.createMany({
+          data: categoryNames.map((name) => ({ name })),
+          skipDuplicates: true,
         });
-        const existingNames = new Set(existingSkills.map((s) => s.name));
-        const toCreate = normalized.filter((skill) => !existingNames.has(skill.name));
-
-        if (toCreate.length) {
-          await tx.skill.createMany({
-            data: toCreate.map((skill) => ({
-              name: skill.name,
-              category: skill.category,
-            })),
-            skipDuplicates: true,
-          });
-        }
-
-        const skills = await tx.skill.findMany({ where: { name: { in: names } } });
-        await tx.profileSkill.deleteMany({ where: { profileId: profile.id } });
-        if (skills.length) {
-          await tx.profileSkill.createMany({
-            data: skills.map((skill) => ({
-              profileId: profile.id,
-              skillId: skill.id,
-            })),
-          });
-        }
-      } else {
-        await tx.profileSkill.deleteMany({ where: { profileId: profile.id } });
       }
+
+      const categories = categoryNames.length
+        ? await tx.category.findMany({ where: { name: { in: categoryNames } } })
+        : [];
+      const categoryMap = new Map(categories.map((c) => [c.name, c.id]));
+
+      await tx.skill.deleteMany({ where: { profileId: profile.id } });
+
+      if (normalized.length) {
+        await tx.skill.createMany({
+          data: normalized.map((skill) => ({
+            name: skill.name,
+            categoryId: skill.category ? categoryMap.get(skill.category) ?? null : null,
+            profileId: profile.id,
+          })),
+          skipDuplicates: true,
+        });
+      }
+    } else {
+      await tx.skill.deleteMany({ where: { profileId: profile.id } });
     }
 
     if (input.experiences) {
@@ -458,7 +460,7 @@ export async function upsertProfile(input: ProfileInput) {
         projects: true,
         educations: true,
         certs: true,
-        skills: { include: { skill: true } },
+        skills: { include: { category: true } },
       },
     });
   });

@@ -29,16 +29,16 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} antialiased bg-white text-zinc-900`}
+        className={`${geistSans.variable} antialiased text-zinc-900`}
       >
         <a href="#main" className="skip-link">
           Skip to main content
         </a>
         <div className="min-h-screen">
-          <header className="border-b border-zinc-200 bg-white">
+          <header className="border-b border-indigo-100 bg-white/80 backdrop-blur supports-[backdrop-filter]:bg-white/70 sticky top-0 z-40 shadow-[0_2px_12px_rgba(0,0,0,0.05)]">
             <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3">
               <div className="flex items-center gap-2 text-lg font-semibold tracking-tight">
-                <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-zinc-900 text-sm text-white">
+                <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-teal-500 via-indigo-400 to-sky-400 text-sm text-white shadow-sm">
                   CC
                 </span>
                 <span>Career Companion</span>
@@ -51,7 +51,7 @@ export default function RootLayout({
                   <Link
                     key={link.href}
                     href={link.href}
-                    className="rounded px-3 py-2 transition hover:bg-zinc-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]"
+                    className="rounded-full px-3 py-2 transition hover:bg-indigo-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]"
                   >
                     {link.label}
                   </Link>
