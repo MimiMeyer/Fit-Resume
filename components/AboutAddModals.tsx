@@ -101,8 +101,8 @@ export function AddExperienceModal({ profileId }: Props) {
         onSubmit={(e) => {
           e.preventDefault();
           const formData = new FormData(e.currentTarget);
-          startTransition(() => {
-            addExperience(formData);
+          startTransition(async () => {
+            await addExperience(formData);
           });
         }}
       >
@@ -139,8 +139,8 @@ export function AddProjectModal({ profileId }: Props) {
         onSubmit={(e) => {
           e.preventDefault();
           const formData = new FormData(e.currentTarget);
-          startTransition(() => {
-            addProject(formData);
+          startTransition(async () => {
+            await addProject(formData);
           });
         }}
       >
@@ -177,8 +177,8 @@ export function AddEducationModal({ profileId }: Props) {
         onSubmit={(e) => {
           e.preventDefault();
           const formData = new FormData(e.currentTarget);
-          startTransition(() => {
-            addEducation(formData);
+          startTransition(async () => {
+            await addEducation(formData);
           });
         }}
       >
@@ -218,8 +218,8 @@ export function AddCertificationModal({ profileId }: Props) {
         onSubmit={(e) => {
           e.preventDefault();
           const formData = new FormData(e.currentTarget);
-          startTransition(() => {
-            addCertification(formData);
+          startTransition(async () => {
+            await addCertification(formData);
           });
         }}
       >
