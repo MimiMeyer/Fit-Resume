@@ -10,7 +10,10 @@
     "prisma": "prisma",
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
-    "db:generate": "prisma generate"
+    "db:generate": "prisma generate",
+    "db:cleanup": "node scripts/cleanup-expired-jobs.js",
+    "db:dev:up": "docker compose up -d db",
+    "db:dev:down": "docker compose down"
   },
   "dependencies": {
     "@prisma/client": "5.19.1",
