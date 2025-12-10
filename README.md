@@ -26,7 +26,6 @@ Career Companion is an AI-powered job search assistant: add keywords to scrape b
 - Skill add flow normalizes categories and handles unknown values; delete works via inline buttons.
 - Jobs, Saved Jobs, and Settings pages are placeholders pending wiring to Prisma/scraper.
 - API: `GET /api/skills/categories` returns distinct skill categories from the DB.
-- Data retention: unsaved scraped jobs default to `expiresAt` ~14 days out; `pnpm db:cleanup` deletes expired, unsaved jobs. Saved jobs set `expiresAt` to `null` and are preserved.
 
 ## Getting Started
 ```bash
@@ -36,5 +35,4 @@ pnpm dev
 ```
 Visit http://localhost:3000 to view the UI. About Me will show your seeded/entered data.
 
-### Cleanup (optional)
-Run `pnpm db:cleanup` to purge expired unsaved jobs (based on `Job.expiresAt`). Saved jobs are preserved.
+ 
