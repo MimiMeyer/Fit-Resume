@@ -1,70 +1,38 @@
 # Career Companion
 
-Career Companion is an AI-powered job search assistant designed to automate the most painful parts of finding a job. It scrapes job listings from multiple platforms, analyzes your match fit using AI, and automatically tailors your resume for each role.
+Career Companion is an AI-powered job search assistant: add keywords to scrape boards, save promising roles, and generate tailored resumes powered by your maintained profile.
 
-## ✨ Features (planned)
+## Features (current & planned)
+- Keyword-driven scraping across boards (Indeed, LinkedIn, etc.) with normalized metadata and match hints.
+- Profile-driven tailoring: About Me stores summary, contact info, skills (with categories), experience, projects, education, certifications; resume generation will use this data per job.
+- Saved jobs workspace: track roles, statuses, and notes; generate/download a tailored resume per job (planned).
+- Dashboard UI: Overview, Job Search, Saved Jobs, About Me, Settings; accessible light-only theme.
+- Agentic automation: OpenAI Codex CLI driven workflow, linting/formatting/CI-friendly setup.
 
-### Keyword-Driven Scraping
-- User-provided keywords drive scraping across job boards (Indeed, LinkedIn, etc.).
-- Normalize metadata (title, company, salary, stack, location) and refresh on a schedule.
-- Match hints via keywords/embeddings and simple rules.
-
-### Profile-Driven Tailoring
-- About Me page to maintain summary, skills, and experience.
-- Tailoring pulls from profile and job description; cover letters later.
-- Fixed resume template for consistent exports (PDF/Markdown planned).
-
-### Saved Jobs Workspace
-- Save promising roles and track status.
-- Generate a tailored resume per saved job and download it.
-- Job details, notes, and match hints in one view.
-
-### Dashboard UI
-- Modern Next.js + Tailwind interface.
-- Pages: Overview, Job Search, Saved Jobs, Resume Template, About Me, Settings.
-- Accessible, light-only theme with keyboard-friendly focus styles.
-
-### Agentic Automation
-- Built with OpenAI Codex CLI for project automation.
-- Automatic code suggestions, diffs, and improvements with approval workflow.
-- Linting, formatting, and CI-friendly architecture.
+## Database Setup
+- PostgreSQL via Prisma. Local dev can run Postgres in Docker; prod should use a hosted Postgres (e.g., Vercel Postgres/Neon) for serverless deployments.
+- Copy `.env.example` to `.env`. The example points at the local Docker container (`postgresql://careercompanion:careercompanion@localhost:5432/career_companion?sslmode=disable`); update as needed.
+- Install deps: `pnpm install`.
+- Start local DB (optional helper scripts):
+  - `pnpm db:dev:up` (docker compose) / `pnpm db:dev:down`
+  - or run your own Postgres and set `DATABASE_URL`.
+- Apply schema: `pnpm db:generate && pnpm db:migrate` (or `pnpm db:push` for quick dev sync).
+- Schema: `prisma/schema.prisma`; client helper: `lib/prisma.ts`.
+  - Models: Profile (contact/title), Experience, Project, Education, Certification, Skill (category is a free-form string), ProfileSkill join, Job (with optional `expiresAt` for unsaved scrape entries), SavedJob, Category.
+- Migrations live in `prisma/migrations/`; run `pnpm db:migrate` to apply.
 
 ## Current State
-- Static UI scaffold only; no live scraping, persistence, or export wiring yet.
-- Placeholder data for Job Search, Saved Jobs, About Me, and Resume Template preview.
-- Next steps: add a mock data layer/server actions, then real DB (Prisma + Postgres) and scraper integration.
+- About Me page is DB-backed with modal-based CRUD for profile, experience, projects, education, certifications, and skills; actions revalidate on submit.
+- Skill add flow normalizes categories and handles unknown values; delete works via inline buttons.
+- Jobs, Saved Jobs, and Settings pages are placeholders pending wiring to Prisma/scraper.
+- API: `GET /api/skills/categories` returns distinct skill categories from the DB.
 
-## 🧰 Tech Stack
+## Getting Started
+```bash
+pnpm install
+pnpm db:generate && pnpm db:migrate   # requires DATABASE_URL
+pnpm dev
+```
+Visit http://localhost:3000 to view the UI. About Me will show your seeded/entered data.
 
-### Frontend
-- Next.js (App Router)
-- React
-- Tailwind CSS
-- shadcn/ui + Radix UI
-- TypeScript
-
-### Backend
-- Next.js API Routes + Server Actions
-- Node.js
-- OpenAI SDK (GPT-5.1, embeddings, text analysis)
-
-### Database
-- PostgreSQL (Neon / Supabase / PlanetScale)
-- Prisma ORM
-
-### Infrastructure & Automation
-- Vercel (hosting)
-- Vercel Cron Jobs or node-cron
-- Codex CLI (development agent)
-- GitHub for version control
-- ESLint + Prettier
-
-### Future Enhancements
-- Multi-board scraping (LinkedIn, ZipRecruiter, Indeed)
-- Browser extension for 1-click “analyze this job”
-- OAuth login (Clerk/Auth.js)
-- ML-based match ranking
-
-## 🎯 Purpose
-
-To give job seekers a fast, intelligent, and automated way to discover the best jobs and submit a perfectly tailored resume — effortlessly.
+ 
