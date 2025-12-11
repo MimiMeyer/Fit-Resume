@@ -15,10 +15,8 @@ export const metadata: Metadata = {
 
 const navLinks = [
   { href: "/", label: "Overview" },
-  { href: "/job-search", label: "Job Search" },
-  { href: "/saved-jobs", label: "Saved Jobs" },
   { href: "/about", label: "About Me" },
-  { href: "/settings", label: "Settings" },
+  { href: "/create-resume", label: "Create Resume" },
 ];
 
 export default function RootLayout({

@@ -24,7 +24,6 @@ model Profile {
   skills      Skill[]
   educations  Education[]
   certs       Certification[]
-  savedJobs   SavedJob[]
   createdAt   DateTime        @default(now())
   updatedAt   DateTime        @updatedAt
 }
@@ -86,33 +85,6 @@ model Certification {
   credentialUrl String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
-}
-
-model Job {
-  id         String     @id @default(cuid())
-  title      String
-  company    String
-  location   String?
-  stack      String?
-  source     String? // board/source identifier
-  matchScore Int?
-  notes      String?
-  savedJobs  SavedJob[]
-  createdAt  DateTime   @default(now())
-  updatedAt  DateTime   @updatedAt
-}
-
-model SavedJob {
-  id        Int      @id @default(autoincrement())
-  status    String   @default("ready_to_apply")
-  notes     String?
-  tailored  String? // generated tailored resume content (optional)
-  profile   Profile  @relation(fields: [profileId], references: [id])
-  profileId Int
-  job       Job      @relation(fields: [jobId], references: [id])
-  jobId     String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 }
 
 model Category {

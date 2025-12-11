@@ -1,13 +1,13 @@
 # Career Companion
 
-Career Companion is an AI-powered job search assistant: add keywords to scrape boards, save promising roles, and generate tailored resumes powered by your maintained profile.
+Career Companion is an AI-powered resume tailoring companion. Maintain an About Me source of truth, paste a job description, and let an agentic flow plan and draft tailored sections you can copy or download.
 
 ## Features (current & planned)
-- Keyword-driven scraping across boards (Indeed, LinkedIn, etc.) with normalized metadata and match hints.
-- Profile-driven tailoring: About Me stores summary, contact info, skills (with categories), experience, projects, education, certifications; resume generation will use this data per job.
-- Saved jobs workspace: track roles, statuses, and notes; generate/download a tailored resume per job (planned).
-- Dashboard UI: Overview, Job Search, Saved Jobs, About Me, Settings; accessible light-only theme.
-- Agentic automation: OpenAI Codex CLI driven workflow, linting/formatting/CI-friendly setup.
+- About Me: DB-backed profile with contact info, headline/title, summary, skills (with categories), experience, projects, education, certifications.
+- Create Resume: paste a job description, run the agentic stub (parse the job description → map to profile → plan content → format summary/bullets/skills/cover note), copy or download text output.
+- Agentic workflow: deterministic pipeline that extracts signals, highlights matched skills vs. gaps, and proposes tailored bullets from your inventory; ready to swap for an LLM chain.
+- UI: Overview landing, About Me editor, Create Resume workspace; accessible light theme with keyboard-focus states.
+- Automation (later): scheduler for reminders or job description ingestion; Playwright hooks for autofill/apply flows.
 
 ## Database Setup
 - PostgreSQL via Prisma. Local dev can run Postgres in Docker; prod should use a hosted Postgres (e.g., Vercel Postgres/Neon) for serverless deployments.
@@ -18,13 +18,13 @@ Career Companion is an AI-powered job search assistant: add keywords to scrape b
   - or run your own Postgres and set `DATABASE_URL`.
 - Apply schema: `pnpm db:generate && pnpm db:migrate` (or `pnpm db:push` for quick dev sync).
 - Schema: `prisma/schema.prisma`; client helper: `lib/prisma.ts`.
-  - Models: Profile (contact/title), Experience, Project, Education, Certification, Skill (category is a free-form string), ProfileSkill join, Job (with optional `expiresAt` for unsaved scrape entries), SavedJob, Category.
+  - Models: Profile (contact/title), Experience, Project, Education, Certification, Skill (category is a free-form string), Category.
 - Migrations live in `prisma/migrations/`; run `pnpm db:migrate` to apply.
 
 ## Current State
 - About Me page is DB-backed with modal-based CRUD for profile, experience, projects, education, certifications, and skills; actions revalidate on submit.
 - Skill add flow normalizes categories and handles unknown values; delete works via inline buttons.
-- Jobs, Saved Jobs, and Settings pages are placeholders pending wiring to Prisma/scraper.
+- Create Resume page simulates the agent flow and produces tailored sections from your profile data; copy and download actions are included.
 - API: `GET /api/skills/categories` returns distinct skill categories from the DB.
 
 ## Getting Started
@@ -34,5 +34,9 @@ pnpm db:generate && pnpm db:migrate   # requires DATABASE_URL
 pnpm dev
 ```
 Visit http://localhost:3000 to view the UI. About Me will show your seeded/entered data.
+
+### Optional: seed sample profile data
+- Run `node scripts/seed-profile.js` once to populate Mimi (Miriam) Meyer’s profile into the DB for demos. The script is git-ignored; adjust the fields in `scripts/seed-profile.js` before running if you want different defaults.
+- The Create Resume page now renders directly from the stored profile (no hardcoded resume data), so keeping your profile filled is required for meaningful output.
 
  

@@ -1,26 +1,26 @@
 const sections = [
   {
-    title: "Job Scraping Engine",
+    title: "About Me",
     items: [
-      "Keyword-driven scraping across multiple boards",
-      "Structured metadata: title, company, salary, stack, location",
-      "Refresh jobs on a schedule and score relevance",
+      "Single source of truth for profile, skills, projects, highlights",
+      "Edit and version details the agent can reuse",
+      "Fast add/edit forms for experience, education, and skills",
     ],
   },
   {
-    title: "AI Resume Tailoring",
+    title: "Create Resume",
     items: [
-      "Profile-driven tailoring using your About Me data",
-      "Fixed resume template for consistent exports",
-      "Generate a tailored version per saved job",
+      "Paste a job description and extract role, level, stack, must-haves",
+      "Map job description  signals to your profile and surface gaps",
+      "Generate tailored summary, bullets, skills, and optional cover note",
     ],
   },
   {
-    title: "Dashboard UI",
+    title: "Agentic Flow",
     items: [
-      "Job Search, Saved Jobs, Resume Template, About Me",
-      "Filters, match hints, status tracking",
-      "Insights and download actions per role",
+      "Job description  parsing → profile retrieval → content plan → formatted output",
+      "Regenerate sections independently and lock favorites",
+      "Download or copy sections into your fixed resume template",
     ],
   },
 ];
@@ -33,24 +33,25 @@ export default function Home() {
           Career Companion
         </p>
         <h1 className="text-3xl font-semibold leading-tight text-zinc-900 sm:text-4xl">
-          AI copilot for finding, ranking, and applying to jobs.
+          Agentic copilot for tailoring resumes to any job you paste.
         </h1>
         <p className="max-w-3xl text-lg text-zinc-700">
-          Add keywords, scrape boards, save the best roles, and generate a
-          tailored resume (fixed template) using your maintained profile.
+          Maintain an About Me profile, paste a job description, and let the
+          agent extract signals, match against your inventory, and draft a
+          tailored resume you can copy or download.
         </p>
         <div className="flex flex-wrap gap-2 text-sm text-zinc-800">
           <span className="rounded-full border border-zinc-200 px-4 py-2 font-semibold">
-            Keyword scraping
+            About Me source of truth
           </span>
           <span className="rounded-full border border-zinc-200 px-4 py-2 font-semibold">
-            Saved job workspace
+            job description  parsing + mapping
           </span>
           <span className="rounded-full border border-zinc-200 px-4 py-2 font-semibold">
-            Resume tailoring
+            Tailored resume sections
           </span>
           <span className="rounded-full border border-zinc-200 px-4 py-2 font-semibold">
-            Fixed template exports
+            Copy / download actions
           </span>
         </div>
       </section>
