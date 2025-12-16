@@ -116,10 +116,11 @@ export async function addExperience(formData: FormData) {
   const profileId = Number(formData.get("profileId"));
   const role = (formData.get("role") as string | null)?.trim();
   const company = (formData.get("company") as string | null)?.trim();
+  const location = (formData.get("location") as string | null)?.trim() || null;
   const period = (formData.get("period") as string | null)?.trim() || null;
   const impact = (formData.get("impact") as string | null)?.trim() || null;
   if (!profileId || !role || !company) return;
-  await prisma.experience.create({ data: { profileId, role, company, period, impact } });
+  await prisma.experience.create({ data: { profileId, role, company, location, period, impact } });
   revalidatePath("/about");
 }
 
@@ -134,10 +135,11 @@ export async function updateExperience(formData: FormData) {
   const id = Number(formData.get("id"));
   const role = (formData.get("role") as string | null)?.trim();
   const company = (formData.get("company") as string | null)?.trim();
+  const location = (formData.get("location") as string | null)?.trim() || null;
   const period = (formData.get("period") as string | null)?.trim() || null;
   const impact = (formData.get("impact") as string | null)?.trim() || null;
   if (!id || !role || !company) return;
-  await prisma.experience.update({ where: { id }, data: { role, company, period, impact } });
+  await prisma.experience.update({ where: { id }, data: { role, company, location, period, impact } });
   revalidatePath("/about");
 }
 

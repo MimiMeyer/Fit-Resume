@@ -1,4 +1,4 @@
-﻿-- Prisma baseline migration
+-- Baseline schema with per-role location
 
 CREATE TABLE "Profile" (
     "id" SERIAL PRIMARY KEY,
@@ -30,6 +30,7 @@ CREATE TABLE "Experience" (
     "profileId" INTEGER NOT NULL,
     "role" TEXT NOT NULL,
     "company" TEXT NOT NULL,
+    "location" TEXT,
     "period" TEXT,
     "impact" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,

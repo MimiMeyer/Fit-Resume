@@ -9,8 +9,8 @@ const geistSans = Geist({
 });
 
 export const metadata: Metadata = {
-  title: "Career Companion",
-  description: "AI-powered job search assistant",
+  title: "FitResume",
+  description: "AI-powered resume tailoring companion",
 };
 
 const navLinks = [
@@ -36,10 +36,10 @@ export default function RootLayout({
           <header className="border-b border-indigo-100 bg-white/80 backdrop-blur supports-[backdrop-filter]:bg-white/70 sticky top-0 z-40 shadow-[0_2px_12px_rgba(0,0,0,0.05)]">
             <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3">
               <div className="flex items-center gap-2 text-lg font-semibold tracking-tight">
-                <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-teal-500 via-indigo-400 to-sky-400 text-sm text-white shadow-sm">
-                  CC
+                <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-sky-500 via-teal-400 to-indigo-400 text-sm font-semibold text-white shadow-sm">
+                  FR
                 </span>
-                <span>Career Companion</span>
+                <span>FitResume</span>
               </div>
               <nav
                 className="flex items-center gap-4 text-sm font-medium text-zinc-700"

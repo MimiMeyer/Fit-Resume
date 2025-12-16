@@ -34,6 +34,7 @@ model Experience {
   profileId Int
   role      String
   company   String
+  location  String?
   period    String? // freeform e.g., "2021-2024"
   impact    String?
   createdAt DateTime @default(now())

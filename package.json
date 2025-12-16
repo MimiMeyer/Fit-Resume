@@ -15,7 +15,11 @@
     "db:dev:down": "docker compose down"
   },
   "dependencies": {
+    "@ai-sdk/anthropic": "^2.0.55",
     "@prisma/client": "5.19.1",
+    "ai": "^5.0.112",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^3.0.4",
     "next": "16.0.6",
     "pdfjs-dist": "^5.4.449",
     "react": "19.2.0",
@@ -30,6 +34,7 @@
     "eslint-config-next": "16.0.6",
     "prisma": "5.19.1",
     "tailwindcss": "^4",
+    "tsx": "^4.21.0",
     "typescript": "^5"
   }
 }

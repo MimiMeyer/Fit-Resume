@@ -423,9 +423,6 @@ export function AboutContent({ profile }: Props) {
           <div className="flex items-center justify-between gap-3">
             <div className="flex flex-col gap-1">
               <h2 className="text-sm font-semibold text-zinc-900">Experience</h2>
-              <p className="text-xs text-zinc-600">
-                Add new roles; remove anything that's out of date.
-              </p>
             </div>
             <AddExperienceModal profileId={profile.id} />
           </div>
@@ -441,10 +438,21 @@ export function AboutContent({ profile }: Props) {
                   </p>
                   <p className="text-xs text-zinc-600">
                     {exp.company}
-                    {exp.period ? ` - ${exp.period}` : ""}
+                    {exp.location ? ` — ${exp.location}` : ""}
+                    {exp.period ? ` • ${exp.period}` : ""}
                   </p>
-                  {exp.impact && (
-                    <p className="text-sm text-zinc-700">{exp.impact}</p>
+                  {exp.impact && exp.impact.split("\n").filter(Boolean).length > 0 && (
+                    <ul className="mt-1 space-y-1 text-sm text-zinc-700">
+                      {exp.impact
+                        .split("\n")
+                        .filter(Boolean)
+                        .map((line: string, idx: number) => (
+                          <li key={idx} className="flex items-start gap-2">
+                            <span className="mt-1 inline-flex h-1.5 w-1.5 rounded-full bg-[var(--accent)]" />
+                            <span>{line}</span>
+                          </li>
+                        ))}
+                    </ul>
                   )}
                 </div>
                 <div className="flex gap-2">
@@ -486,15 +494,14 @@ export function AboutContent({ profile }: Props) {
         </section>
       )}
 
-      {profile.educations.length ? (
-        <section className="space-y-2 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-zinc-100">
-          <div className="flex items-center justify-between">
-            <div className="flex flex-col gap-1">
-              <h2 className="text-sm font-semibold text-zinc-900">Education</h2>
-              <p className="text-xs text-zinc-600">Add schools, degrees, or bootcamps.</p>
-            </div>
-            <AddEducationModal profileId={profile.id} />
+      <section className="space-y-2 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-zinc-100">
+        <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-1">
+            <h2 className="text-sm font-semibold text-zinc-900">Education</h2>
           </div>
+          <AddEducationModal profileId={profile.id} />
+        </div>
+        {profile.educations.length ? (
           <div className="space-y-2 text-sm text-zinc-700">
             {profile.educations.map((edu: any) => (
               <div
@@ -536,33 +543,23 @@ export function AboutContent({ profile }: Props) {
               </div>
             ))}
           </div>
-        </section>
-      ) : (
-        <section className="space-y-2 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-zinc-100">
-          <div className="flex items-center justify-between">
-            <div className="flex flex-col gap-1">
-              <h2 className="text-sm font-semibold text-zinc-900">Education</h2>
-              <p className="text-xs text-zinc-600">Add schools, degrees, or bootcamps.</p>
-            </div>
-            <AddEducationModal profileId={profile.id} />
-          </div>
+        ) : (
           <p className="text-sm text-zinc-700">
             No education added yet. Use the form above to add one.
           </p>
-        </section>
-      )}
+        )}
+      </section>
 
-      {profile.certs.length ? (
-        <section className="space-y-2 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-zinc-100">
-          <div className="flex items-center justify-between">
-            <div className="flex flex-col gap-1">
-              <h2 className="text-sm font-semibold text-zinc-900">
-                Certifications
-              </h2>
-              <p className="text-xs text-zinc-600">Add licenses or badges.</p>
-            </div>
-            <AddCertificationModal profileId={profile.id} />
+      <section className="space-y-2 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-zinc-100">
+        <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-1">
+            <h2 className="text-sm font-semibold text-zinc-900">
+              Certifications
+            </h2>
           </div>
+          <AddCertificationModal profileId={profile.id} />
+        </div>
+        {profile.certs.length ? (
           <div className="space-y-2 text-sm text-zinc-700">
             {profile.certs.map((cert: any) => (
               <div
@@ -597,32 +594,18 @@ export function AboutContent({ profile }: Props) {
               </div>
             ))}
           </div>
-        </section>
-      ) : (
-        <section className="space-y-2 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-zinc-100">
-          <div className="flex items-center justify-between">
-            <div className="flex flex-col gap-1">
-              <h2 className="text-sm font-semibold text-zinc-900">
-                Certifications
-              </h2>
-              <p className="text-xs text-zinc-600">Add licenses or badges.</p>
-            </div>
-            <AddCertificationModal profileId={profile.id} />
-          </div>
+        ) : (
           <p className="text-sm text-zinc-700">
             No certifications yet. Use the form above to add one.
           </p>
-        </section>
-      )}
+        )}
+      </section>
 
       {profile.projects.length ? (
         <section className="space-y-3 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-zinc-100">
           <div className="flex items-center justify-between gap-3">
             <div className="flex flex-col gap-1">
               <h2 className="text-sm font-semibold text-zinc-900">Projects</h2>
-              <p className="text-xs text-zinc-600">
-                Keep personal and work highlights up to date.
-              </p>
             </div>
             <AddProjectModal profileId={profile.id} />
           </div>
@@ -850,6 +833,7 @@ export function AboutContent({ profile }: Props) {
             <input type="hidden" name="id" value={editingExp.id} />
             <label className="space-y-1 block"><span className="block text-xs font-semibold text-zinc-700">Role</span><input name="role" defaultValue={editingExp.role} className="w-full rounded border border-zinc-200 px-3 py-2" required /></label>
             <label className="space-y-1 block"><span className="block text-xs font-semibold text-zinc-700">Company</span><input name="company" defaultValue={editingExp.company} className="w-full rounded border border-zinc-200 px-3 py-2" required /></label>
+            <label className="space-y-1 block"><span className="block text-xs font-semibold text-zinc-700">Location</span><input name="location" defaultValue={editingExp.location ?? ""} className="w-full rounded border border-zinc-200 px-3 py-2" /></label>
             <label className="space-y-1 block"><span className="block text-xs font-semibold text-zinc-700">Period</span><input name="period" defaultValue={editingExp.period ?? ""} className="w-full rounded border border-zinc-200 px-3 py-2" /></label>
             <label className="space-y-1 block"><span className="block text-xs font-semibold text-zinc-700">Impact</span><textarea name="impact" rows={3} defaultValue={editingExp.impact ?? ""} className="w-full rounded border border-zinc-200 px-3 py-2" /></label>
             <div className="flex gap-2 pt-2"><button type="submit" disabled={isPending} className="inline-flex items-center gap-2 rounded-full bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:opacity-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)] disabled:opacity-60">{isPending ? "Saving..." : "Save"}</button><button type="button" data-close-modal="true" className="rounded-full border border-zinc-200 px-4 py-2 text-sm font-semibold text-zinc-800 transition hover:bg-indigo-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]">Cancel</button></div>
@@ -990,4 +974,3 @@ export function AboutContent({ profile }: Props) {
     </div>
   );
 }
-

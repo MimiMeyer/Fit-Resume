@@ -88,13 +88,24 @@ function FormField({
 
 export function AddExperienceModal({ profileId }: Props) {
   const [isPending, startTransition] = useTransition();
+  const [open, setOpen] = useState(false);
 
   return (
-    <Modal
-      triggerLabel="Add Role"
-      title="Add experience"
-      description="Share your role, company, and a quick highlight."
-    >
+    <>
+      <button
+        type="button"
+        className={primaryButton}
+        onClick={() => setOpen(true)}
+      >
+        Add Role
+      </button>
+      <Modal
+        triggerLabel=""
+        open={open}
+        onClose={() => setOpen(false)}
+        title="Add experience"
+        description="Share your role, company, and a quick highlight."
+      >
       <form
         action={addExperience}
         className="space-y-4 text-sm"
@@ -103,13 +114,15 @@ export function AddExperienceModal({ profileId }: Props) {
           const formData = new FormData(e.currentTarget);
           startTransition(async () => {
             await addExperience(formData);
+              setOpen(false);
           });
         }}
       >
         <input type="hidden" name="profileId" value={profileId} />
         <FormField label="Role" name="role" placeholder="Software Engineer" required />
         <FormField label="Company" name="company" placeholder="Company name" required />
-        <FormField label="Period" name="period" placeholder="2022 – Present" />
+        <FormField label="Location" name="location" placeholder="City, State" />
+        <FormField label="Period" name="period" placeholder="2022 — Present" />
         <FormField label="Impact" name="impact" placeholder="Shipped features, improved reliability…" as="textarea" />
         <div className="flex items-center gap-2 pt-1">
           <button type="submit" disabled={isPending} className={primaryButton}>
@@ -120,19 +133,31 @@ export function AddExperienceModal({ profileId }: Props) {
           </button>
         </div>
       </form>
-    </Modal>
+      </Modal>
+    </>
   );
 }
 
 export function AddProjectModal({ profileId }: Props) {
   const [isPending, startTransition] = useTransition();
+  const [open, setOpen] = useState(false);
 
   return (
-    <Modal
-      triggerLabel="Add Project"
-      title="Add project"
-      description="List what you built, tech used, and a link."
-    >
+    <>
+      <button
+        type="button"
+        className={primaryButton}
+        onClick={() => setOpen(true)}
+      >
+        Add Project
+      </button>
+      <Modal
+        triggerLabel=""
+        open={open}
+        onClose={() => setOpen(false)}
+        title="Add project"
+        description="List what you built, tech used, and a link."
+      >
       <form
         action={addProject}
         className="space-y-3 text-sm"
@@ -141,6 +166,7 @@ export function AddProjectModal({ profileId }: Props) {
           const formData = new FormData(e.currentTarget);
           startTransition(async () => {
             await addProject(formData);
+              setOpen(false);
           });
         }}
       >
@@ -158,19 +184,31 @@ export function AddProjectModal({ profileId }: Props) {
           </button>
         </div>
       </form>
-    </Modal>
+      </Modal>
+    </>
   );
 }
 
 export function AddEducationModal({ profileId }: Props) {
   const [isPending, startTransition] = useTransition();
+  const [open, setOpen] = useState(false);
 
   return (
-    <Modal
-      triggerLabel="Add Education"
-      title="Add education"
-      description="Include institution, degree, field, and years."
-    >
+    <>
+      <button
+        type="button"
+        className={primaryButton}
+        onClick={() => setOpen(true)}
+      >
+        Add Education
+      </button>
+      <Modal
+        triggerLabel=""
+        open={open}
+        onClose={() => setOpen(false)}
+        title="Add education"
+        description="Include institution, degree, field, and years."
+      >
       <form
         action={addEducation}
         className="space-y-3 text-sm"
@@ -179,6 +217,7 @@ export function AddEducationModal({ profileId }: Props) {
           const formData = new FormData(e.currentTarget);
           startTransition(async () => {
             await addEducation(formData);
+              setOpen(false);
           });
         }}
       >
@@ -199,19 +238,31 @@ export function AddEducationModal({ profileId }: Props) {
           </button>
         </div>
       </form>
-    </Modal>
+      </Modal>
+    </>
   );
 }
 
 export function AddCertificationModal({ profileId }: Props) {
   const [isPending, startTransition] = useTransition();
+  const [open, setOpen] = useState(false);
 
   return (
-    <Modal
-      triggerLabel="Add Certification"
-      title="Add certification"
-      description="Include the issuer, year, and credential URL if you have one."
-    >
+    <>
+      <button
+        type="button"
+        className={primaryButton}
+        onClick={() => setOpen(true)}
+      >
+        Add Certification
+      </button>
+      <Modal
+        triggerLabel=""
+        open={open}
+        onClose={() => setOpen(false)}
+        title="Add certification"
+        description="Include the issuer, year, and credential URL if you have one."
+      >
       <form
         action={addCertification}
         className="space-y-3 text-sm"
@@ -220,6 +271,7 @@ export function AddCertificationModal({ profileId }: Props) {
           const formData = new FormData(e.currentTarget);
           startTransition(async () => {
             await addCertification(formData);
+              setOpen(false);
           });
         }}
       >
@@ -237,7 +289,8 @@ export function AddCertificationModal({ profileId }: Props) {
           </button>
         </div>
       </form>
-    </Modal>
+      </Modal>
+    </>
   );
 }
 

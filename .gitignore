@@ -44,5 +44,5 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# local resume template (keep out of git)
-scripts/seed-profile.js
+# ignore scripts utilities 
+/scripts/

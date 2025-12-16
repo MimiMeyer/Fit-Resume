@@ -3,24 +3,24 @@ const sections = [
     title: "About Me",
     items: [
       "Single source of truth for profile, skills, projects, highlights",
-      "Edit and version details the agent can reuse",
-      "Fast add/edit forms for experience, education, and skills",
+      "Modal-based add/edit for experience, education, certifications, skills",
+      "Keep contact, title, summary, and links ready for generation",
     ],
   },
   {
     title: "Create Resume",
     items: [
-      "Paste a job description and extract role, level, stack, must-haves",
-      "Map job description  signals to your profile and surface gaps",
-      "Generate tailored summary, bullets, skills, and optional cover note",
+      "Paste a job description; run agents to tailor summary/experience/projects/skills",
+      "Auto-pagination to A4; download PDF/Doc from in-memory output",
+      "AI output is not saved—export only when you’re ready",
     ],
   },
   {
     title: "Agentic Flow",
     items: [
-      "Job description  parsing → profile retrieval → content plan → formatted output",
-      "Regenerate sections independently and lock favorites",
-      "Download or copy sections into your fixed resume template",
+      "JD parsing → profile retrieval → AI agents for summary/bullets/projects/skills",
+      "Runs via /api/generate-resume (Anthropic); no DB writes from generation",
+      "CLI scaffold in scripts/agentic-cli.ts for local runs against Prisma",
     ],
   },
 ];
@@ -30,7 +30,7 @@ export default function Home() {
     <div className="space-y-10">
       <section className="flex flex-col gap-6 rounded-2xl bg-white p-8 shadow-sm">
         <p className="text-sm font-semibold uppercase tracking-[0.18em] text-zinc-600">
-          Career Companion
+          FitResume
         </p>
         <h1 className="text-3xl font-semibold leading-tight text-zinc-900 sm:text-4xl">
           Agentic copilot for tailoring resumes to any job you paste.
