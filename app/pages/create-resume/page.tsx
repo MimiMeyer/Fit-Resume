@@ -1,8 +1,8 @@
 import { getProfile } from "@/app/actions/profile";
-import { ResumeComposer } from "@/components/ResumeComposer";
+import { CreateResumeView } from "./view";
 
 export default async function CreateResumePage() {
   const profile = await getProfile();
 
-  return <ResumeComposer profile={profile} />;
+  return <CreateResumeView profile={profile} />;
 }

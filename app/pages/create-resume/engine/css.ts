@@ -1,13 +1,9 @@
+import type { ResumePalette } from "../types";
+
 type BuildStylesArgs = {
   pageWidth: number;
   pageHeight: number;
-  palette: {
-    accent: string;
-    accentLight: string;
-    accentSoft: string;
-    accentBorder: string;
-    accentText: string;
-  };
+  palette: ResumePalette;
 };
 
 export function buildResumeStyles({ pageWidth, pageHeight, palette }: BuildStylesArgs) {

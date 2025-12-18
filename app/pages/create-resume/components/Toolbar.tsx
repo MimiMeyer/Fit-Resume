@@ -10,7 +10,7 @@ type ToolbarProps = {
   onDownloadPdf: () => void;
   pdfGenerating: boolean;
   pdfError: string | null;
-  onShowJd: () => void;
+  onShowJd?: () => void;
 };
 
 const accentOptions = [

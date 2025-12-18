@@ -1,17 +1,24 @@
-type SectionId = "experience" | "skills" | "education" | "projects" | "certifications";
+import type { Certification } from "@/app/types/certification";
+import type {
+  ResumeEducationForView,
+  ResumeExperienceForView,
+  ResumeLayoutMode,
+  ResumeProjectForView,
+  ResumeSectionId,
+  ResumeSkillGroup,
+} from "../types";
 
-type SectionHtmlMap = Record<SectionId, () => string>;
+type SectionHtmlMap = Record<ResumeSectionId, () => string>;
 
 export function buildSectionHtml(args: {
-  experiencesForView: { role: string; company: string; location: string; period: string; bullets: string[] }[];
-  skillGroups: { category: string; items: string[] }[];
-  educationForView: { degree: string; school: string; period: string }[];
-  projectsForView: { name: string; detail: string; link: string }[];
-  certs: any[];
-  linkify: (value: string) => string;
-  layoutMode?: "single" | "two";
+  experiencesForView: ResumeExperienceForView[];
+  skillGroups: ResumeSkillGroup[];
+  educationForView: ResumeEducationForView[];
+  projectsForView: ResumeProjectForView[];
+  certs: Certification[];
+  layoutMode?: ResumeLayoutMode;
 }) {
-  const { experiencesForView, skillGroups, educationForView, projectsForView, certs, linkify, layoutMode = "single" } = args;
+  const { experiencesForView, skillGroups, educationForView, projectsForView, certs, layoutMode = "single" } = args;
 
   const map: SectionHtmlMap = {
     experience: () => `
@@ -114,8 +121,8 @@ export function buildSectionHtml(args: {
           <div class="resume-card">
             <ul class="resume-cert-list">
               ${certs
-                ?.map((c: any) => {
-                  if (!c?.name) return "";
+                .map((c) => {
+                  if (!c.name) return "";
                   const issuer = c.issuer ? ` - ${c.issuer}` : "";
                   const link = c.credentialUrl
                     ? ` <a class="resume-link resume-cert-link" href="${c.credentialUrl}" target="_blank" rel="noreferrer">(link)</a>`
@@ -142,10 +149,10 @@ export function buildPagesHtml({
   contactParts,
   paginatedGap = true,
 }: {
-  paginatedSections: SectionId[][];
+  paginatedSections: ResumeSectionId[][];
   sectionHtml: SectionHtmlMap;
   showPageNumbers: boolean;
-  layoutMode: "single" | "two";
+  layoutMode: ResumeLayoutMode;
   profile: { fullName: string; title?: string | null; headline?: string | null; summary?: string | null };
   contactParts: string[];
   paginatedGap?: boolean;

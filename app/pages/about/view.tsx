@@ -1,42 +1,27 @@
 ﻿"use client";
 
 import { useAbout } from "./useAbout";
-import type { Profile } from "../../types/profile";
-import { PenIcon } from "../../icons/pen";
-import { TrashIcon } from "../../icons/trash";
+import type { Profile } from "./types";
 import { styles } from "./style-constants";
+import { EditProfileModal } from "./components/EditProfileModal";
+import { ProfileHeader } from "./components/ProfileHeader";
 import { Modal } from "@/components/Modal";
 import {
-  AddCertificationModal,
-  AddEducationModal,
-  AddExperienceModal,
-  AddProjectModal,
-  AddSkillModal,
-  dangerButton,
-} from "@/components/AboutAddModals";
-import {
-  deleteExperience,
-  deleteProject,
-  deleteEducation,
-  deleteCertification,
-  deleteSkill,
-  updateProfileDetails,
   updateExperience,
   updateProject,
   updateEducation,
   updateCertification,
   updateSkill,
 } from "@/app/actions/profile";
+import { ExperienceSection } from "./components/ExperienceSection";
+import { EducationSection } from "./components/EducationSection";
+import { CertificationsSection } from "./components/CertificationsSection";
+import { ProjectsSection } from "./components/ProjectsSection";
+import { SkillsSection } from "./components/SkillsSection";
 
 type Props = {
   profile: Profile;
 };
-
-function skillChipClass(isDragging: boolean) {
-  return isDragging
-    ? `${styles.skillChipBase} ${styles.skillChipDragging}`
-    : styles.skillChipBase;
-}
 
 export function AboutLayout({ profile }: Props) {
   const {
@@ -82,590 +67,63 @@ export function AboutLayout({ profile }: Props) {
   } = useAbout(profile);
 
   return (
-<div className={styles.pageRoot}>
-      <section className={styles.aboutCard}>
-        <div className={styles.headerRow}>
-          <header className={styles.headerStack}>
-            <p className={styles.eyebrow}>
-              About Me
-            </p>
-            <h1 className={styles.pageTitle}>
-              {profile.fullName}
-            </h1>
-            <p className={styles.bodyText}>
-              {profile.title ?? profile.headline ?? "Role not set"}
-            </p>
-            <div className={styles.pillRow}>
-              {profile.location && (
-                <span className={styles.pill}>
-                  {profile.location}
-                </span>
-              )}
-              {profile.email && (
-                <span className={styles.pill}>
-                  {profile.email}
-                </span>
-              )}
-              {profile.phone && (
-                <span className={styles.pill}>
-                  {profile.phone}
-                </span>
-              )}
-              {profile.linkedinUrl && (
-                <a
-                  className={styles.linkPill}
-                  href={profile.linkedinUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  LinkedIn
-                </a>
-              )}
-              {profile.githubUrl && (
-                <a
-                  className={styles.linkPill}
-                  href={profile.githubUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  GitHub
-                </a>
-              )}
-            </div>
-            {profile.summary && (
-              <p className={styles.bodyText}>{profile.summary}</p>
-            )}
-          </header>
-          <button
-            onClick={() => setEditOpen(true)}
-            className={styles.iconOnlyWithMargin}
-            aria-label="Edit profile"
-          >
-            <PenIcon className={styles.iconSm} />
-          </button>
-        </div>
-      </section>
-
-      <Modal
-        triggerLabel=""
-        title="Edit Profile"
+    <div className={styles.pageRoot}>
+      <ProfileHeader profile={profile} onEdit={() => setEditOpen(true)} />
+      <EditProfileModal
+        profile={profile}
+        isPending={isPending}
         open={editOpen}
         onClose={() => setEditOpen(false)}
-      >
-        <form
-          action={updateProfileDetails}
-          className={styles.formContainer}
-          onSubmit={(e) => {
-            e.preventDefault();
-            const formData = new FormData(e.currentTarget);
-            startTransition(async () => {
-              await updateProfileDetails(formData);
-              setEditOpen(false);
-            });
-          }}
-        >
-          <label className={styles.formField}>
-            <span className={styles.labelText}>Full name</span>
-            <input
-              name="fullName"
-              defaultValue={profile.fullName}
-              className={styles.input}
-              required
-            />
-          </label>
-          <label className={styles.formField}>
-            <span className={styles.labelText}>Title</span>
-            <input
-              name="title"
-              defaultValue={profile.title ?? ""}
-              className={styles.input}
-            />
-          </label>
-          <label className={styles.formField}>
-            <span className={styles.labelText}>Email</span>
-            <input
-              name="email"
-              defaultValue={profile.email ?? ""}
-              className={styles.input}
-            />
-          </label>
-          <label className={styles.formField}>
-            <span className={styles.labelText}>Phone</span>
-            <input
-              name="phone"
-              defaultValue={profile.phone ?? ""}
-              className={styles.input}
-            />
-          </label>
-          <label className={styles.formField}>
-            <span className={styles.labelText}>Summary</span>
-            <textarea
-              name="summary"
-              rows={4}
-              defaultValue={profile.summary ?? ""}
-              className={styles.input}
-            />
-          </label>
-          <label className={styles.formField}>
-            <span className={styles.labelText}>Location</span>
-            <input
-              name="location"
-              defaultValue={profile.location ?? ""}
-              className={styles.input}
-            />
-          </label>
-          <label className={styles.formField}>
-            <span className={styles.labelText}>Headline</span>
-            <input
-              name="headline"
-              defaultValue={profile.headline ?? ""}
-              className={styles.input}
-            />
-          </label>
-          <label className={styles.formField}>
-            <span className={styles.labelText}>LinkedIn</span>
-            <input
-              name="linkedinUrl"
-              defaultValue={profile.linkedinUrl ?? ""}
-              className={styles.input}
-            />
-          </label>
-          <label className={styles.formField}>
-            <span className={styles.labelText}>GitHub</span>
-            <input
-              name="githubUrl"
-              defaultValue={profile.githubUrl ?? ""}
-              className={styles.input}
-            />
-          </label>
-          <label className={styles.formField}>
-            <span className={styles.labelText}>Website</span>
-            <input
-              name="websiteUrl"
-              defaultValue={profile.websiteUrl ?? ""}
-              className={styles.input}
-            />
-          </label>
-          <div className={styles.actionsRowPadded}>
-            <button
-              type="submit"
-              disabled={isPending}
-              className={styles.primaryButton}
-            >
-              {isPending ? "Saving..." : "Save"}
-            </button>
-            <button type="button" data-close-modal="true" className={styles.stackSm2}>
-              Cancel
-            </button>
-          </div>
-        </form>
-      </Modal>
+        onAfterSave={() => setEditOpen(false)}
+        startTransition={startTransition}
+      />
 
-      {profile.experiences.length ? (
-        <section className={styles.sectionCardMd}>
-          <div className={styles.sectionHeaderSpaced}>
-            <div className={styles.stackSm}>
-              <h2 className={styles.sectionTitle}>Experience</h2>
-            </div>
-            <AddExperienceModal profileId={profile.id} />
-          </div>
-          <div className={styles.stackMd}>
-            {profile.experiences.map((exp) => (
-              <article
-                key={exp.id}
-                className={styles.itemCard}
-              >
-                <div className={styles.stackSmFlex}>
-                  <p className={styles.sectionTitle}>
-                    {exp.role}
-                  </p>
-                  <p className={styles.mutedText}>
-                    {exp.company}
-                    {exp.location ? ` â€” ${exp.location}` : ""}
-                    {exp.period ? ` â€¢ ${exp.period}` : ""}
-                  </p>
-                  {exp.impact && exp.impact.split("\n").filter(Boolean).length > 0 && (
-                    <ul className={styles.bulletList}>
-                      {exp.impact
-                        .split("\n")
-                        .filter(Boolean)
-                        .map((line: string, idx: number) => (
-                          <li key={idx} className={styles.bulletRow}>
-                            <span className={styles.bulletDot} />
-                            <span>{line}</span>
-                          </li>
-                        ))}
-                    </ul>
-                  )}
-                </div>
-                <div className={styles.actionsRow}>
-                  <button
-                    onClick={() => setEditingExp(exp)}
-                    className={styles.editButton}
-                    aria-label="Edit experience"
-                  >
-                    <PenIcon className={styles.iconSm} />
-                  </button>
-                  <form action={deleteExperience}>
-                    <input type="hidden" name="id" value={exp.id} />
-                    <button
-                      type="submit"
-                      className={dangerButton}
-                    >
-                      Delete
-                    </button>
-                  </form>
-                </div>
-              </article>
-            ))}
-          </div>
-        </section>
-      ) : null}
+      <ExperienceSection
+        profileId={profile.id}
+        experiences={profile.experiences}
+        onEdit={setEditingExp}
+      />
 
-      {profile.experiences.length ? null : (
-        <section className={styles.sectionCardMd}>
-          <div className={styles.sectionHeaderSpaced}>
-            <div className={styles.stackSm}>
-              <h2 className={styles.sectionTitle}>Experience</h2>
-              <p className={styles.mutedText}>Add your first role.</p>
-            </div>
-            <AddExperienceModal profileId={profile.id} />
-          </div>
-          <p className={styles.bodyText}>
-            No experience added yet. Use the form above to add one.
-          </p>
-        </section>
-      )}
+      <EducationSection
+        profileId={profile.id}
+        educations={profile.educations}
+        onEdit={setEditingEdu}
+      />
 
-      <section className={styles.sectionCard}>
-        <div className={styles.sectionHeader}>
-          <div className={styles.stackSm}>
-            <h2 className={styles.sectionTitle}>Education</h2>
-          </div>
-          <AddEducationModal profileId={profile.id} />
-        </div>
-        {profile.educations.length ? (
-          <div className={styles.sectionBody}>
-            {profile.educations.map((edu) => (
-              <div
-                key={edu.id}
-                className={styles.listRow}
-              >
-                <div className={styles.flex1}>
-                  <p className={styles.strongText}>
-                    {edu.institution}
-                  </p>
-                  <p className={styles.mutedText}>
-                    {edu.degree}
-                    {edu.field ? ` - ${edu.field}` : ""}
-                  </p>
-                  {(edu.startYear || edu.endYear) && (
-                    <p className={styles.mutedText}>
-                      {edu.startYear ?? "?"} - {edu.endYear ?? "?"}
-                    </p>
-                  )}
-                </div>
-                <div className={styles.actionsRow}>
-                  <button
-                    onClick={() => setEditingEdu(edu)}
-                    className={styles.editButton}
-                    aria-label="Edit education"
-                  >
-                    <PenIcon className={styles.iconSm} />
-                  </button>
-                  <form action={deleteEducation}>
-                    <input type="hidden" name="id" value={edu.id} />
-                    <button
-                      type="submit"
-                      className={dangerButton}
-                    >
-                      Delete
-                    </button>
-                  </form>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p className={styles.bodyText}>
-            No education added yet. Use the form above to add one.
-          </p>
-        )}
-      </section>
+      <CertificationsSection
+        profileId={profile.id}
+        certs={profile.certs}
+        onEdit={setEditingCert}
+      />
 
-      <section className={styles.sectionCard}>
-        <div className={styles.sectionHeader}>
-          <div className={styles.stackSm}>
-            <h2 className={styles.sectionTitle}>
-              Certifications
-            </h2>
-          </div>
-          <AddCertificationModal profileId={profile.id} />
-        </div>
-        {profile.certs.length ? (
-          <div className={styles.sectionBody}>
-            {profile.certs.map((cert) => (
-              <div
-                key={cert.id}
-                className={styles.listRow}
-              >
-                <div className={styles.flex1}>
-                  <p className={styles.strongText}>{cert.name}</p>
-                  <p className={styles.mutedText}>
-                    {cert.issuer ?? "Issuer not set"}
-                    {cert.issuedYear ? ` - ${cert.issuedYear}` : ""}
-                  </p>
-                </div>
-                <div className={styles.actionsRow}>
-                  <button
-                    onClick={() => setEditingCert(cert)}
-                    className={styles.editButton}
-                    aria-label="Edit certification"
-                  >
-                    <PenIcon className={styles.iconSm} />
-                  </button>
-                  <form action={deleteCertification}>
-                    <input type="hidden" name="id" value={cert.id} />
-                    <button
-                      type="submit"
-                      className={dangerButton}
-                    >
-                      Delete
-                    </button>
-                  </form>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p className={styles.bodyText}>
-            No certifications yet. Use the form above to add one.
-          </p>
-        )}
-      </section>
+      <ProjectsSection
+        profileId={profile.id}
+        projects={profile.projects}
+        onEdit={setEditingProject}
+      />
 
-      {profile.projects.length ? (
-        <section className={styles.sectionCardMd}>
-          <div className={styles.sectionHeaderSpaced}>
-            <div className={styles.stackSm}>
-              <h2 className={styles.sectionTitle}>Projects</h2>
-            </div>
-            <AddProjectModal profileId={profile.id} />
-          </div>
-          <div className={styles.stackMd}>
-            {profile.projects.map((project) => (
-              <article
-                key={project.id}
-                className={styles.itemCard}
-              >
-                <div className={styles.stackSmFlex}>
-                  <p className={styles.sectionTitle}>
-                    {project.title}
-                  </p>
-                  {project.description && (
-                    <p className={styles.bodyText}>
-                      {project.description}
-                    </p>
-                  )}
-                  {project.technologies?.length ? (
-                    <div className={styles.tagWrap}>
-                      {(project.technologies ?? []).map((tech: string) => (
-                        <span
-                          key={tech}
-                          className={styles.pillSm}
-                        >
-                          {tech}
-                        </span>
-                      ))}
-                    </div>
-                  ) : null}
-                  {project.link ? (
-                    <a
-                      href={project.link}
-                      className={styles.accentLink}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      View
-                    </a>
-                  ) : null}
-                </div>
-                <div className={styles.actionsRow}>
-                  <button
-                    onClick={() => setEditingProject(project)}
-                    className={styles.editButton}
-                    aria-label="Edit project"
-                  >
-                    <PenIcon className={styles.iconSm} />
-                  </button>
-                  <form action={deleteProject}>
-                    <input type="hidden" name="id" value={project.id} />
-                    <button
-                      type="submit"
-                      className={dangerButton}
-                    >
-                      Delete
-                    </button>
-                  </form>
-                </div>
-              </article>
-            ))}
-          </div>
-        </section>
-      ) : (
-        <section className={styles.sectionCardMd}>
-          <div className={styles.sectionHeaderSpaced}>
-            <div className={styles.stackSm}>
-              <h2 className={styles.sectionTitle}>Projects</h2>
-              <p className={styles.mutedText}>Add your first project.</p>
-            </div>
-            <AddProjectModal profileId={profile.id} />
-          </div>
-          <p className={styles.bodyText}>
-            No projects added yet. Use the form above to add one.
-          </p>
-        </section>
-      )}
-
-      <section className={styles.sectionCardMd}>
-        <div className={styles.sectionHeader}>
-          <h2 className={styles.sectionTitle}>Skills</h2>
-          <AddSkillModal profileId={profile.id} />
-        </div>
-
-        {skills.length ? (
-          <div className={styles.stackMdPadded}>
-            {sortedCategories.map((category) => (
-              <div
-                key={category}
-                className={styles.categoryCard}
-                onDragOver={(e) => {
-                  e.preventDefault();
-                }}
-                onDrop={() => handleSkillDrop(category)}
-              >
-                <div className={styles.skillsHeader}>
-                  <div className={styles.categoryHeaderLeft}>
-                    {(() => {
-                      const cat = categories.find((c) => c.name === category);
-                      const isEditing = cat && editingCategoryId === cat.id;
-                      return (
-                        <>
-                          {isEditing ? (
-                            <input
-                              className={styles.categoryEditInput}
-                              value={editingCategoryName}
-                              onChange={(e) => setEditingCategoryName(e.target.value)}
-                              onBlur={saveCategoryEdit}
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter") {
-                                  e.preventDefault();
-                                  saveCategoryEdit();
-                                } else if (e.key === "Escape") {
-                                  cancelCategoryEdit();
-                                }
-                              }}
-                              autoFocus
-                              disabled={categoryBusy}
-                            />
-                          ) : (
-                            <button
-                              onClick={() =>
-                                setOpenCategories((prev) => ({
-                                  ...prev,
-                                  [category]: !(prev[category] ?? true),
-                                }))
-                              }
-                              className={styles.categoryToggle}
-                            >
-                              <span>{category}</span>
-                              <span className={styles.countBadge}>
-                                {groupedSkills[category].length}
-                              </span>
-                            </button>
-                          )}
-                        </>
-                      );
-                    })()}
-                  </div>
-                  <div className={styles.skillsHeaderActions}>
-                    {(() => {
-                      const cat = categories.find((c) => c.name === category);
-                      if (!cat) return null;
-                      return (
-                        <>
-                          <AddSkillModal
-                            profileId={profile.id}
-                            presetCategory={category}
-                            triggerLabel="+skill"
-                            triggerClassName={styles.addButton}
-                          />
-                          <button
-                            type="button"
-                            onClick={() => startEditCategory(cat)}
-                            className={styles.editButton}
-                            aria-label={`Edit category ${cat.name}`}
-                            disabled={categoryBusy}
-                          >
-                            <PenIcon className={styles.iconSm} />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteCategory(cat)}
-                            className={styles.skillRemove}
-                            aria-label={`Delete category ${cat.name}`}
-                            disabled={categoryBusy}
-                          >
-                            <TrashIcon className={styles.iconSm} />
-                          </button>
-                        </>
-                      );
-                    })()}
-                  </div>
-                </div>
-                {(openCategories[category] ?? true) && (
-                  <div className={styles.chipWrap}>
-                    {groupedSkills[category].map((skill) => (
-                      <div
-                        key={skill.id}
-                        className={skillChipClass(draggingSkill?.id === skill.id)}
-                        draggable
-                        onDragStart={() => handleSkillDragStart(skill)}
-                        onDragEnd={handleSkillDragEnd}
-                      >
-                        <span className={styles.skillName}>{skill.name}</span>
-                        <div className={styles.hoverReveal}>
-                          <button
-                            onClick={() => setEditingSkill(skill)}
-                            className={styles.editButton}
-                            aria-label="Edit skill"
-                          >
-                            <PenIcon className={styles.iconSm} />
-                          </button>
-                          <form action={deleteSkill}>
-                            <input type="hidden" name="skillId" value={skill.id} />
-                            <button
-                              type="submit"
-                              className={styles.skillRemove}
-                              aria-label="Remove skill"
-                            >
-                              <TrashIcon className={styles.iconSm} />
-                            </button>
-                          </form>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p className={styles.bodyText}>
-            No skills added yet. Use the form above to add one.
-          </p>
-        )}
-      </section>
+      <SkillsSection
+        profileId={profile.id}
+        skills={skills}
+        categories={categories}
+        groupedSkills={groupedSkills}
+        sortedCategories={sortedCategories}
+        openCategories={openCategories}
+        setOpenCategories={setOpenCategories}
+        categoryBusy={categoryBusy}
+        editingCategoryId={editingCategoryId}
+        editingCategoryName={editingCategoryName}
+        setEditingCategoryName={setEditingCategoryName}
+        startEditCategory={startEditCategory}
+        saveCategoryEdit={saveCategoryEdit}
+        cancelCategoryEdit={cancelCategoryEdit}
+        handleDeleteCategory={handleDeleteCategory}
+        draggingSkill={draggingSkill}
+        handleSkillDragStart={handleSkillDragStart}
+        handleSkillDragEnd={handleSkillDragEnd}
+        handleSkillDrop={handleSkillDrop}
+        onEditSkill={setEditingSkill}
+      />
 
       {/* Edit Modals */}
       <Modal triggerLabel="" title="Edit Experience" open={!!editingExp} onClose={() => setEditingExp(null)}>

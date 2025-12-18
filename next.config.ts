@@ -11,6 +11,10 @@ const nextConfig: NextConfig = {
         source: "/about",
         destination: "/pages/about",
       },
+      {
+        source: "/create-resume",
+        destination: "/pages/create-resume",
+      },
     ];
   },
 };

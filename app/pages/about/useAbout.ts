@@ -10,15 +10,16 @@ import {
 } from "react";
 import { useRouter } from "next/navigation";
 import { updateSkill } from "@/app/actions/profile";
-import { styles } from "./style-constants";
 
-import type { Category } from "../../types/category";
-import type { Certification } from "../../types/certification";
-import type { Education } from "../../types/education";
-import type { Experience } from "../../types/experience";
-import type { Profile } from "../../types/profile";
-import type { Project } from "../../types/project";
-import type { Skill } from "../../types/skill";
+import type {
+  Category,
+  Certification,
+  Education,
+  Experience,
+  Profile,
+  Project,
+  Skill,
+} from "./types";
 
 export type AboutLogic = {
   isPending: boolean;
