@@ -1,0 +1,16 @@
+export const styles = {
+  pageRoot: "space-y-10",
+  heroCard: "flex flex-col gap-6 rounded-2xl bg-white p-8 shadow-sm",
+  heroEyebrow: "text-sm font-semibold uppercase tracking-[0.18em] text-zinc-600",
+  heroTitle: "text-3xl font-semibold leading-tight text-zinc-900 sm:text-4xl",
+  heroBody: "max-w-3xl text-lg text-zinc-700",
+  pillRow: "flex flex-wrap gap-2 text-sm text-zinc-800",
+  pill: "rounded-full border border-zinc-200 px-4 py-2 font-semibold",
+  cardsGrid: "grid gap-6 md:grid-cols-3",
+  card: "flex flex-col gap-3 rounded-2xl bg-white p-6 shadow-sm",
+  cardTitle: "text-lg font-semibold text-zinc-900",
+  cardList: "space-y-2 text-sm text-zinc-700",
+  bulletRow: "flex items-start gap-2 leading-relaxed",
+  bulletDot: "mt-1 inline-flex h-2 w-2 rounded-full bg-[var(--accent)]",
+} as const;
+
