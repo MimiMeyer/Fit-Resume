@@ -3,7 +3,7 @@
 import { PenIcon } from "@/app/icons/pen";
 import { styles } from "../style-constants";
 import type { Certification } from "../types";
-import { AddCertificationModal, dangerButton } from "@/components/AboutAddModals";
+import { AddCertificationModal, dangerButton } from "../modals/AboutAddModals";
 import { deleteCertification } from "@/app/actions/profile";
 
 type Props = {

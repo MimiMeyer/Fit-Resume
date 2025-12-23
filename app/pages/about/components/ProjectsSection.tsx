@@ -3,7 +3,7 @@
 import { PenIcon } from "@/app/icons/pen";
 import { styles } from "../style-constants";
 import type { Project } from "../types";
-import { AddProjectModal, dangerButton } from "@/components/AboutAddModals";
+import { AddProjectModal, dangerButton } from "../modals/AboutAddModals";
 import { deleteProject } from "@/app/actions/profile";
 
 type Props = {

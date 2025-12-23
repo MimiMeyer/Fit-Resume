@@ -3,7 +3,7 @@
 import { PenIcon } from "@/app/icons/pen";
 import { styles } from "../style-constants";
 import type { Education } from "../types";
-import { AddEducationModal, dangerButton } from "@/components/AboutAddModals";
+import { AddEducationModal, dangerButton } from "../modals/AboutAddModals";
 import { deleteEducation } from "@/app/actions/profile";
 
 type Props = {

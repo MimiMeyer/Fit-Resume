@@ -3,7 +3,7 @@
 import { PenIcon } from "@/app/icons/pen";
 import { styles } from "../style-constants";
 import type { Experience } from "../types";
-import { AddExperienceModal, dangerButton } from "@/components/AboutAddModals";
+import { AddExperienceModal, dangerButton } from "../modals/AboutAddModals";
 import { deleteExperience } from "@/app/actions/profile";
 
 type Props = {

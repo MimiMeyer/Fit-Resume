@@ -5,7 +5,7 @@ import type { Profile } from "./types";
 import { styles } from "./style-constants";
 import { EditProfileModal } from "./components/EditProfileModal";
 import { ProfileHeader } from "./components/ProfileHeader";
-import { Modal } from "@/components/Modal";
+import { Modal } from "./modals/Modal";
 import {
   updateExperience,
   updateProject,

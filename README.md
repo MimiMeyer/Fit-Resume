@@ -26,7 +26,7 @@ FitResume is an AI-powered resume tailoring companion. Maintain an About Me sour
 - About Me page is DB-backed with modal-based CRUD for profile, experience, projects, education, certifications, and skills; actions revalidate on submit.
 - Skill add flow normalizes categories and handles unknown values; delete works via inline buttons.
 - Create Resume page calls `/api/generate-resume` to generate tailored summary/experience/projects/skills from your profile + pasted JD; output lives in state only (not saved) and supports PDF/Doc download with auto-pagination.
-- API: `POST /api/generate-resume` runs the agent pipeline; `GET /api/skills/categories` returns distinct skill categories from the DB.
+- API: `POST /api/generate-resume` runs the agent pipeline.
 - CLI scaffold: `scripts/agentic-cli.ts` to run the agentic flow locally against Prisma data.
 
 ## Getting Started

@@ -1,7 +1,7 @@
 "use client";
 
 import { updateProfileDetails } from "@/app/actions/profile";
-import { Modal } from "@/components/Modal";
+import { Modal } from "../modals/Modal";
 import type { Profile } from "../types";
 import { styles } from "../style-constants";
 

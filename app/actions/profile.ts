@@ -254,7 +254,7 @@ export async function addSkill(formData: FormData) {
 
   const category = await getOrCreateCategory(categoryName);
 
-  const skill = await prisma.skill.upsert({
+  await prisma.skill.upsert({
     where: { name },
     update: {
       categoryId: category?.id ?? null,

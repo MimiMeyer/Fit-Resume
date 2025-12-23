@@ -5,7 +5,7 @@ import { PenIcon } from "@/app/icons/pen";
 import { TrashIcon } from "@/app/icons/trash";
 import { styles } from "../style-constants";
 import type { Category, Skill } from "../types";
-import { AddSkillModal } from "@/components/AboutAddModals";
+import { AddSkillModal } from "../modals/AboutAddModals";
 import { deleteSkill } from "@/app/actions/profile";
 
 function skillChipClass(isDragging: boolean) {

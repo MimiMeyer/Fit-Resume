@@ -2,8 +2,9 @@
 
 import { useTransition, useState } from "react";
 import React from "react";
-import { Modal } from "@/components/Modal";
+import { Modal } from "./Modal";
 import { useRouter } from "next/navigation";
+import { getCategories } from "@/app/actions/categories";
 import {
   addCertification,
   addEducation,
@@ -321,13 +322,13 @@ export function AddSkillModal({
   // Load existing categories on mount
   const loadCategories = React.useCallback(async () => {
     try {
-      const response = await fetch("/api/categories", { cache: "no-store" });
-      if (response.ok) {
-        const data = await response.json();
-        const names = (data.categories || []).map((c: any) => c.name);
-        const merged = presetCategory && !names.includes(presetCategory) ? [...names, presetCategory] : names;
-        setExistingCategories(merged);
-      }
+      const categories = await getCategories();
+      const names = categories.map((c) => c.name);
+      const merged =
+        presetCategory && !names.includes(presetCategory)
+          ? [...names, presetCategory]
+          : names;
+      setExistingCategories(merged);
     } catch (e) {
       console.error("Failed to load categories:", e);
     }

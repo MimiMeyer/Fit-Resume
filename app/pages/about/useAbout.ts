@@ -10,6 +10,7 @@ import {
 } from "react";
 import { useRouter } from "next/navigation";
 import { updateSkill } from "@/app/actions/profile";
+import { deleteCategory, getCategories, updateCategoryName } from "@/app/actions/categories";
 
 import type {
   Category,
@@ -99,11 +100,8 @@ export function useAbout(profile: Profile): AboutLogic {
 
   const loadCategories = async () => {
     try {
-      const res = await fetch("/api/categories", { cache: "no-store" });
-      if (res.ok) {
-        const data = await res.json();
-        setCategories(data.categories || []);
-      }
+      const next = await getCategories();
+      setCategories(next);
     } catch (e) {
       console.error("Failed to load categories", e);
     }
@@ -143,30 +141,25 @@ export function useAbout(profile: Profile): AboutLogic {
     setCategoryBusy(true);
     try {
       const toRemove = cat.name.toUpperCase();
-      const res = await fetch("/api/categories", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: cat.id }),
-      });
-      if (res.ok) {
-        if (toRemove) {
-          setSkills((prev) =>
-            prev.filter(
-              (skill) =>
-                (skill.category?.name ?? "Uncategorized").toUpperCase() !== toRemove,
-            ),
-          );
-        }
-        setCategories((prev) => prev.filter((c) => c.id !== cat.id));
-        setOpenCategories((prev) => {
-          const next = { ...prev };
-          delete next[toRemove];
-          return next;
-        });
-        await loadCategories();
-        router.refresh();
-        window.dispatchEvent(new Event("categories-refresh"));
+      await deleteCategory(cat.id);
+
+      if (toRemove) {
+        setSkills((prev) =>
+          prev.filter(
+            (skill) =>
+              (skill.category?.name ?? "Uncategorized").toUpperCase() !== toRemove,
+          ),
+        );
       }
+      setCategories((prev) => prev.filter((c) => c.id !== cat.id));
+      setOpenCategories((prev) => {
+        const next = { ...prev };
+        delete next[toRemove];
+        return next;
+      });
+      await loadCategories();
+      router.refresh();
+      window.dispatchEvent(new Event("categories-refresh"));
     } catch (err) {
       console.error("Failed to delete category", err);
     } finally {
@@ -188,15 +181,9 @@ export function useAbout(profile: Profile): AboutLogic {
     }
     setCategoryBusy(true);
     try {
-      const res = await fetch("/api/categories", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: editingCategoryId, name: nextName }),
-      });
-      if (res.ok) {
-        await loadCategories();
-        router.refresh();
-      }
+      await updateCategoryName(editingCategoryId, nextName);
+      await loadCategories();
+      router.refresh();
     } catch (err) {
       console.error("Failed to edit category", err);
     } finally {
