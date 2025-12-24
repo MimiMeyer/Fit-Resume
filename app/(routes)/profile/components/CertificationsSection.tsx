@@ -27,11 +27,8 @@ function AddCertificationModal({ profileId }: { profileId: number }) {
       </button>
       <Modal triggerLabel="" open={open} onClose={() => setOpen(false)} title="Add certification">
         <form
-          action={addCertification}
           className={styles.formContainer}
-          onSubmit={(e) => {
-            e.preventDefault();
-            const formData = new FormData(e.currentTarget);
+          action={(formData) => {
             startTransition(async () => {
               await addCertification(formData);
               setOpen(false);

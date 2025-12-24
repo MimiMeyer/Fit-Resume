@@ -41,16 +41,10 @@ function EditProfileModal({
   return (
     <Modal triggerLabel="" title="Edit Profile" open={open} onClose={onClose}>
       <form
-        action={updateProfileDetails}
         className={styles.formContainer}
-        onSubmit={(e) => {
-          e.preventDefault();
-          const formData = new FormData(e.currentTarget);
+        action={(formData) => {
           startTransition(() => {
-            void (async () => {
-              await updateProfileDetails(formData);
-              onAfterSave();
-            })();
+            void updateProfileDetails(formData).then(onAfterSave);
           });
         }}
       >
@@ -242,7 +236,15 @@ export function AboutLayout({ profile }: Props) {
       {/* Edit Modals */}
       <Modal triggerLabel="" title="Edit Experience" open={!!editingExp} onClose={() => setEditingExp(null)}>
         {editingExp && (
-          <form action={updateExperience} className={styles.formContainer} onSubmit={(e) => { e.preventDefault(); const fd = new FormData(e.currentTarget); startTransition(async () => { await updateExperience(fd); setEditingExp(null); }); }}>
+          <form
+            className={styles.formContainer}
+            action={(fd) => {
+              startTransition(async () => {
+                await updateExperience(fd);
+                setEditingExp(null);
+              });
+            }}
+          >
             <input type="hidden" name="id" value={editingExp.id} />
             <label className={styles.formField}><span className={styles.labelText}>Role</span><input name="role" defaultValue={editingExp.role} className={styles.input} required /></label>
             <label className={styles.formField}><span className={styles.labelText}>Company</span><input name="company" defaultValue={editingExp.company} className={styles.input} required /></label>
@@ -256,7 +258,15 @@ export function AboutLayout({ profile }: Props) {
 
       <Modal triggerLabel="" title="Edit Project" open={!!editingProject} onClose={() => setEditingProject(null)}>
         {editingProject && (
-          <form action={updateProject} className={styles.formContainer} onSubmit={(e) => { e.preventDefault(); const fd = new FormData(e.currentTarget); startTransition(async () => { await updateProject(fd); setEditingProject(null); }); }}>
+          <form
+            className={styles.formContainer}
+            action={(fd) => {
+              startTransition(async () => {
+                await updateProject(fd);
+                setEditingProject(null);
+              });
+            }}
+          >
             <input type="hidden" name="id" value={editingProject.id} />
             <label className={styles.formField}><span className={styles.labelText}>Title</span><input name="title" defaultValue={editingProject.title} className={styles.input} required /></label>
             <label className={styles.formField}><span className={styles.labelText}>Description</span><textarea name="description" rows={3} defaultValue={editingProject.description ?? ""} className={styles.input} /></label>
@@ -269,7 +279,15 @@ export function AboutLayout({ profile }: Props) {
 
       <Modal triggerLabel="" title="Edit Education" open={!!editingEdu} onClose={() => setEditingEdu(null)}>
         {editingEdu && (
-          <form action={updateEducation} className={styles.formContainer} onSubmit={(e) => { e.preventDefault(); const fd = new FormData(e.currentTarget); startTransition(async () => { await updateEducation(fd); setEditingEdu(null); }); }}>
+          <form
+            className={styles.formContainer}
+            action={(fd) => {
+              startTransition(async () => {
+                await updateEducation(fd);
+                setEditingEdu(null);
+              });
+            }}
+          >
             <input type="hidden" name="id" value={editingEdu.id} />
             <label className={styles.formField}><span className={styles.labelText}>Institution</span><input name="institution" defaultValue={editingEdu.institution} className={styles.input} required /></label>
             <label className={styles.formField}><span className={styles.labelText}>Degree</span><input name="degree" defaultValue={editingEdu.degree ?? ""} className={styles.input} /></label>
@@ -283,7 +301,15 @@ export function AboutLayout({ profile }: Props) {
 
       <Modal triggerLabel="" title="Edit Certification" open={!!editingCert} onClose={() => setEditingCert(null)}>
         {editingCert && (
-          <form action={updateCertification} className={styles.formContainer} onSubmit={(e) => { e.preventDefault(); const fd = new FormData(e.currentTarget); startTransition(async () => { await updateCertification(fd); setEditingCert(null); }); }}>
+          <form
+            className={styles.formContainer}
+            action={(fd) => {
+              startTransition(async () => {
+                await updateCertification(fd);
+                setEditingCert(null);
+              });
+            }}
+          >
             <input type="hidden" name="id" value={editingCert.id} />
             <label className={styles.formField}><span className={styles.labelText}>Name</span><input name="name" defaultValue={editingCert.name} className={styles.input} required /></label>
             <label className={styles.formField}><span className={styles.labelText}>Issuer</span><input name="issuer" defaultValue={editingCert.issuer ?? ""} className={styles.input} /></label>
@@ -298,9 +324,7 @@ export function AboutLayout({ profile }: Props) {
         {editingSkill && (
           <form
             className={styles.formContainer}
-            onSubmit={(e) => {
-              e.preventDefault();
-              const fd = new FormData(e.currentTarget);
+            action={(fd) => {
               const categoryName =
                 editCategoryMode === "new"
                   ? editCategoryOther.trim()

@@ -20,7 +20,7 @@ function getAnthropicModel() {
 function buildModelInput(profile: AgentProfileInput) {
   const groupedSkills: Record<string, string[]> = {};
   for (const skill of profile.skills) {
-    const cat = (skill.category?.name || "Uncategorized").toUpperCase();
+    const cat = skill.category.name.toUpperCase();
     if (!groupedSkills[cat]) groupedSkills[cat] = [];
     groupedSkills[cat].push(skill.name);
   }

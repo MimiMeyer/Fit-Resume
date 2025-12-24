@@ -11,7 +11,7 @@ export async function addSkill(formData: FormData) {
   const profileId = Number(formData.get("profileId"));
   const name = (formData.get("name") as string | null)?.trim();
   const categoryName = (formData.get("category") as string | null)?.trim();
-  if (!profileId || !name) return;
+  if (!profileId || !name || !categoryName) return;
 
   await upsertSkillRepo({ profileId, name, categoryName });
   revalidatePath("/profile");
@@ -28,7 +28,7 @@ export async function updateSkill(formData: FormData) {
   const skillId = Number(formData.get("skillId"));
   const name = (formData.get("name") as string | null)?.trim();
   const categoryName = (formData.get("category") as string | null)?.trim();
-  if (!skillId || !name) return;
+  if (!skillId || !name || !categoryName) return;
 
   await updateSkillRepo(skillId, { name, categoryName });
   revalidatePath("/profile");

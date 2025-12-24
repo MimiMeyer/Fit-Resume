@@ -1,6 +1,6 @@
 export type AgentSkillInput = {
   name: string;
-  category?: { name?: string | null } | null;
+  category: { name: string };
 };
 
 export type AgentExperienceInput = {

@@ -94,12 +94,8 @@ function AddSkillModal({
         description="Add a skill and assign it to a category."
       >
         <form
-          action={addSkill}
           className={styles.formContainer}
-          onSubmit={(e) => {
-            e.preventDefault();
-            const fd = new FormData(e.currentTarget);
-
+          action={(fd) => {
             const categoryName = selectedCategory.trim();
             if (!categoryName) {
               alert("Please select or add a category");

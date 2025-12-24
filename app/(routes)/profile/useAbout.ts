@@ -86,7 +86,7 @@ export function useAbout(profile: Profile): AboutLogic {
   );
 
   const groupedSkills = skills.reduce<Record<string, Skill[]>>((acc, skill) => {
-    const category = skill.category?.name || "Uncategorized";
+    const category = skill.category.name;
     if (!acc[category]) {
       acc[category] = [];
     }
@@ -120,7 +120,7 @@ export function useAbout(profile: Profile): AboutLogic {
 
   useEffect(() => {
     if (editingSkill) {
-      const existing = editingSkill.category?.name ?? "";
+      const existing = editingSkill.category.name;
       setEditCategoryMode(existing ? "existing" : "new");
       setEditCategoryValue(existing);
       setEditCategoryOther("");
@@ -145,7 +145,7 @@ export function useAbout(profile: Profile): AboutLogic {
         setSkills((prev) =>
           prev.filter(
             (skill) =>
-              (skill.category?.name ?? "Uncategorized").toUpperCase() !== toRemove,
+              skill.category.name.toUpperCase() !== toRemove,
           ),
         );
       }
@@ -206,7 +206,7 @@ export function useAbout(profile: Profile): AboutLogic {
 
   const handleSkillDrop = (targetCategory: string) => {
     if (!draggingSkill) return;
-    const currentCategory = draggingSkill.category?.name || "Uncategorized";
+    const currentCategory = draggingSkill.category.name;
     if (currentCategory === targetCategory) {
       setDraggingSkill(null);
       return;

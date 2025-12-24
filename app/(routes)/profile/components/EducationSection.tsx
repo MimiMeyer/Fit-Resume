@@ -27,11 +27,8 @@ function AddEducationModal({ profileId }: { profileId: number }) {
       </button>
       <Modal triggerLabel="" open={open} onClose={() => setOpen(false)} title="Add education">
         <form
-          action={addEducation}
           className={styles.formContainer}
-          onSubmit={(e) => {
-            e.preventDefault();
-            const formData = new FormData(e.currentTarget);
+          action={(formData) => {
             startTransition(async () => {
               await addEducation(formData);
               setOpen(false);

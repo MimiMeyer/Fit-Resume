@@ -47,7 +47,7 @@ export type CertificationInput = { profileId: number } & Pick<
   "name" | "issuer" | "issuedYear" | "credentialUrl"
 >;
 
-export type SkillInput = { profileId: number; categoryName?: string | null } & Pick<
+export type SkillInput = { profileId: number; categoryName: string } & Pick<
   Skill,
   "name"
 >;
@@ -80,7 +80,7 @@ export async function getProfileWithRelations() {
     });
   }
 
-  return profile;
+  return profile as unknown as Profile;
 }
 
 

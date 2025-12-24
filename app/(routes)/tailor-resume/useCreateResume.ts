@@ -205,7 +205,7 @@ export function useCreateResume(
     if (generated?.skillsByCategory) return generated.skillsByCategory;
     const grouped: Record<string, string[]> = {};
     profile.skills.forEach((s) => {
-      const category = s.category?.name || "Skills";
+      const category = s.category.name;
       if (!grouped[category]) grouped[category] = [];
       if (s.name) grouped[category].push(s.name);
     });

@@ -33,11 +33,8 @@ function AddProjectModal({ profileId }: { profileId: number }) {
         description="Add a project title, quick description, and optional link."
       >
         <form
-          action={addProject}
           className={styles.formContainer}
-          onSubmit={(e) => {
-            e.preventDefault();
-            const formData = new FormData(e.currentTarget);
+          action={(formData) => {
             startTransition(async () => {
               await addProject(formData);
               setOpen(false);

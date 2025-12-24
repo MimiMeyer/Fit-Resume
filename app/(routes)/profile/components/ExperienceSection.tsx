@@ -33,11 +33,8 @@ function AddExperienceModal({ profileId }: { profileId: number }) {
         description="Share your role, company, and a quick highlight."
       >
         <form
-          action={addExperience}
           className={styles.formContainer}
-          onSubmit={(e) => {
-            e.preventDefault();
-            const formData = new FormData(e.currentTarget);
+          action={(formData) => {
             startTransition(async () => {
               await addExperience(formData);
               setOpen(false);
@@ -90,9 +87,7 @@ export function ExperienceSection({ profileId, experiences, onEdit }: Props) {
           </div>
           <AddExperienceModal profileId={profileId} />
         </div>
-        <p className={styles.bodyText}>
-          No experience added yet. Use the form above to add one.
-        </p>
+        <p className={styles.bodyText}>No experience added yet. Use the form above to add one.</p>
       </section>
     );
   }
@@ -130,11 +125,7 @@ export function ExperienceSection({ profileId, experiences, onEdit }: Props) {
               )}
             </div>
             <div className={styles.actionsRow}>
-              <button
-                onClick={() => onEdit(exp)}
-                className={styles.editButton}
-                aria-label="Edit experience"
-              >
+              <button onClick={() => onEdit(exp)} className={styles.editButton} aria-label="Edit experience">
                 <PenIcon className={styles.iconSm} />
               </button>
               <form action={deleteExperience}>
@@ -150,3 +141,4 @@ export function ExperienceSection({ profileId, experiences, onEdit }: Props) {
     </section>
   );
 }
+
