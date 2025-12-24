@@ -19,14 +19,14 @@ export async function addEducation(formData: FormData) {
   if (!profileId || !institution) return;
 
   await createEducation({ profileId, institution, degree, field, startYear, endYear, details });
-  revalidatePath("/about");
+  revalidatePath("/profile");
 }
 
 export async function deleteEducation(formData: FormData) {
   const id = Number(formData.get("id"));
   if (!id) return;
   await deleteEducationRepo(id);
-  revalidatePath("/about");
+  revalidatePath("/profile");
 }
 
 export async function updateEducation(formData: FormData) {
@@ -40,6 +40,5 @@ export async function updateEducation(formData: FormData) {
   if (!id || !institution) return;
 
   await updateEducationRepo(id, { institution, degree, field, startYear, endYear, details });
-  revalidatePath("/about");
+  revalidatePath("/profile");
 }
-

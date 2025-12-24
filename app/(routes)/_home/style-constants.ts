@@ -6,7 +6,7 @@ export const styles = {
   heroBody: "max-w-3xl text-lg text-zinc-700",
   pillRow: "flex flex-wrap gap-2 text-sm text-zinc-800",
   pill: "rounded-full border border-zinc-200 px-4 py-2 font-semibold",
-  cardsGrid: "grid gap-6 md:grid-cols-3",
+  cardsGrid: "flex flex-col gap-6",
   card: "flex flex-col gap-3 rounded-2xl bg-white p-6 shadow-sm",
   cardTitle: "text-lg font-semibold text-zinc-900",
   cardList: "space-y-2 text-sm text-zinc-700",

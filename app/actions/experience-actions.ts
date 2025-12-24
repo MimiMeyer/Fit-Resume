@@ -18,14 +18,14 @@ export async function addExperience(formData: FormData) {
   if (!profileId || !role || !company) return;
 
   await createExperience({ profileId, role, company, location, period, impact });
-  revalidatePath("/about");
+  revalidatePath("/profile");
 }
 
 export async function deleteExperience(formData: FormData) {
   const id = Number(formData.get("id"));
   if (!id) return;
   await deleteExperienceRepo(id);
-  revalidatePath("/about");
+  revalidatePath("/profile");
 }
 
 export async function updateExperience(formData: FormData) {
@@ -38,6 +38,5 @@ export async function updateExperience(formData: FormData) {
   if (!id || !role || !company) return;
 
   await updateExperienceRepo(id, { role, company, location, period, impact });
-  revalidatePath("/about");
+  revalidatePath("/profile");
 }
-

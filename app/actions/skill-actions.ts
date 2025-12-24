@@ -14,14 +14,14 @@ export async function addSkill(formData: FormData) {
   if (!profileId || !name) return;
 
   await upsertSkillRepo({ profileId, name, categoryName });
-  revalidatePath("/about");
+  revalidatePath("/profile");
 }
 
 export async function deleteSkill(formData: FormData) {
   const skillId = Number(formData.get("skillId"));
   if (!skillId) return;
   await deleteSkillRepo(skillId);
-  revalidatePath("/about");
+  revalidatePath("/profile");
 }
 
 export async function updateSkill(formData: FormData) {
@@ -31,6 +31,5 @@ export async function updateSkill(formData: FormData) {
   if (!skillId || !name) return;
 
   await updateSkillRepo(skillId, { name, categoryName });
-  revalidatePath("/about");
+  revalidatePath("/profile");
 }
-

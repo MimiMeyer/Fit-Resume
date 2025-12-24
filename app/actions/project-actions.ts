@@ -18,14 +18,14 @@ export async function addProject(formData: FormData) {
   if (!profileId || !title) return;
 
   await createProject({ profileId, title, description, link, technologies });
-  revalidatePath("/about");
+  revalidatePath("/profile");
 }
 
 export async function deleteProject(formData: FormData) {
   const id = Number(formData.get("id"));
   if (!id) return;
   await deleteProjectRepo(id);
-  revalidatePath("/about");
+  revalidatePath("/profile");
 }
 
 export async function updateProject(formData: FormData) {
@@ -38,6 +38,5 @@ export async function updateProject(formData: FormData) {
   if (!id || !title) return;
 
   await updateProjectRepo(id, { title, description, link, technologies });
-  revalidatePath("/about");
+  revalidatePath("/profile");
 }
-

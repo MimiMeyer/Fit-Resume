@@ -33,5 +33,5 @@ export async function updateProfileDetails(formData: FormData) {
     websiteUrl,
   });
 
-  revalidatePath("/about");
+  revalidatePath("/profile");
 }

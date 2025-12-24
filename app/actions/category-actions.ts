@@ -15,11 +15,10 @@ export async function getCategories(): Promise<CategoryWithCount[]> {
 
 export async function updateCategoryName(id: number, name: string) {
   await updateCategoryNameRepo(id, name);
-  revalidatePath("/about");
+  revalidatePath("/profile");
 }
 
 export async function deleteCategory(id: number) {
   await deleteCategoryRepo(id);
-  revalidatePath("/about");
+  revalidatePath("/profile");
 }
-

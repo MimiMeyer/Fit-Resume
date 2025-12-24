@@ -17,14 +17,14 @@ export async function addCertification(formData: FormData) {
   if (!profileId || !name) return;
 
   await createCertification({ profileId, name, issuer, issuedYear, credentialUrl });
-  revalidatePath("/about");
+  revalidatePath("/profile");
 }
 
 export async function deleteCertification(formData: FormData) {
   const id = Number(formData.get("id"));
   if (!id) return;
   await deleteCertificationRepo(id);
-  revalidatePath("/about");
+  revalidatePath("/profile");
 }
 
 export async function updateCertification(formData: FormData) {
@@ -36,6 +36,5 @@ export async function updateCertification(formData: FormData) {
   if (!id || !name) return;
 
   await updateCertificationRepo(id, { name, issuer, issuedYear, credentialUrl });
-  revalidatePath("/about");
+  revalidatePath("/profile");
 }
-
