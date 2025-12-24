@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import Image from "next/image";
 import { Geist } from "next/font/google";
 import "./globals.css";
+import appIcon from "./icon.png";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -9,16 +11,14 @@ const geistSans = Geist({
 });
 
 export const metadata: Metadata = {
-  title: "Career Companion",
-  description: "AI-powered job search assistant",
+  title: "FitResume",
+  description: "AI-powered resume tailoring companion",
 };
 
 const navLinks = [
   { href: "/", label: "Overview" },
-  { href: "/job-search", label: "Job Search" },
-  { href: "/saved-jobs", label: "Saved Jobs" },
-  { href: "/about", label: "About Me" },
-  { href: "/settings", label: "Settings" },
+  { href: "/profile", label: "Profile" },
+  { href: "/tailor-resume", label: "Tailor Resume" },
 ];
 
 export default function RootLayout({
@@ -37,12 +37,22 @@ export default function RootLayout({
         <div className="min-h-screen">
           <header className="border-b border-indigo-100 bg-white/80 backdrop-blur supports-[backdrop-filter]:bg-white/70 sticky top-0 z-40 shadow-[0_2px_12px_rgba(0,0,0,0.05)]">
             <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3">
-              <div className="flex items-center gap-2 text-lg font-semibold tracking-tight">
-                <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-teal-500 via-indigo-400 to-sky-400 text-sm text-white shadow-sm">
-                  CC
-                </span>
-                <span>Career Companion</span>
-              </div>
+              <Link
+                href="/"
+                aria-label="Go to overview"
+                className="flex items-center gap-2 text-lg font-semibold tracking-tight rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]"
+              >
+                <Image
+                  src={appIcon}
+                  alt=""
+                  aria-hidden
+                  width={36}
+                  height={36}
+                  priority
+                  className="h-9 w-9 rounded-lg object-contain shadow-sm ring-1 ring-black/5"
+                />
+                <span>FitResume</span>
+              </Link>
               <nav
                 className="flex items-center gap-4 text-sm font-medium text-zinc-700"
                 aria-label="Primary"
