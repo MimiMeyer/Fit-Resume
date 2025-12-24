@@ -11,7 +11,7 @@ export async function generateResume(jd: string) {
 
   const profile = await getProfileWithRelations();
   if (!profile) {
-    throw new Error("No profile found. Add details in About Me first.");
+    throw new Error("No profile found. Add details in Profile first.");
   }
 
   return runResumeAgents(profile, trimmed);

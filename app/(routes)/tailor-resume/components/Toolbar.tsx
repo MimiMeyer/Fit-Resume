@@ -101,7 +101,7 @@ export function Toolbar({
         <div className="flex items-center gap-2 rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1.5 text-[11px] font-semibold text-zinc-700">
           <button
             aria-label="Zoom out"
-            onClick={() => onZoomChange(zoomPercent - zoomStep * 100)}
+            onClick={() => onZoomChange(zoomPercent - zoomStep)}
             className="rounded-full px-2 py-1 transition hover:bg-white"
           >
             -
@@ -112,7 +112,7 @@ export function Toolbar({
           </div>
           <button
             aria-label="Zoom in"
-            onClick={() => onZoomChange(zoomPercent + zoomStep * 100)}
+            onClick={() => onZoomChange(zoomPercent + zoomStep)}
             className="rounded-full px-2 py-1 transition hover:bg-white"
           >
             +
@@ -123,7 +123,7 @@ export function Toolbar({
             type="range"
             min={10}
             max={300}
-            step={zoomStep * 100}
+            step={zoomStep}
             value={zoomPercent}
             onChange={(e) => onZoomChange(Number(e.target.value))}
             className="h-1 w-32 accent-[var(--accent)]"

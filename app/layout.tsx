@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import Image from "next/image";
 import { Geist } from "next/font/google";
 import "./globals.css";
+import appIcon from "./icon.png";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -40,9 +42,15 @@ export default function RootLayout({
                 aria-label="Go to overview"
                 className="flex items-center gap-2 text-lg font-semibold tracking-tight rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]"
               >
-                <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-sky-500 via-teal-400 to-indigo-400 text-sm font-semibold text-white shadow-sm">
-                  FR
-                </span>
+                <Image
+                  src={appIcon}
+                  alt=""
+                  aria-hidden
+                  width={36}
+                  height={36}
+                  priority
+                  className="h-9 w-9 rounded-lg object-contain shadow-sm ring-1 ring-black/5"
+                />
                 <span>FitResume</span>
               </Link>
               <nav
