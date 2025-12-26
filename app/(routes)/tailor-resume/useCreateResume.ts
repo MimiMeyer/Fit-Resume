@@ -35,6 +35,80 @@ const emptyProfileFallback = {
   summary: "",
 };
 
+type CachedResumeEdits = {
+  version: 1;
+  updatedAt: number;
+  topHtml?: string;
+  sections?: Partial<Record<ResumeSectionId, string>>;
+};
+
+const RESUME_EDITS_CACHE_KEY = "fitresume.tailorResumeEdits.v1";
+
+function safeParseCachedEdits(raw: string | null): CachedResumeEdits | null {
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as CachedResumeEdits;
+    if (parsed?.version !== 1) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function parseHtmlRoot(html: string) {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(`<div id="__root">${html}</div>`, "text/html");
+  return doc.getElementById("__root");
+}
+
+function extractEditsFromHtml(html: string): CachedResumeEdits | null {
+  const root = parseHtmlRoot(html);
+  if (!root) return null;
+
+  const top = root.querySelector(".resume-top") as HTMLElement | null;
+  const sections = Array.from(
+    root.querySelectorAll(".resume-section[data-section-id]"),
+  ) as HTMLElement[];
+
+  const next: CachedResumeEdits = { version: 1, updatedAt: Date.now() };
+  if (top) next.topHtml = top.outerHTML;
+
+  if (sections.length) {
+    next.sections = {};
+    for (const section of sections) {
+      const id = section.getAttribute("data-section-id") as ResumeSectionId | null;
+      if (!id) continue;
+      next.sections[id] = section.outerHTML;
+    }
+  }
+
+  return next;
+}
+
+function applyEditsToHtml(baseHtml: string, edits: CachedResumeEdits | null): string {
+  if (!edits) return baseHtml;
+  const root = parseHtmlRoot(baseHtml);
+  if (!root) return baseHtml;
+
+  if (edits.topHtml) {
+    const topTarget = root.querySelector(".resume-top");
+    const topSrcRoot = parseHtmlRoot(edits.topHtml);
+    const topNode = topSrcRoot?.firstElementChild;
+    if (topTarget && topNode) topTarget.replaceWith(topNode);
+  }
+
+  const sections = edits.sections || {};
+  for (const [id, sectionHtml] of Object.entries(sections) as Array<[ResumeSectionId, string]>) {
+    if (!sectionHtml) continue;
+    const target = root.querySelector(`.resume-section[data-section-id="${id}"]`);
+    const srcRoot = parseHtmlRoot(sectionHtml);
+    const srcNode = srcRoot?.firstElementChild;
+    if (target && srcNode) target.replaceWith(srcNode);
+  }
+
+  return root.innerHTML;
+}
+
 function linkifyContact(part: string) {
   const trimmed = part.trim();
   if (!trimmed) return "";
@@ -75,6 +149,7 @@ export function useCreateResume(
   const [generated, setGenerated] = useState<GeneratedResume | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generateError, setGenerateError] = useState<string | null>(null);
+  const [cachedEdits, setCachedEdits] = useState<CachedResumeEdits | null>(null);
 
   const [viewMode, setViewMode] = useState<"edit" | "preview">("edit");
   const [showJobDescription, setShowJobDescription] = useState(true);
@@ -90,6 +165,11 @@ export function useCreateResume(
 
   const resumeRef = useRef<HTMLDivElement>(null);
   const resumeWrapperRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const next = safeParseCachedEdits(sessionStorage.getItem(RESUME_EDITS_CACHE_KEY));
+    setCachedEdits(next);
+  }, []);
 
   const palette = useMemo(() => {
     const neutral = {
@@ -231,7 +311,7 @@ export function useCreateResume(
     layoutMode,
   ]);
 
-  const { resumeStyles, pagesHtml } = useMemo(() => {
+  const { resumeStyles, pagesHtml: basePagesHtml } = useMemo(() => {
     const sectionHtml = buildSectionHtml({
       experiencesForView,
       skillGroups,
@@ -283,6 +363,11 @@ export function useCreateResume(
     summaryForView,
   ]);
 
+  const pagesHtmlForView = useMemo(
+    () => applyEditsToHtml(basePagesHtml, cachedEdits),
+    [basePagesHtml, cachedEdits],
+  );
+
   const handleGenerate = async () => {
     if (!jd.trim()) return;
     setIsGenerating(true);
@@ -295,6 +380,8 @@ export function useCreateResume(
         projects: data.projects || [],
         skillsByCategory: data.skillsByCategory || {},
       });
+      setCachedEdits(null);
+      sessionStorage.removeItem(RESUME_EDITS_CACHE_KEY);
       setViewMode("preview");
       setShowJobDescription(false);
     } catch (err) {
@@ -335,7 +422,7 @@ export function useCreateResume(
 
     const raf = requestAnimationFrame(recalc);
     return () => cancelAnimationFrame(raf);
-  }, [layoutMode, pagesHtml, paginatedSections]);
+  }, [layoutMode, pagesHtmlForView, paginatedSections]);
 
   const pageStyle = useMemo(
     () =>
@@ -372,6 +459,14 @@ export function useCreateResume(
   const resetGenerated = () => {
     setGenerated(null);
     setGenerateError(null);
+    setCachedEdits(null);
+    sessionStorage.removeItem(RESUME_EDITS_CACHE_KEY);
+  };
+
+  const resetToProfile = () => {
+    resetGenerated();
+    setViewMode("edit");
+    setShowJobDescription(true);
   };
 
   const handleDownloadPdf = async () => {
@@ -414,7 +509,15 @@ export function useCreateResume(
     layoutMode,
     setLayoutMode,
     resumeStyles,
-    pagesHtml,
+    pagesHtml: pagesHtmlForView,
+    commitEditsHtml: (html: string) => {
+      const next = extractEditsFromHtml(html);
+      if (next) {
+        setCachedEdits(next);
+        sessionStorage.setItem(RESUME_EDITS_CACHE_KEY, JSON.stringify(next));
+      }
+    },
+    hasCachedEdits: !!cachedEdits,
     zoomStyle,
     pageStyle,
     paginatedSectionsCount: paginatedSections.length,
@@ -423,5 +526,6 @@ export function useCreateResume(
     handleGenerate,
     handleDownloadPdf,
     resetGenerated,
+    resetToProfile,
   } as const;
 }

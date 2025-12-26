@@ -38,6 +38,8 @@ export function CreateResumeView({
     setLayoutMode,
     resumeStyles,
     pagesHtml,
+    commitEditsHtml,
+    hasCachedEdits,
     zoomStyle,
     pageStyle,
     paginatedSectionsCount,
@@ -45,7 +47,7 @@ export function CreateResumeView({
     resumeWrapperRef,
     handleGenerate,
     handleDownloadPdf,
-    resetGenerated,
+    resetToProfile,
   } = useCreateResume(profile, { onGenerate });
 
   return (
@@ -65,9 +67,13 @@ export function CreateResumeView({
           ))}
         </div>
         {generated ? <span className={styles.statusBadge}>AI resume ready</span> : null}
-        {generated ? (
-          <button type="button" onClick={resetGenerated} className={styles.resetButton}>
-            Reset AI output
+        {generated || hasCachedEdits ? (
+          <button
+            type="button"
+            onClick={resetToProfile}
+            className={styles.resetButton}
+          >
+            Reset to Profile
           </button>
         ) : null}
       </div>
@@ -122,6 +128,8 @@ export function CreateResumeView({
             resumeRef={resumeRef}
             resumeWrapperRef={resumeWrapperRef}
             maxHeight={viewMode === "edit" ? "75vh" : "85vh"}
+            isEditable={viewMode === "edit"}
+            onCommitEdits={(html) => commitEditsHtml(html)}
           />
         </div>
       </div>
