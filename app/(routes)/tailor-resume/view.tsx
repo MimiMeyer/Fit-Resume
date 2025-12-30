@@ -34,6 +34,16 @@ export function CreateResumeView({
     pdfError,
     accentColor,
     setAccentColor,
+    accentOpacity,
+    setAccentOpacity,
+    fontSizes,
+    setFontSizes,
+    fontFamilies,
+    setFontFamilies,
+    borders,
+    setBorders,
+    spacing,
+    setSpacing,
     layoutMode,
     setLayoutMode,
     resumeStyles,
@@ -48,6 +58,7 @@ export function CreateResumeView({
     handleGenerate,
     handleDownloadPdf,
     resetToProfile,
+    defaultPdfFileName,
   } = useCreateResume(profile, { onGenerate });
 
   return (
@@ -105,10 +116,21 @@ export function CreateResumeView({
             setLayoutMode={setLayoutMode}
             accentColor={accentColor}
             setAccentColor={setAccentColor}
+            accentOpacity={accentOpacity}
+            setAccentOpacity={setAccentOpacity}
+            fontSizes={fontSizes}
+            setFontSizes={setFontSizes}
+            fontFamilies={fontFamilies}
+            setFontFamilies={setFontFamilies}
+            borders={borders}
+            setBorders={setBorders}
+            spacing={spacing}
+            setSpacing={setSpacing}
             zoomPercent={zoomPercent}
             zoomStep={ZOOM_STEP * 100}
             onZoomChange={(val) => setZoom(clampZoom(val / 100))}
             onDownloadPdf={handleDownloadPdf}
+            defaultPdfFileName={defaultPdfFileName}
             pdfGenerating={pdfGenerating}
             pdfError={pdfError}
             onShowJd={

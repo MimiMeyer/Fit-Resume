@@ -3,15 +3,27 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { buildResumeStyles } from "./engine/css";
 import { buildPagesHtml, buildSectionHtml } from "./engine/html";
-import { downloadResumePdf } from "./engine/pdf";
+import { buildDefaultResumePdfFileName, downloadResumePdf } from "./engine/pdf";
 import { measureSections, paginateByMeasurement } from "./engine/pagination";
+import {
+  DEFAULT_BORDERS,
+  DEFAULT_FONT_FAMILIES,
+  DEFAULT_FONT_SIZES,
+  DEFAULT_SPACING,
+} from "./types";
 import type {
+  ResumeBorders,
+  ResumeBorderTargetKey,
+  ResumePalette,
+  ResumeFontFamilies,
+  ResumeFontSizes,
   ResumeEducationForView,
   ResumeExperienceForView,
   ResumeLayoutMode,
   ResumeProjectForView,
   ResumeSectionId,
   ResumeSkillGroup,
+  ResumeSpacing,
 } from "./types";
 import type { GeneratedResume } from "@/types/resume-agent";
 import type { Profile } from "@/types/profile";
@@ -43,6 +55,11 @@ type CachedResumeEdits = {
 };
 
 const RESUME_EDITS_CACHE_KEY = "fitresume.tailorResumeEdits.v1";
+const RESUME_FONT_CACHE_KEY = "fitresume.tailorResumeFontSizes.v1";
+const RESUME_FONT_FAMILIES_CACHE_KEY = "fitresume.tailorResumeFontFamilies.v1";
+const RESUME_BORDERS_CACHE_KEY = "fitresume.tailorResumeBorders.v1";
+const RESUME_ACCENT_OPACITY_CACHE_KEY = "fitresume.tailorResumeAccentOpacity.v1";
+const RESUME_SPACING_CACHE_KEY = "fitresume.tailorResumeSpacing.v1";
 
 function safeParseCachedEdits(raw: string | null): CachedResumeEdits | null {
   if (!raw) return null;
@@ -50,6 +67,108 @@ function safeParseCachedEdits(raw: string | null): CachedResumeEdits | null {
     const parsed = JSON.parse(raw) as CachedResumeEdits;
     if (parsed?.version !== 1) return null;
     return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function safeParseAccentOpacity(raw: string | null): number | null {
+  if (!raw) return null;
+  const parsed = Number(raw);
+  if (!Number.isFinite(parsed)) return null;
+  if (parsed < 0 || parsed > 1) return null;
+  return parsed;
+}
+
+function safeParseFontSizes(raw: string | null): ResumeFontSizes | null {
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as Partial<ResumeFontSizes>;
+    const headingPx = Number(parsed.headingPx);
+    const subtitlePx = Number(parsed.subtitlePx);
+    const bodyPx = Number(parsed.bodyPx);
+    if (!Number.isFinite(headingPx) || !Number.isFinite(subtitlePx) || !Number.isFinite(bodyPx)) {
+      return null;
+    }
+    return { headingPx, subtitlePx, bodyPx };
+  } catch {
+    return null;
+  }
+}
+
+function safeParseSpacing(raw: string | null): ResumeSpacing | null {
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as Partial<ResumeSpacing>;
+    const sectionGapPx = Number(parsed.sectionGapPx);
+    const bulletGapPx = Number(parsed.bulletGapPx);
+    const pagePaddingPx = Number(parsed.pagePaddingPx);
+    if (
+      !Number.isFinite(sectionGapPx) ||
+      !Number.isFinite(bulletGapPx) ||
+      !Number.isFinite(pagePaddingPx)
+    ) {
+      return null;
+    }
+    return { sectionGapPx, bulletGapPx, pagePaddingPx };
+  } catch {
+    return null;
+  }
+}
+
+function safeParseFontFamilies(raw: string | null): ResumeFontFamilies | null {
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as Partial<ResumeFontFamilies>;
+    const title = typeof parsed.title === "string" ? parsed.title.trim() : "";
+    const heading = typeof parsed.heading === "string" ? parsed.heading.trim() : "";
+    const body = typeof parsed.body === "string" ? parsed.body.trim() : "";
+    if (!title || !heading || !body) return null;
+    return { title, heading, body };
+  } catch {
+    return null;
+  }
+}
+
+function safeParseBorders(raw: string | null): ResumeBorders | null {
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as Partial<
+      ResumeBorders & { scope?: "none" | "outer" | "inner" | "both" }
+    >;
+    const widthPx = Number(parsed.widthPx);
+    const style = parsed.style;
+    const radius = parsed.radius;
+    if (!Number.isFinite(widthPx) || widthPx < 0 || widthPx > 6) return null;
+    if (style !== "solid" && style !== "dashed" && style !== "dotted") return null;
+    if (radius !== "sharp" && radius !== "rounded") return null;
+
+    const targetsRaw = parsed.targets;
+    if (targetsRaw && typeof targetsRaw === "object") {
+      const maybe = targetsRaw as Partial<Record<ResumeBorderTargetKey, unknown>>;
+      const page = typeof maybe.page === "boolean" ? maybe.page : DEFAULT_BORDERS.targets.page;
+      const summary =
+        typeof maybe.summary === "boolean" ? maybe.summary : DEFAULT_BORDERS.targets.summary;
+      const section =
+        typeof maybe.section === "boolean" ? maybe.section : DEFAULT_BORDERS.targets.section;
+      const content =
+        typeof maybe.content === "boolean" ? maybe.content : DEFAULT_BORDERS.targets.content;
+      return { widthPx, style, radius, targets: { page, summary, section, content } };
+    }
+
+    const scope = parsed.scope;
+    if (scope !== "none" && scope !== "outer" && scope !== "inner" && scope !== "both") return null;
+    return {
+      widthPx,
+      style,
+      radius,
+      targets: {
+        page: DEFAULT_BORDERS.targets.page,
+        summary: scope === "outer" || scope === "both",
+        section: scope === "outer" || scope === "both",
+        content: scope === "inner" || scope === "both",
+      },
+    };
   } catch {
     return null;
   }
@@ -113,17 +232,37 @@ function linkifyContact(part: string) {
   const trimmed = part.trim();
   if (!trimmed) return "";
   const isEmail = trimmed.includes("@");
+  if (isEmail) return trimmed;
   const hasProtocol = /^https?:\/\//i.test(trimmed);
   const isUrlLike = trimmed.includes(".") || trimmed.includes("/");
-  const href = isEmail
-    ? `mailto:${trimmed}`
-    : hasProtocol
-      ? trimmed
-      : isUrlLike
-        ? `https://${trimmed.replace(/^\/+/, "")}`
-        : "";
+  const href = hasProtocol ? trimmed : isUrlLike ? `https://${trimmed.replace(/^\/+/, "")}` : "";
   if (!href) return trimmed;
   return `<a href="${href}" class="resume-link">${trimmed}</a>`;
+}
+
+function applyAlpha(hex: string, alpha: number) {
+  const norm = hex.trim();
+  if (alpha >= 1) return norm;
+  const normalized = norm.replace(/^#/, "");
+  if (!/^[0-9a-f]{3}([0-9a-f]{3})?$/i.test(normalized)) return norm;
+  const full = normalized.length === 3 ? normalized.split("").map((c) => c + c).join("") : normalized;
+  const num = parseInt(full, 16);
+  const r = (num >> 16) & 255;
+  const g = (num >> 8) & 255;
+  const b = num & 255;
+  const a = Math.max(0, Math.min(1, alpha));
+  return `rgba(${r}, ${g}, ${b}, ${a})`;
+}
+
+function applyOpacityToPalette(base: Omit<ResumePalette, "accentFill">, opacity: number): ResumePalette {
+  return {
+    accent: base.accent,
+    accentFill: applyAlpha(base.accent, opacity),
+    accentLight: applyAlpha(base.accentLight, opacity),
+    accentSoft: applyAlpha(base.accentSoft, opacity),
+    accentBorder: applyAlpha(base.accentBorder, opacity),
+    accentText: base.accentText,
+  };
 }
 
 function mixColor(hex: string, amt: number) {
@@ -150,6 +289,10 @@ export function useCreateResume(
   const [isGenerating, setIsGenerating] = useState(false);
   const [generateError, setGenerateError] = useState<string | null>(null);
   const [cachedEdits, setCachedEdits] = useState<CachedResumeEdits | null>(null);
+  const [fontSizes, setFontSizes] = useState<ResumeFontSizes>(DEFAULT_FONT_SIZES);
+  const [fontFamilies, setFontFamilies] = useState<ResumeFontFamilies>(DEFAULT_FONT_FAMILIES);
+  const [borders, setBorders] = useState<ResumeBorders>(DEFAULT_BORDERS);
+  const [spacing, setSpacing] = useState<ResumeSpacing>(DEFAULT_SPACING);
 
   const [viewMode, setViewMode] = useState<"edit" | "preview">("edit");
   const [showJobDescription, setShowJobDescription] = useState(true);
@@ -161,6 +304,7 @@ export function useCreateResume(
   const [pdfError, setPdfError] = useState<string | null>(null);
 
   const [accentColor, setAccentColor] = useState("#0c6d82");
+  const [accentOpacity, setAccentOpacity] = useState(1);
   const [layoutMode, setLayoutMode] = useState<ResumeLayoutMode>("two");
 
   const resumeRef = useRef<HTMLDivElement>(null);
@@ -169,11 +313,26 @@ export function useCreateResume(
   useEffect(() => {
     const next = safeParseCachedEdits(sessionStorage.getItem(RESUME_EDITS_CACHE_KEY));
     setCachedEdits(next);
+    const nextFonts = safeParseFontSizes(sessionStorage.getItem(RESUME_FONT_CACHE_KEY));
+    if (nextFonts) setFontSizes(nextFonts);
+    const nextFontFamilies = safeParseFontFamilies(
+      sessionStorage.getItem(RESUME_FONT_FAMILIES_CACHE_KEY),
+    );
+    if (nextFontFamilies) setFontFamilies(nextFontFamilies);
+    const nextBorders = safeParseBorders(sessionStorage.getItem(RESUME_BORDERS_CACHE_KEY));
+    if (nextBorders) setBorders(nextBorders);
+    const nextAccentOpacity = safeParseAccentOpacity(
+      sessionStorage.getItem(RESUME_ACCENT_OPACITY_CACHE_KEY),
+    );
+    if (nextAccentOpacity != null) setAccentOpacity(nextAccentOpacity);
+    const nextSpacing = safeParseSpacing(sessionStorage.getItem(RESUME_SPACING_CACHE_KEY));
+    if (nextSpacing) setSpacing(nextSpacing);
   }, []);
 
   const palette = useMemo(() => {
     const neutral = {
       accent: "#0b1b2b",
+      accentFill: "#0b1b2b",
       accentLight: "#e5e7eb",
       accentSoft: "#f9fafb",
       accentBorder: "#e5e7eb",
@@ -201,8 +360,8 @@ export function useCreateResume(
       accentText = "#0b1b2b";
     }
 
-    return { accent, accentLight, accentSoft, accentBorder, accentText };
-  }, [accentColor]);
+    return applyOpacityToPalette({ accent, accentLight, accentSoft, accentBorder, accentText }, accentOpacity);
+  }, [accentColor, accentOpacity]);
 
   const clampZoom = (value: number) => Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, value));
 
@@ -334,16 +493,19 @@ export function useCreateResume(
         headline: profile.headline,
         summary: summaryForView || emptyProfileFallback.summary,
       },
-      contactParts:
-        layoutMode === "single"
-          ? contactParts.map((part) => linkifyContact(part))
-          : contactParts,
+      contactParts: contactParts.map((part) => linkifyContact(part)),
     });
 
     const resumeStyles = buildResumeStyles({
       pageWidth: PAGE_WIDTH_PX,
       pageHeight: PAGE_HEIGHT_PX,
       palette,
+      fontSizes,
+      fontFamilies,
+      borders,
+      accentIsNone: accentColor.toLowerCase() === "#ffffff",
+      accentOpacity,
+      spacing,
     });
 
     return { resumeStyles, pagesHtml };
@@ -351,6 +513,8 @@ export function useCreateResume(
     contactParts,
     educationForView,
     experiencesForView,
+    fontFamilies,
+    borders,
     layoutMode,
     paginatedSections,
     palette,
@@ -361,6 +525,8 @@ export function useCreateResume(
     projectsForView,
     skillGroups,
     summaryForView,
+    fontSizes,
+    spacing,
   ]);
 
   const pagesHtmlForView = useMemo(
@@ -422,7 +588,7 @@ export function useCreateResume(
 
     const raf = requestAnimationFrame(recalc);
     return () => cancelAnimationFrame(raf);
-  }, [layoutMode, pagesHtmlForView, paginatedSections]);
+  }, [fontSizes, spacing, layoutMode, pagesHtmlForView, paginatedSections]);
 
   const pageStyle = useMemo(
     () =>
@@ -432,6 +598,7 @@ export function useCreateResume(
         "--page-width": `${PAGE_WIDTH_PX}px`,
         "--page-height": `${PAGE_HEIGHT_PX}px`,
         "--accent": palette.accent,
+        "--accent-fill": palette.accentFill,
         "--accent-light": palette.accentLight,
         "--accent-soft": palette.accentSoft,
         "--accent-border": palette.accentBorder,
@@ -467,9 +634,23 @@ export function useCreateResume(
     resetGenerated();
     setViewMode("edit");
     setShowJobDescription(true);
+    setFontSizes(DEFAULT_FONT_SIZES);
+    sessionStorage.removeItem(RESUME_FONT_CACHE_KEY);
+    setFontFamilies(DEFAULT_FONT_FAMILIES);
+    sessionStorage.removeItem(RESUME_FONT_FAMILIES_CACHE_KEY);
+    setBorders(DEFAULT_BORDERS);
+    sessionStorage.removeItem(RESUME_BORDERS_CACHE_KEY);
+    setAccentOpacity(1);
+    sessionStorage.removeItem(RESUME_ACCENT_OPACITY_CACHE_KEY);
+    setSpacing(DEFAULT_SPACING);
+    sessionStorage.removeItem(RESUME_SPACING_CACHE_KEY);
   };
 
-  const handleDownloadPdf = async () => {
+  const defaultPdfFileName = useMemo(() => {
+    return buildDefaultResumePdfFileName(profile.fullName);
+  }, [profile.fullName]);
+
+  const handleDownloadPdf = async (fileName?: string) => {
     setPdfError(null);
     setPdfGenerating(true);
 
@@ -478,6 +659,7 @@ export function useCreateResume(
         resumeDocEl: resumeRef.current,
         resumeWrapperEl: resumeWrapperRef.current,
         fullName: profile.fullName,
+        fileName,
         pageWidthPx: PAGE_WIDTH_PX,
         pageHeightPx: PAGE_HEIGHT_PX,
       });
@@ -506,6 +688,11 @@ export function useCreateResume(
     pdfError,
     accentColor,
     setAccentColor,
+    accentOpacity,
+    setAccentOpacity: (next: number) => {
+      setAccentOpacity(next);
+      sessionStorage.setItem(RESUME_ACCENT_OPACITY_CACHE_KEY, String(next));
+    },
     layoutMode,
     setLayoutMode,
     resumeStyles,
@@ -527,5 +714,26 @@ export function useCreateResume(
     handleDownloadPdf,
     resetGenerated,
     resetToProfile,
+    defaultPdfFileName,
+    fontSizes,
+    setFontSizes: (next: ResumeFontSizes) => {
+      setFontSizes(next);
+      sessionStorage.setItem(RESUME_FONT_CACHE_KEY, JSON.stringify(next));
+    },
+    fontFamilies,
+    setFontFamilies: (next: ResumeFontFamilies) => {
+      setFontFamilies(next);
+      sessionStorage.setItem(RESUME_FONT_FAMILIES_CACHE_KEY, JSON.stringify(next));
+    },
+    borders,
+    setBorders: (next: ResumeBorders) => {
+      setBorders(next);
+      sessionStorage.setItem(RESUME_BORDERS_CACHE_KEY, JSON.stringify(next));
+    },
+    spacing,
+    setSpacing: (next: ResumeSpacing) => {
+      setSpacing(next);
+      sessionStorage.setItem(RESUME_SPACING_CACHE_KEY, JSON.stringify(next));
+    },
   } as const;
 }

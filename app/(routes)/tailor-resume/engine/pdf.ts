@@ -4,20 +4,35 @@ type DownloadResumePdfArgs = {
   resumeDocEl: HTMLElement | null;
   resumeWrapperEl: HTMLElement | null;
   fullName?: string | null;
+  fileName?: string | null;
   pageWidthPx: number;
   pageHeightPx: number;
 };
 
-function buildSafeBaseName(fullName?: string | null) {
+export function buildSafePdfFileBase(fullName?: string | null) {
   const baseName = (fullName || "Resume").trim();
   const safeBaseName = baseName.replace(/[\\/:*?"<>|]+/g, "").trim() || "Resume";
   return safeBaseName.replace(/\s+/g, "_");
+}
+
+export function sanitizePdfFileName(fileName: string) {
+  const trimmed = fileName.trim();
+  if (!trimmed) return null;
+  const safe = trimmed.replace(/[\\/:*?"<>|]+/g, "").trim();
+  if (!safe) return null;
+  const withExt = safe.toLowerCase().endsWith(".pdf") ? safe : `${safe}.pdf`;
+  return withExt;
+}
+
+export function buildDefaultResumePdfFileName(fullName?: string | null) {
+  return `${buildSafePdfFileBase(fullName)}_Resume.pdf`;
 }
 
 export async function downloadResumePdf({
   resumeDocEl,
   resumeWrapperEl,
   fullName,
+  fileName,
   pageWidthPx,
   pageHeightPx,
 }: DownloadResumePdfArgs) {
@@ -25,7 +40,8 @@ export async function downloadResumePdf({
     throw new Error("No resume content found to export.");
   }
 
-  const fileBase = buildSafeBaseName(fullName);
+  const defaultFileName = buildDefaultResumePdfFileName(fullName);
+  const resolvedFileName = fileName ? sanitizePdfFileName(fileName) : null;
 
   let resumeRoot: HTMLElement | null = null;
   let prevPageWidth: string | null = null;
@@ -116,7 +132,7 @@ export async function downloadResumePdf({
       }
     }
 
-    pdf.save(`${fileBase}_Resume.pdf`);
+    pdf.save(resolvedFileName ?? defaultFileName);
   } finally {
     if (resumeRoot) {
       resumeRoot.style.setProperty("--page-width", prevPageWidth ?? "");

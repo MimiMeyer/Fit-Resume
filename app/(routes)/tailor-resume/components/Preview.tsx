@@ -164,7 +164,13 @@ export function Preview({
     const doc = resumeRef.current;
     if (!doc) return;
 
-    const selection = window.getSelection();
+    const shouldPreserveSelection = (() => {
+      const active = document.activeElement;
+      if (!active) return false;
+      return doc.contains(active);
+    })();
+
+    const selection = shouldPreserveSelection ? window.getSelection() : null;
     const savedRange =
       selection && selection.rangeCount ? selection.getRangeAt(0).cloneRange() : null;
 
@@ -285,7 +291,10 @@ export function Preview({
 
       if (savedRange && selection) {
         try {
-          if (!savedRange.startContainer.isConnected || !savedRange.endContainer.isConnected) return;
+          if (!savedRange.startContainer.isConnected || !savedRange.endContainer.isConnected) {
+            // Skip restoring selection if nodes are no longer in the DOM.
+            return;
+          }
           selection.removeAllRanges();
           selection.addRange(savedRange);
         } catch {
@@ -333,6 +342,20 @@ export function Preview({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isEditable, pagesHtml]);
+
+  useEffect(() => {
+    if (!isEditable) return;
+    if (!resumeRef.current) return;
+
+    // Font-size / style changes affect layout but don't change pagesHtml while editing.
+    if (paginateRafRef.current) cancelAnimationFrame(paginateRafRef.current);
+    paginateRafRef.current = requestAnimationFrame(() => {
+      paginateRafRef.current = null;
+      repaginate();
+      latestHtmlRef.current = resumeRef.current?.innerHTML ?? "";
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isEditable, resumeStyles]);
 
   useEffect(() => {
     if (isEditable) return;
