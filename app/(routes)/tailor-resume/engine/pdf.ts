@@ -1,5 +1,17 @@
 "use client";
 
+const PDF_EXPORT_ATTR = "data-pdf-export-target";
+const PDF_EXPORT_HOST_LEFT_PX = -100000;
+const PDF_EXPORT_SCALE_MIN = 2;
+const PDF_EXPORT_SCALE_MAX = 3;
+const PDF_EXPORT_SCALE_DPR_MULTIPLIER = 2;
+
+function computePdfExportScale() {
+  const dpr = window.devicePixelRatio || 1;
+  const scaled = Math.ceil(dpr * PDF_EXPORT_SCALE_DPR_MULTIPLIER);
+  return Math.min(PDF_EXPORT_SCALE_MAX, Math.max(PDF_EXPORT_SCALE_MIN, scaled));
+}
+
 type DownloadResumePdfArgs = {
   resumeDocEl: HTMLElement | null;
   resumeWrapperEl: HTMLElement | null;
@@ -43,47 +55,73 @@ export async function downloadResumePdf({
   const defaultFileName = buildDefaultResumePdfFileName(fullName);
   const resolvedFileName = fileName ? sanitizePdfFileName(fileName) : null;
 
-  let resumeRoot: HTMLElement | null = null;
-  let prevPageWidth: string | null = null;
-  let prevPageHeight: string | null = null;
-  let prevWrapperTransform: string | null = null;
+  const exportToken = `pdf-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  let exportHost: HTMLDivElement | null = null;
+  let exportRoot: HTMLElement | null = null;
+  let exportDoc: HTMLElement | null = null;
 
   try {
-    resumeRoot = resumeDocEl.closest<HTMLElement>(".resume-root") ?? null;
-    if (resumeRoot) {
-      prevPageWidth = resumeRoot.style.getPropertyValue("--page-width");
-      prevPageHeight = resumeRoot.style.getPropertyValue("--page-height");
-      resumeRoot.style.setProperty("--page-width", `${pageWidthPx}px`);
-      resumeRoot.style.setProperty("--page-height", `${pageHeightPx}px`);
+    resumeDocEl.setAttribute(PDF_EXPORT_ATTR, exportToken);
+    resumeWrapperEl?.setAttribute(PDF_EXPORT_ATTR, exportToken);
+
+    exportHost = document.createElement("div");
+    exportHost.style.position = "fixed";
+    exportHost.style.left = `${PDF_EXPORT_HOST_LEFT_PX}px`;
+    exportHost.style.top = "0";
+    exportHost.style.width = `${pageWidthPx}px`;
+    exportHost.style.height = `${pageHeightPx}px`;
+    exportHost.style.background = "#ffffff";
+    exportHost.style.pointerEvents = "none";
+    exportHost.style.zIndex = "-1";
+
+    const resumeRoot = resumeDocEl.closest<HTMLElement>(".resume-root") ?? resumeDocEl;
+    exportRoot = resumeRoot.cloneNode(true) as HTMLElement;
+    exportRoot.style.setProperty("--page-width", `${pageWidthPx}px`);
+    exportRoot.style.setProperty("--page-height", `${pageHeightPx}px`);
+    exportRoot.classList.add("is-pdf-export");
+
+    const exportWrapper = exportRoot.querySelector<HTMLElement>(
+      `[${PDF_EXPORT_ATTR}="${exportToken}"]`,
+    );
+    if (exportWrapper) exportWrapper.style.transform = "none";
+
+    exportHost.appendChild(exportRoot);
+    document.body.appendChild(exportHost);
+
+    exportDoc = exportRoot.querySelector<HTMLElement>(`[${PDF_EXPORT_ATTR}="${exportToken}"]`);
+    if (!exportDoc) {
+      throw new Error("Unable to prepare resume export.");
     }
 
-    if (resumeWrapperEl) {
-      prevWrapperTransform = resumeWrapperEl.style.transform;
-      resumeWrapperEl.style.transform = "none";
-    }
-
-    document.body.style.setProperty("background", "#ffffff");
+    // Avoid layout jitter in the visible UI by rendering from the offscreen clone.
+    await document.fonts?.ready;
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
 
     const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
       import("html2canvas"),
       import("jspdf"),
     ]);
 
-    const pages = resumeDocEl.querySelectorAll<HTMLElement>(".resume-page");
+    const exportScale = computePdfExportScale();
+
+    const pages = exportDoc.querySelectorAll<HTMLElement>(".resume-page");
     if (!pages.length) {
       throw new Error("No resume pages found to export.");
     }
 
-    const pdf = new jsPDF({ unit: "px", format: "a4" });
-    const pdfWidth = pdf.internal.pageSize.getWidth();
-    const pdfHeight = pdf.internal.pageSize.getHeight();
+    const pdf = new jsPDF({
+      unit: "px",
+      format: [pageWidthPx, pageHeightPx],
+      hotfixes: ["px_scaling"],
+      compress: true,
+    });
     const pageList = Array.from(pages);
 
     for (let i = 0; i < pageList.length; i += 1) {
       const page = pageList[i];
       const pageRect = page.getBoundingClientRect();
       const canvas = await html2canvas(page, {
-        scale: 2,
+        scale: exportScale,
         useCORS: true,
         backgroundColor: "#ffffff",
         logging: false,
@@ -94,32 +132,26 @@ export async function downloadResumePdf({
       });
 
       const imgData = canvas.toDataURL("image/png");
-      const fitScale = pdfWidth / canvas.width;
-      const renderWidth = canvas.width * fitScale;
-      const renderHeight = canvas.height * fitScale;
-      const xOffset = Math.max((pdfWidth - renderWidth) / 2, 0);
-      const yOffset = Math.max((pdfHeight - renderHeight) / 2, 0);
-
       pdf.addImage(
         imgData,
         "PNG",
-        xOffset,
-        yOffset,
-        renderWidth,
-        renderHeight,
+        0,
+        0,
+        pageWidthPx,
+        pageHeightPx,
         undefined,
-        "FAST",
+        "SLOW",
       );
 
-      const linkScaleX = renderWidth / pageRect.width;
-      const linkScaleY = renderHeight / pageRect.height;
+      const linkScaleX = pageWidthPx / pageRect.width;
+      const linkScaleY = pageHeightPx / pageRect.height;
       const anchors = page.querySelectorAll<HTMLAnchorElement>("a[href]");
       anchors.forEach((anchor) => {
         const href = anchor.getAttribute("href");
         if (!href) return;
         const rect = anchor.getBoundingClientRect();
-        const x = (rect.left - pageRect.left) * linkScaleX + xOffset;
-        const y = (rect.top - pageRect.top) * linkScaleY + yOffset;
+        const x = (rect.left - pageRect.left) * linkScaleX;
+        const y = (rect.top - pageRect.top) * linkScaleY;
         const w = rect.width * linkScaleX;
         const h = rect.height * linkScaleY;
         if (w > 0 && h > 0) {
@@ -134,15 +166,8 @@ export async function downloadResumePdf({
 
     pdf.save(resolvedFileName ?? defaultFileName);
   } finally {
-    if (resumeRoot) {
-      resumeRoot.style.setProperty("--page-width", prevPageWidth ?? "");
-      resumeRoot.style.setProperty("--page-height", prevPageHeight ?? "");
-    }
-
-    if (resumeWrapperEl && prevWrapperTransform !== null) {
-      resumeWrapperEl.style.transform = prevWrapperTransform;
-    }
-
-    document.body.style.removeProperty("background");
+    resumeDocEl.removeAttribute(PDF_EXPORT_ATTR);
+    resumeWrapperEl?.removeAttribute(PDF_EXPORT_ATTR);
+    exportHost?.remove();
   }
 }

@@ -149,6 +149,34 @@ export function buildResumeStyles({
       .resume-contact-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 6px; font-size: var(--resume-text); }
       .resume-contact-list li { font-size: var(--resume-text); color: #0b1b2b; line-height: 1.4; }
       .resume-contact-list a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
+
+      .resume-root.is-pdf-export a {
+        text-decoration: none !important;
+        border-bottom: 1px solid currentColor;
+        padding-bottom: 6px;
+        display: inline-block;
+      }
+
+      .resume-root.is-pdf-export .resume-bullets,
+      .resume-root.is-pdf-export .resume-subbullets {
+        list-style: none;
+        padding-left: 0;
+      }
+
+
+
+      .resume-root.is-pdf-export .resume-subbullets > li {
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
+      }
+
+      .resume-root.is-pdf-export .resume-subbullets > li::before {
+        content: "•";
+        line-height: 1;
+        margin-top: 0.22em;
+        flex: 0 0 auto;
+      }
       @media print {
         .resume-root { background: white; padding: 0; }
         .resume-doc { gap: 0; }
