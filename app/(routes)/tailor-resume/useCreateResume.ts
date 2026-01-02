@@ -27,6 +27,15 @@ import type {
 } from "./types";
 import type { GeneratedResume } from "@/types/resume-agent";
 import type { Profile } from "@/types/profile";
+import type {
+  TailorCertificationDraft,
+  TailorEducationDraft,
+  TailorExperienceDraft,
+  TailorHeaderDraft,
+  TailorProjectDraft,
+  TailorResumeDraft,
+  TailorSkillDraft,
+} from "./draft";
 
 const PAGE_WIDTH_PX = 794; // A4 width at 96 DPI
 const PAGE_HEIGHT_PX = 1123; // A4 height at 96 DPI
@@ -47,24 +56,18 @@ const emptyProfileFallback = {
   summary: "",
 };
 
-type CachedResumeEdits = {
-  version: 1;
-  updatedAt: number;
-  topHtml?: string;
-  sections?: Partial<Record<ResumeSectionId, string>>;
-};
-
-const RESUME_EDITS_CACHE_KEY = "fitresume.tailorResumeEdits.v1";
+const TAILOR_RESUME_DRAFT_CACHE_KEY = "fitresume.tailorResumeDraft.v1";
+const LEGACY_RESUME_EDITS_CACHE_KEY = "fitresume.tailorResumeEdits.v1";
 const RESUME_FONT_CACHE_KEY = "fitresume.tailorResumeFontSizes.v1";
 const RESUME_FONT_FAMILIES_CACHE_KEY = "fitresume.tailorResumeFontFamilies.v1";
 const RESUME_BORDERS_CACHE_KEY = "fitresume.tailorResumeBorders.v1";
 const RESUME_ACCENT_OPACITY_CACHE_KEY = "fitresume.tailorResumeAccentOpacity.v1";
 const RESUME_SPACING_CACHE_KEY = "fitresume.tailorResumeSpacing.v1";
 
-function safeParseCachedEdits(raw: string | null): CachedResumeEdits | null {
+function safeParseDraft(raw: string | null): TailorResumeDraft | null {
   if (!raw) return null;
   try {
-    const parsed = JSON.parse(raw) as CachedResumeEdits;
+    const parsed = JSON.parse(raw) as TailorResumeDraft;
     if (parsed?.version !== 1) return null;
     return parsed;
   } catch {
@@ -174,58 +177,60 @@ function safeParseBorders(raw: string | null): ResumeBorders | null {
   }
 }
 
-function parseHtmlRoot(html: string) {
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(`<div id="__root">${html}</div>`, "text/html");
-  return doc.getElementById("__root");
+function joinLines(lines: string[]) {
+  return lines.map((l) => l.trim()).filter(Boolean).join("\n");
 }
 
-function extractEditsFromHtml(html: string): CachedResumeEdits | null {
-  const root = parseHtmlRoot(html);
-  if (!root) return null;
-
-  const top = root.querySelector(".resume-top") as HTMLElement | null;
-  const sections = Array.from(
-    root.querySelectorAll(".resume-section[data-section-id]"),
-  ) as HTMLElement[];
-
-  const next: CachedResumeEdits = { version: 1, updatedAt: Date.now() };
-  if (top) next.topHtml = top.outerHTML;
-
-  if (sections.length) {
-    next.sections = {};
-    for (const section of sections) {
-      const id = section.getAttribute("data-section-id") as ResumeSectionId | null;
-      if (!id) continue;
-      next.sections[id] = section.outerHTML;
-    }
-  }
-
-  return next;
+function normalizeTailorExperienceDraft(input: TailorExperienceDraft): TailorExperienceDraft {
+  return {
+    id: input.id,
+    role: input.role.trim(),
+    company: input.company.trim(),
+    location: input.location.trim(),
+    period: input.period.trim(),
+    impact: input.impact.trim(),
+  };
 }
 
-function applyEditsToHtml(baseHtml: string, edits: CachedResumeEdits | null): string {
-  if (!edits) return baseHtml;
-  const root = parseHtmlRoot(baseHtml);
-  if (!root) return baseHtml;
+function normalizeTailorProjectDraft(input: TailorProjectDraft): TailorProjectDraft {
+  const technologies = input.technologies.map((t) => t.trim()).filter(Boolean);
+  return {
+    id: input.id,
+    title: input.title.trim(),
+    description: input.description.trim(),
+    link: input.link.trim(),
+    technologies,
+  };
+}
 
-  if (edits.topHtml) {
-    const topTarget = root.querySelector(".resume-top");
-    const topSrcRoot = parseHtmlRoot(edits.topHtml);
-    const topNode = topSrcRoot?.firstElementChild;
-    if (topTarget && topNode) topTarget.replaceWith(topNode);
-  }
+function normalizeTailorSkillDraft(input: TailorSkillDraft): TailorSkillDraft {
+  return {
+    id: input.id,
+    name: input.name.trim(),
+    category: input.category.trim(),
+  };
+}
 
-  const sections = edits.sections || {};
-  for (const [id, sectionHtml] of Object.entries(sections) as Array<[ResumeSectionId, string]>) {
-    if (!sectionHtml) continue;
-    const target = root.querySelector(`.resume-section[data-section-id="${id}"]`);
-    const srcRoot = parseHtmlRoot(sectionHtml);
-    const srcNode = srcRoot?.firstElementChild;
-    if (target && srcNode) target.replaceWith(srcNode);
-  }
+function normalizeTailorEducationDraft(input: TailorEducationDraft): TailorEducationDraft {
+  return {
+    id: input.id,
+    institution: input.institution.trim(),
+    degree: input.degree.trim(),
+    field: input.field.trim(),
+    startYear: input.startYear,
+    endYear: input.endYear,
+    details: input.details.trim(),
+  };
+}
 
-  return root.innerHTML;
+function normalizeTailorCertificationDraft(input: TailorCertificationDraft): TailorCertificationDraft {
+  return {
+    id: input.id,
+    name: input.name.trim(),
+    issuer: input.issuer.trim(),
+    issuedYear: input.issuedYear,
+    credentialUrl: input.credentialUrl.trim(),
+  };
 }
 
 function linkifyContact(part: string) {
@@ -288,13 +293,12 @@ export function useCreateResume(
   const [generated, setGenerated] = useState<GeneratedResume | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generateError, setGenerateError] = useState<string | null>(null);
-  const [cachedEdits, setCachedEdits] = useState<CachedResumeEdits | null>(null);
+  const [draft, setDraftState] = useState<TailorResumeDraft | null>(null);
   const [fontSizes, setFontSizes] = useState<ResumeFontSizes>(DEFAULT_FONT_SIZES);
   const [fontFamilies, setFontFamilies] = useState<ResumeFontFamilies>(DEFAULT_FONT_FAMILIES);
   const [borders, setBorders] = useState<ResumeBorders>(DEFAULT_BORDERS);
   const [spacing, setSpacing] = useState<ResumeSpacing>(DEFAULT_SPACING);
 
-  const [viewMode, setViewMode] = useState<"edit" | "preview">("edit");
   const [showJobDescription, setShowJobDescription] = useState(true);
 
   const [zoom, setZoom] = useState(0.75);
@@ -311,8 +315,9 @@ export function useCreateResume(
   const resumeWrapperRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const next = safeParseCachedEdits(sessionStorage.getItem(RESUME_EDITS_CACHE_KEY));
-    setCachedEdits(next);
+    const next = safeParseDraft(sessionStorage.getItem(TAILOR_RESUME_DRAFT_CACHE_KEY));
+    setDraftState(next);
+    sessionStorage.removeItem(LEGACY_RESUME_EDITS_CACHE_KEY);
     const nextFonts = safeParseFontSizes(sessionStorage.getItem(RESUME_FONT_CACHE_KEY));
     if (nextFonts) setFontSizes(nextFonts);
     const nextFontFamilies = safeParseFontFamilies(
@@ -365,14 +370,6 @@ export function useCreateResume(
 
   const clampZoom = (value: number) => Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, value));
 
-  useEffect(() => {
-    if (viewMode === "edit") {
-      setZoom(0.75);
-    } else if (viewMode === "preview") {
-      setZoom(1);
-    }
-  }, [viewMode]);
-
   const contactParts = useMemo(
     () =>
       [profile.location, profile.phone, profile.email, profile.githubUrl, profile.linkedinUrl].filter(
@@ -387,74 +384,171 @@ export function useCreateResume(
     ],
   );
 
-  const summaryForView = generated?.summary ?? profile.summary ?? "";
+  const headerForEdit: TailorHeaderDraft = useMemo(() => {
+    const fromDraft = draft?.header ?? {};
 
-  const experiencesForView: ResumeExperienceForView[] = useMemo(() => {
+    const fullName =
+      (fromDraft.fullName !== undefined ? fromDraft.fullName : profile.fullName) ||
+      emptyProfileFallback.fullName;
+    const title = fromDraft.title !== undefined ? fromDraft.title : profile.title ?? "";
+    const headline = fromDraft.headline !== undefined ? fromDraft.headline : profile.headline ?? "";
+    const summary =
+      fromDraft.summary !== undefined ? fromDraft.summary : generated?.summary ?? profile.summary ?? "";
+
+    return {
+      fullName: fullName.trim(),
+      title: title.trim(),
+      headline: headline.trim(),
+      summary: summary,
+    };
+  }, [draft?.header, generated?.summary, profile.fullName, profile.headline, profile.summary, profile.title]);
+
+  const summaryForView = headerForEdit.summary;
+
+  const experiencesForEdit: TailorExperienceDraft[] = useMemo(() => {
+    if (draft?.experiences !== undefined) return draft.experiences;
+
     if (generated?.experiences?.length) {
       return generated.experiences.map((exp) => ({
+        id: undefined,
         role: exp.role,
         company: exp.company,
         location: exp.location || "",
         period: exp.period || "",
-        bullets: exp.bullets.slice(0, 4),
+        impact: joinLines(exp.bullets || []),
       }));
     }
-    return profile.experiences && profile.experiences.length
-      ? profile.experiences.map((exp) => ({
+
+    return (profile.experiences || []).map((exp) => ({
+      id: exp.id,
+      role: exp.role,
+      company: exp.company,
+      location: exp.location || "",
+      period: exp.period || "",
+      impact: exp.impact || "",
+    }));
+  }, [draft?.experiences, generated?.experiences, profile.experiences]);
+
+  const experiencesForView: ResumeExperienceForView[] = useMemo(
+    () =>
+      (experiencesForEdit || [])
+        .map((exp) => normalizeTailorExperienceDraft(exp))
+        .filter((exp) => exp.role && exp.company)
+        .map((exp) => ({
           role: exp.role,
           company: exp.company,
-          location: exp.location || "",
-          period: exp.period || "",
-          bullets: exp.impact ? exp.impact.split("\n").filter(Boolean).slice(0, 4) : [],
-        }))
-      : [];
-  }, [generated?.experiences, profile.experiences]);
+          location: exp.location,
+          period: exp.period,
+          bullets: exp.impact ? exp.impact.split("\n").map((l) => l.trim()).filter(Boolean).slice(0, 4) : [],
+        })),
+    [experiencesForEdit],
+  );
+
+  const educationsForEdit: TailorEducationDraft[] = useMemo(() => {
+    if (draft?.educations !== undefined) return draft.educations;
+    return (profile.educations || []).map((edu) => ({
+      id: edu.id,
+      institution: edu.institution,
+      degree: edu.degree || "",
+      field: edu.field || "",
+      startYear: edu.startYear ?? null,
+      endYear: edu.endYear ?? null,
+      details: edu.details || "",
+    }));
+  }, [draft?.educations, profile.educations]);
 
   const educationForView: ResumeEducationForView[] = useMemo(
     () =>
-      profile.educations && profile.educations.length
-        ? profile.educations.map((edu) => ({
-            degree: edu.degree || "",
-            school: edu.institution,
-            period:
-              edu.startYear && edu.endYear ? `${edu.startYear} - ${edu.endYear}` : "",
-          }))
-        : [],
-    [profile.educations],
+      (educationsForEdit || [])
+        .map((edu) => normalizeTailorEducationDraft(edu))
+        .filter((edu) => edu.institution)
+        .map((edu) => ({
+          degree: edu.degree || "",
+          school: edu.institution,
+          period: edu.startYear && edu.endYear ? `${edu.startYear} - ${edu.endYear}` : "",
+        })),
+    [educationsForEdit],
   );
 
-  const projectsForView: ResumeProjectForView[] = useMemo(() => {
+  const projectsForEdit: TailorProjectDraft[] = useMemo(() => {
+    if (draft?.projects !== undefined) return draft.projects;
+
     if (generated?.projects?.length) {
       return generated.projects.map((proj) => ({
-        name: proj.title,
-        detail: proj.description || "",
+        id: undefined,
+        title: proj.title,
+        description: proj.description || "",
         link: proj.link || "",
+        technologies: [],
       }));
     }
-    return profile.projects && profile.projects.length
-      ? profile.projects.slice(0, 2).map((proj) => ({
+
+    return (profile.projects || []).map((proj) => ({
+      id: proj.id,
+      title: proj.title,
+      description: proj.description || "",
+      link: proj.link || "",
+      technologies: proj.technologies || [],
+    }));
+  }, [draft?.projects, generated?.projects, profile.projects]);
+
+  const projectsForView: ResumeProjectForView[] = useMemo(
+    () =>
+      (projectsForEdit || [])
+        .map((proj) => normalizeTailorProjectDraft(proj))
+        .filter((proj) => proj.title)
+        .slice(0, 2)
+        .map((proj) => ({
           name: proj.title,
           detail: proj.description || "",
           link: proj.link || "",
-        }))
-      : [];
-  }, [generated?.projects, profile.projects]);
+        })),
+    [projectsForEdit],
+  );
+
+  const skillsForEdit: TailorSkillDraft[] = useMemo(() => {
+    if (draft?.skills !== undefined) return draft.skills;
+    if (generated?.skillsByCategory) {
+      return Object.entries(generated.skillsByCategory).flatMap(([category, items]) =>
+        items.map((name) => ({ id: undefined, name, category })),
+      );
+    }
+    return (profile.skills || []).map((s) => ({ id: s.id, name: s.name, category: s.category.name }));
+  }, [draft?.skills, generated?.skillsByCategory, profile.skills]);
 
   const groupedSkills = useMemo(() => {
-    if (generated?.skillsByCategory) return generated.skillsByCategory;
     const grouped: Record<string, string[]> = {};
-    profile.skills.forEach((s) => {
-      const category = s.category.name;
-      if (!grouped[category]) grouped[category] = [];
-      if (s.name) grouped[category].push(s.name);
-    });
+    (skillsForEdit || [])
+      .map((s) => normalizeTailorSkillDraft(s))
+      .filter((s) => s.name && s.category)
+      .forEach((s) => {
+        const category = s.category.toUpperCase();
+        if (!grouped[category]) grouped[category] = [];
+        grouped[category].push(s.name);
+      });
+
+    for (const cat of Object.keys(grouped)) {
+      grouped[cat] = Array.from(new Set(grouped[cat])).sort((a, b) => a.localeCompare(b));
+    }
+
     return grouped;
-  }, [generated?.skillsByCategory, profile.skills]);
+  }, [skillsForEdit]);
 
   const skillGroups: ResumeSkillGroup[] = useMemo(
     () => Object.entries(groupedSkills).map(([category, items]) => ({ category, items })),
     [groupedSkills],
   );
+
+  const certificationsForEdit: TailorCertificationDraft[] = useMemo(() => {
+    if (draft?.certifications !== undefined) return draft.certifications;
+    return (profile.certs || []).map((c) => ({
+      id: c.id,
+      name: c.name,
+      issuer: c.issuer || "",
+      issuedYear: c.issuedYear ?? null,
+      credentialUrl: c.credentialUrl || "",
+    }));
+  }, [draft?.certifications, profile.certs]);
 
   const [paginatedSections, setPaginatedSections] = useState<ResumeSectionId[][]>([
     SECTION_ORDER,
@@ -471,12 +565,23 @@ export function useCreateResume(
   ]);
 
   const { resumeStyles, pagesHtml: basePagesHtml } = useMemo(() => {
+    const certsForView = (certificationsForEdit || [])
+      .map((c) => normalizeTailorCertificationDraft(c))
+      .filter((c) => c.name)
+      .map((c, idx) => ({
+        id: c.id ?? -(idx + 1),
+        name: c.name,
+        issuer: c.issuer ? c.issuer : null,
+        issuedYear: c.issuedYear ?? null,
+        credentialUrl: c.credentialUrl ? c.credentialUrl : null,
+      }));
+
     const sectionHtml = buildSectionHtml({
       experiencesForView,
       skillGroups,
       educationForView,
       projectsForView,
-      certs: profile.certs || [],
+      certs: certsForView,
       layoutMode,
     });
 
@@ -488,9 +593,9 @@ export function useCreateResume(
       showPageNumbers,
       layoutMode,
       profile: {
-        fullName: profile.fullName || emptyProfileFallback.fullName,
-        title: profile.title || profile.headline || emptyProfileFallback.title,
-        headline: profile.headline,
+        fullName: headerForEdit.fullName || emptyProfileFallback.fullName,
+        title: headerForEdit.title || headerForEdit.headline || emptyProfileFallback.title,
+        headline: headerForEdit.headline,
         summary: summaryForView || emptyProfileFallback.summary,
       },
       contactParts: contactParts.map((part) => linkifyContact(part)),
@@ -510,6 +615,8 @@ export function useCreateResume(
 
     return { resumeStyles, pagesHtml };
   }, [
+    accentColor,
+    accentOpacity,
     contactParts,
     educationForView,
     experiencesForView,
@@ -518,21 +625,16 @@ export function useCreateResume(
     layoutMode,
     paginatedSections,
     palette,
-    profile.certs,
-    profile.fullName,
-    profile.headline,
-    profile.title,
+    certificationsForEdit,
+    headerForEdit.fullName,
+    headerForEdit.headline,
+    headerForEdit.title,
     projectsForView,
     skillGroups,
     summaryForView,
     fontSizes,
     spacing,
   ]);
-
-  const pagesHtmlForView = useMemo(
-    () => applyEditsToHtml(basePagesHtml, cachedEdits),
-    [basePagesHtml, cachedEdits],
-  );
 
   const handleGenerate = async () => {
     if (!jd.trim()) return;
@@ -546,9 +648,9 @@ export function useCreateResume(
         projects: data.projects || [],
         skillsByCategory: data.skillsByCategory || {},
       });
-      setCachedEdits(null);
-      sessionStorage.removeItem(RESUME_EDITS_CACHE_KEY);
-      setViewMode("preview");
+      setDraftState(null);
+      sessionStorage.removeItem(TAILOR_RESUME_DRAFT_CACHE_KEY);
+      sessionStorage.removeItem(LEGACY_RESUME_EDITS_CACHE_KEY);
       setShowJobDescription(false);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Unable to generate resume.";
@@ -588,7 +690,7 @@ export function useCreateResume(
 
     const raf = requestAnimationFrame(recalc);
     return () => cancelAnimationFrame(raf);
-  }, [fontSizes, spacing, layoutMode, pagesHtmlForView, paginatedSections]);
+  }, [fontSizes, spacing, layoutMode, basePagesHtml, paginatedSections]);
 
   const pageStyle = useMemo(
     () =>
@@ -606,6 +708,7 @@ export function useCreateResume(
       }) as CSSProperties,
     [
       palette.accent,
+      palette.accentFill,
       palette.accentBorder,
       palette.accentLight,
       palette.accentSoft,
@@ -626,13 +729,13 @@ export function useCreateResume(
   const resetGenerated = () => {
     setGenerated(null);
     setGenerateError(null);
-    setCachedEdits(null);
-    sessionStorage.removeItem(RESUME_EDITS_CACHE_KEY);
+    setDraftState(null);
+    sessionStorage.removeItem(TAILOR_RESUME_DRAFT_CACHE_KEY);
+    sessionStorage.removeItem(LEGACY_RESUME_EDITS_CACHE_KEY);
   };
 
   const resetToProfile = () => {
     resetGenerated();
-    setViewMode("edit");
     setShowJobDescription(true);
     setFontSizes(DEFAULT_FONT_SIZES);
     sessionStorage.removeItem(RESUME_FONT_CACHE_KEY);
@@ -647,8 +750,8 @@ export function useCreateResume(
   };
 
   const defaultPdfFileName = useMemo(() => {
-    return buildDefaultResumePdfFileName(profile.fullName);
-  }, [profile.fullName]);
+    return buildDefaultResumePdfFileName(headerForEdit.fullName);
+  }, [headerForEdit.fullName]);
 
   const handleDownloadPdf = async (fileName?: string) => {
     setPdfError(null);
@@ -658,7 +761,7 @@ export function useCreateResume(
       await downloadResumePdf({
         resumeDocEl: resumeRef.current,
         resumeWrapperEl: resumeWrapperRef.current,
-        fullName: profile.fullName,
+        fullName: headerForEdit.fullName,
         fileName,
         pageWidthPx: PAGE_WIDTH_PX,
         pageHeightPx: PAGE_HEIGHT_PX,
@@ -677,8 +780,6 @@ export function useCreateResume(
     generated,
     generateError,
     isGenerating,
-    viewMode,
-    setViewMode,
     showJobDescription,
     setShowJobDescription,
     zoomPercent,
@@ -696,15 +797,7 @@ export function useCreateResume(
     layoutMode,
     setLayoutMode,
     resumeStyles,
-    pagesHtml: pagesHtmlForView,
-    commitEditsHtml: (html: string) => {
-      const next = extractEditsFromHtml(html);
-      if (next) {
-        setCachedEdits(next);
-        sessionStorage.setItem(RESUME_EDITS_CACHE_KEY, JSON.stringify(next));
-      }
-    },
-    hasCachedEdits: !!cachedEdits,
+    pagesHtml: basePagesHtml,
     zoomStyle,
     pageStyle,
     paginatedSectionsCount: paginatedSections.length,
@@ -715,6 +808,21 @@ export function useCreateResume(
     resetGenerated,
     resetToProfile,
     defaultPdfFileName,
+    draft,
+    setDraft: (next: TailorResumeDraft | null) => {
+      setDraftState(next);
+      if (!next) {
+        sessionStorage.removeItem(TAILOR_RESUME_DRAFT_CACHE_KEY);
+        return;
+      }
+      sessionStorage.setItem(TAILOR_RESUME_DRAFT_CACHE_KEY, JSON.stringify(next));
+    },
+    headerForEdit,
+    experiencesForEdit,
+    projectsForEdit,
+    skillsForEdit,
+    educationsForEdit,
+    certificationsForEdit,
     fontSizes,
     setFontSizes: (next: ResumeFontSizes) => {
       setFontSizes(next);

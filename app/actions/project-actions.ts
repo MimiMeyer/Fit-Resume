@@ -2,8 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import {
-  createProject,
+  createProject as createProjectRepo,
   deleteProject as deleteProjectRepo,
+  saveProjectsSection as saveProjectsSectionRepo,
   updateProject as updateProjectRepo,
 } from "@/server/profile/profile.repo";
 
@@ -17,7 +18,7 @@ export async function addProject(formData: FormData) {
   const technologies = technologiesRaw.split(",").map((t) => t.trim()).filter(Boolean);
   if (!profileId || !title) return;
 
-  await createProject({ profileId, title, description, link, technologies });
+  await createProjectRepo({ profileId, title, description, link, technologies });
   revalidatePath("/profile");
 }
 
@@ -39,4 +40,20 @@ export async function updateProject(formData: FormData) {
 
   await updateProjectRepo(id, { title, description, link, technologies });
   revalidatePath("/profile");
+}
+
+export async function saveProjectsSection(args: {
+  profileId: number;
+  projects: Array<{
+    id?: number;
+    title: string;
+    description: string;
+    link: string;
+    technologies: string[];
+  }>;
+}) {
+  await saveProjectsSectionRepo(args);
+
+  revalidatePath("/profile");
+  revalidatePath("/tailor-resume");
 }

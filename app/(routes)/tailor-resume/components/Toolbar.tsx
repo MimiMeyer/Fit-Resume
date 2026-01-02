@@ -10,7 +10,6 @@ import {
 } from "../types";
 
 type ToolbarProps = {
-  viewMode: "edit" | "preview";
   layoutMode: "single" | "two";
   setLayoutMode: (mode: "single" | "two") => void;
   accentColor: string;
@@ -57,7 +56,6 @@ const stripPdfExt = (value: string) => value.replace(/\.pdf$/i, "");
 
 export function Toolbar(props: ToolbarProps) {
   const {
-    viewMode,
     layoutMode,
     setLayoutMode,
     accentColor,
@@ -168,8 +166,7 @@ export function Toolbar(props: ToolbarProps) {
 
   return (
     <div className="relative z-30 flex flex-wrap items-center justify-between gap-3 overflow-visible">
-      {viewMode === "edit" ? (
-        <>
+      <>
           <div className="flex w-full items-center gap-2">
             {onShowJd ? (
               <div className="shrink-0">
@@ -491,28 +488,7 @@ export function Toolbar(props: ToolbarProps) {
             </div>
           </div>
           {pdfError ? <p className="text-[11px] text-red-600">{pdfError}</p> : null}
-        </>
-      ) : (
-        <>
-          <div className="flex flex-wrap items-center gap-2">
-            {onShowJd ? (
-              <button onClick={onShowJd} className="rounded-full border border-zinc-200 bg-white px-3 py-1 text-xs font-semibold text-[var(--accent)] shadow-sm transition hover:border-[var(--accent)]">Show job description</button>
-            ) : null}
-            <ZoomPill />
-          </div>
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => onDownloadPdf()}
-              disabled={pdfGenerating}
-              className="inline-flex items-center gap-2 rounded-full bg-[var(--accent)] px-3 py-2 text-xs font-semibold text-white shadow-sm transition hover:opacity-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)] disabled:cursor-not-allowed disabled:opacity-70"
-            >
-              {pdfGenerating ? "Preparing PDF..." : "Download PDF"}
-            </button>
-          </div>
-          {pdfError ? <p className="text-[11px] text-red-600">{pdfError}</p> : null}
-        </>
-      )}
+      </>
     </div>
   );
 }

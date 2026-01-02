@@ -2,8 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import {
-  createExperience,
+  createExperience as createExperienceRepo,
   deleteExperience as deleteExperienceRepo,
+  saveExperiencesSection as saveExperiencesSectionRepo,
   updateExperience as updateExperienceRepo,
 } from "@/server/profile/profile.repo";
 
@@ -17,7 +18,7 @@ export async function addExperience(formData: FormData) {
   const impact = (formData.get("impact") as string | null)?.trim() || null;
   if (!profileId || !role || !company) return;
 
-  await createExperience({ profileId, role, company, location, period, impact });
+  await createExperienceRepo({ profileId, role, company, location, period, impact });
   revalidatePath("/profile");
 }
 
@@ -39,4 +40,21 @@ export async function updateExperience(formData: FormData) {
 
   await updateExperienceRepo(id, { role, company, location, period, impact });
   revalidatePath("/profile");
+}
+
+export async function saveExperiencesSection(args: {
+  profileId: number;
+  experiences: Array<{
+    id?: number;
+    role: string;
+    company: string;
+    location: string;
+    period: string;
+    impact: string;
+  }>;
+}) {
+  await saveExperiencesSectionRepo(args);
+
+  revalidatePath("/profile");
+  revalidatePath("/tailor-resume");
 }

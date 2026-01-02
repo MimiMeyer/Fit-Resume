@@ -3,6 +3,7 @@
 import { JdPanel } from "./components/JdPanel";
 import { Preview } from "./components/Preview";
 import { Toolbar } from "./components/Toolbar";
+import { ContentPanel } from "./components/ContentPanel";
 import type { GeneratedResume } from "@/types/resume-agent";
 import type { Profile } from "@/types/profile";
 import { styles } from "./style-constants";
@@ -23,8 +24,6 @@ export function CreateResumeView({
     generated,
     generateError,
     isGenerating,
-    viewMode,
-    setViewMode,
     showJobDescription,
     setShowJobDescription,
     zoomPercent,
@@ -48,8 +47,6 @@ export function CreateResumeView({
     setLayoutMode,
     resumeStyles,
     pagesHtml,
-    commitEditsHtml,
-    hasCachedEdits,
     zoomStyle,
     pageStyle,
     paginatedSectionsCount,
@@ -59,59 +56,76 @@ export function CreateResumeView({
     handleDownloadPdf,
     resetToProfile,
     defaultPdfFileName,
+    draft,
+    setDraft,
+    headerForEdit,
+    experiencesForEdit,
+    projectsForEdit,
+    skillsForEdit,
+    educationsForEdit,
+    certificationsForEdit,
   } = useCreateResume(profile, { onGenerate });
+
+  const hasDraft = !!draft;
 
   return (
     <section className={styles.rootCard}>
       <div className={styles.headerRow}>
-        <div className={styles.modeTogglePill}>
-          {(["edit", "preview"] as const).map((mode) => (
+        <div className="flex flex-wrap items-center gap-2">
+          {generated ? <span className={styles.statusBadge}>AI resume ready</span> : null}
+          {generated || hasDraft ? (
             <button
-              key={mode}
-              onClick={() => setViewMode(mode)}
-              className={`${styles.modeButtonBase} ${
-                viewMode === mode ? styles.modeButtonActive : styles.modeButtonInactive
-              }`}
+              type="button"
+              onClick={resetToProfile}
+              className={styles.resetButton}
             >
-              {mode === "edit" ? "Edit mode" : "Preview mode"}
+              Reset to Profile
             </button>
-          ))}
+          ) : null}
         </div>
-        {generated ? <span className={styles.statusBadge}>AI resume ready</span> : null}
-        {generated || hasCachedEdits ? (
-          <button
-            type="button"
-            onClick={resetToProfile}
-            className={styles.resetButton}
-          >
-            Reset to Profile
-          </button>
-        ) : null}
+        <ContentPanel
+          profileId={profile.id}
+          profileDetails={{
+            email: profile.email ?? null,
+            phone: profile.phone ?? null,
+            location: profile.location ?? null,
+            githubUrl: profile.githubUrl ?? null,
+            linkedinUrl: profile.linkedinUrl ?? null,
+            websiteUrl: profile.websiteUrl ?? null,
+          }}
+          draft={draft}
+          setDraft={setDraft}
+          header={headerForEdit}
+          experiences={experiencesForEdit}
+          projects={projectsForEdit}
+          skills={skillsForEdit}
+          educations={educationsForEdit}
+          certifications={certificationsForEdit}
+        />
       </div>
 
       <div
         className={`${styles.panelGrid} ${
-          viewMode === "edit" && showJobDescription
-            ? "lg:grid-cols-[360px_minmax(0,1fr)]"
-            : "grid-cols-1"
+          showJobDescription ? "lg:grid-cols-[360px_minmax(0,1fr)]" : ""
         }`}
       >
-        {viewMode === "edit" && showJobDescription ? (
-          <JdPanel
-            show={showJobDescription}
-            jd={jd}
-            setJd={setJd}
-            onGenerate={handleGenerate}
-            onToggle={() => setShowJobDescription((s) => !s)}
-            isGenerating={isGenerating}
-            hasGenerated={!!generated}
-            error={generateError}
-          />
+        {showJobDescription ? (
+          <div className="flex flex-col gap-3">
+            <JdPanel
+              show
+              jd={jd}
+              setJd={setJd}
+              onGenerate={handleGenerate}
+              onToggle={() => setShowJobDescription((s) => !s)}
+              isGenerating={isGenerating}
+              hasGenerated={!!generated}
+              error={generateError}
+            />
+          </div>
         ) : null}
 
         <div className={styles.previewPanel}>
           <Toolbar
-            viewMode={viewMode}
             layoutMode={layoutMode}
             setLayoutMode={setLayoutMode}
             accentColor={accentColor}
@@ -134,9 +148,7 @@ export function CreateResumeView({
             pdfGenerating={pdfGenerating}
             pdfError={pdfError}
             onShowJd={
-              !showJobDescription && viewMode === "edit"
-                ? () => setShowJobDescription(true)
-                : undefined
+              !showJobDescription ? () => setShowJobDescription(true) : undefined
             }
           />
 
@@ -149,9 +161,7 @@ export function CreateResumeView({
             zoomPercent={zoomPercent}
             resumeRef={resumeRef}
             resumeWrapperRef={resumeWrapperRef}
-            maxHeight={viewMode === "edit" ? "75vh" : "85vh"}
-            isEditable={viewMode === "edit"}
-            onCommitEdits={(html) => commitEditsHtml(html)}
+            maxHeight={showJobDescription ? "75vh" : "85vh"}
           />
         </div>
       </div>

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import {
   deleteSkill as deleteSkillRepo,
+  saveSkillsSection as saveSkillsSectionRepo,
   updateSkill as updateSkillRepo,
   upsertSkill as upsertSkillRepo,
 } from "@/server/profile/profile.repo";
@@ -32,4 +33,14 @@ export async function updateSkill(formData: FormData) {
 
   await updateSkillRepo(skillId, { name, categoryName });
   revalidatePath("/profile");
+}
+
+export async function saveSkillsSection(args: {
+  profileId: number;
+  skills: Array<{ id?: number; name: string; category: string }>;
+}) {
+  await saveSkillsSectionRepo(args);
+
+  revalidatePath("/profile");
+  revalidatePath("/tailor-resume");
 }

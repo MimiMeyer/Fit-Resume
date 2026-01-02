@@ -1,6 +1,6 @@
 export const styles = {
   rootCard: "rounded-2xl bg-white p-6 shadow-sm ring-1 ring-zinc-100",
-  headerRow: "flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end",
+  headerRow: "flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between",
   modeTogglePill:
     "inline-flex items-center gap-1 rounded-full border border-zinc-200 bg-zinc-50 p-1 text-xs font-semibold text-zinc-700",
   modeButtonBase: "rounded-full px-3 py-1 transition",
