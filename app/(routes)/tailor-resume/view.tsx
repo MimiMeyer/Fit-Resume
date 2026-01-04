@@ -14,9 +14,11 @@ const ZOOM_STEP = 0.05;
 export function CreateResumeView({
   profile,
   onGenerate,
+  updateProfile,
 }: {
   profile: Profile;
   onGenerate: (jobDescription: string) => Promise<GeneratedResume>;
+  updateProfile: (updater: (current: Profile) => Profile, opts?: { flush?: boolean }) => void;
 }) {
   const {
     jobDescription,
@@ -85,7 +87,7 @@ export function CreateResumeView({
           ) : null}
         </div>
         <EditSections
-          profileId={profile.id}
+          updateProfile={updateProfile}
           profileDetails={{
             email: profile.email ?? null,
             phone: profile.phone ?? null,

@@ -7,7 +7,6 @@ import { styles } from "../style-constants";
 import type { Category } from "@/types/category";
 import type { Skill } from "@/types/skill";
 import { Modal } from "../Modal";
-import { addSkill, deleteSkill } from "@/app/actions/skill-actions";
 
 function skillChipClass(isDragging: boolean) {
   return isDragging
@@ -36,6 +35,9 @@ type Props = {
   handleSkillDragEnd: () => void;
   handleSkillDrop: (category: string) => void;
   onEditSkill: (skill: Skill) => void;
+  onAddSkill: (name: string, categoryName: string) => void;
+  onDeleteSkill: (id: number) => void;
+  onUpdateSkill: (id: number, name: string, categoryName: string) => void;
 };
 
 type AddSkillModalProps = {
@@ -44,6 +46,7 @@ type AddSkillModalProps = {
   presetCategory?: string;
   triggerLabel?: string;
   triggerClassName?: string;
+  onAddSkill: Props["onAddSkill"];
 };
 
 function AddSkillModal({
@@ -52,6 +55,7 @@ function AddSkillModal({
   presetCategory,
   triggerLabel = "Add Skill",
   triggerClassName,
+  onAddSkill,
 }: AddSkillModalProps) {
   const [isPending, startTransition] = useTransition();
   const [open, setOpen] = useState(false);
@@ -97,23 +101,23 @@ function AddSkillModal({
         <form
           className={styles.formContainer}
           onSubmit={(e) => {
-            const category = selectedCategory.trim();
-            if (category) {
-              categoryInputRef.current?.setCustomValidity("");
+            e.preventDefault();
+            const categoryName = selectedCategory.trim();
+            if (!categoryName) {
+              categoryInputRef.current?.setCustomValidity("Please select or add a category.");
+              categoryInputRef.current?.reportValidity();
+              openPicker();
               return;
             }
-            e.preventDefault();
-            categoryInputRef.current?.setCustomValidity("Please select or add a category.");
-            categoryInputRef.current?.reportValidity();
-            openPicker();
-          }}
-          action={(fd) => {
-            fd.set("category", selectedCategory.trim());
 
-            startTransition(async () => {
-              await addSkill(fd);
+            const formData = new FormData(e.currentTarget);
+            const name = String(formData.get("name") ?? "").trim();
+            if (!name) return;
+
+            categoryInputRef.current?.setCustomValidity("");
+            startTransition(() => {
+              onAddSkill(name, categoryName);
               close();
-              window.dispatchEvent(new Event("profile-refresh"));
             });
           }}
         >
@@ -271,12 +275,14 @@ export function SkillsSection({
   handleSkillDragEnd,
   handleSkillDrop,
   onEditSkill,
+  onAddSkill,
+  onDeleteSkill,
 }: Props) {
   return (
     <section className={styles.sectionCardMd}>
       <div className={styles.sectionHeader}>
         <h2 className={styles.sectionTitle}>Skills</h2>
-        <AddSkillModal profileId={profileId} categories={categories} />
+        <AddSkillModal profileId={profileId} categories={categories} onAddSkill={onAddSkill} />
       </div>
 
       {skills.length ? (
@@ -348,6 +354,7 @@ export function SkillsSection({
                           presetCategory={category}
                           triggerLabel="+skill"
                           triggerClassName={styles.addButton}
+                          onAddSkill={onAddSkill}
                         />
                         <button
                           type="button"
@@ -391,20 +398,14 @@ export function SkillsSection({
                         >
                           <PenIcon className={styles.iconSm} />
                         </button>
-                        <form action={deleteSkill}>
-                          <input
-                            type="hidden"
-                            name="skillId"
-                            value={skill.id}
-                          />
-                          <button
-                            type="submit"
-                            className={styles.skillRemove}
-                            aria-label="Remove skill"
-                          >
-                            <TrashIcon className={styles.iconSm} />
-                          </button>
-                        </form>
+                        <button
+                          type="button"
+                          className={styles.skillRemove}
+                          aria-label="Remove skill"
+                          onClick={() => onDeleteSkill(skill.id)}
+                        >
+                          <TrashIcon className={styles.iconSm} />
+                        </button>
                       </div>
                     </div>
                   ))}

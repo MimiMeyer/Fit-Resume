@@ -3,14 +3,10 @@
 import {
   useEffect,
   useState,
-  useTransition,
   type Dispatch,
   type SetStateAction,
   type TransitionStartFunction,
 } from "react";
-import { useRouter } from "next/navigation";
-import { updateSkill } from "@/app/actions/skill-actions";
-import { deleteCategory, getCategories, updateCategoryName } from "@/app/actions/category-actions";
 
 import type { Category } from "@/types/category";
 import type { Certification } from "@/types/certification";
@@ -19,6 +15,11 @@ import type { Experience } from "@/types/experience";
 import type { Profile } from "@/types/profile";
 import type { Project } from "@/types/project";
 import type { Skill } from "@/types/skill";
+import {
+  deleteSkillCategory as deleteSkillCategoryLocal,
+  renameSkillCategory as renameSkillCategoryLocal,
+  updateSkill as updateSkillLocal,
+} from "@/app/local/profile-store";
 
 export type AboutLogic = {
   isPending: boolean;
@@ -51,7 +52,6 @@ export type AboutLogic = {
   skills: Skill[];
   groupedSkills: Record<string, Skill[]>;
   sortedCategories: string[];
-  loadCategories: () => Promise<void>;
   handleDeleteCategory: (cat: Category) => Promise<void>;
   startEditCategory: (category: Category) => void;
   saveCategoryEdit: () => Promise<void>;
@@ -62,9 +62,22 @@ export type AboutLogic = {
   handleSkillDrop: (targetCategory: string) => void;
 };
 
-export function useAbout(profile: Profile): AboutLogic {
-  const router = useRouter();
-  const [isPending, startTransition] = useTransition();
+function categoryIdFromName(name: string): number {
+  const value = name.toUpperCase();
+  let hash = 2166136261;
+  for (let i = 0; i < value.length; i += 1) {
+    hash ^= value.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return Math.abs(hash);
+}
+
+export function useAbout(
+  profile: Profile,
+  controls: { isPending: boolean; startTransition: TransitionStartFunction },
+  updateProfile: (updater: (current: Profile) => Profile) => void,
+): AboutLogic {
+  const { isPending, startTransition } = controls;
   const [editOpen, setEditOpen] = useState(false);
   const [editingExp, setEditingExp] = useState<Experience | null>(null);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
@@ -72,7 +85,6 @@ export function useAbout(profile: Profile): AboutLogic {
   const [editingCert, setEditingCert] = useState<Certification | null>(null);
   const [editingSkill, setEditingSkill] = useState<Skill | null>(null);
   const [openCategories, setOpenCategories] = useState<Record<string, boolean>>({});
-  const [categories, setCategories] = useState<Category[]>([]);
   const [categoryBusy, setCategoryBusy] = useState(false);
   const [editCategoryMode, setEditCategoryMode] = useState<"existing" | "new">("existing");
   const [editCategoryValue, setEditCategoryValue] = useState("");
@@ -81,9 +93,7 @@ export function useAbout(profile: Profile): AboutLogic {
   const [editingCategoryName, setEditingCategoryName] = useState("");
   const [draggingSkill, setDraggingSkill] = useState<Skill | null>(null);
 
-  const [skills, setSkills] = useState<Skill[]>(
-    [...(profile.skills || [])].sort((a, b) => a.name.localeCompare(b.name)),
-  );
+  const skills = [...(profile.skills || [])].sort((a, b) => a.name.localeCompare(b.name));
 
   const groupedSkills = skills.reduce<Record<string, Skill[]>>((acc, skill) => {
     const category = skill.category.name;
@@ -96,27 +106,11 @@ export function useAbout(profile: Profile): AboutLogic {
 
   const sortedCategories = Object.keys(groupedSkills).sort();
 
-  const loadCategories = async () => {
-    try {
-      const next = await getCategories();
-      setCategories(next);
-    } catch (e) {
-      console.error("Failed to load categories", e);
-    }
-  };
-
-  useEffect(() => {
-    loadCategories();
-  }, []);
-
-  useEffect(() => {
-    const handleProfileRefresh = () => {
-      loadCategories();
-      router.refresh();
-    };
-    window.addEventListener("profile-refresh", handleProfileRefresh);
-    return () => window.removeEventListener("profile-refresh", handleProfileRefresh);
-  }, [router]);
+  const categories: Category[] = sortedCategories.map((name) => ({
+    id: categoryIdFromName(name),
+    name,
+    count: groupedSkills[name]?.length ?? 0,
+  }));
 
   useEffect(() => {
     if (editingSkill) {
@@ -131,33 +125,15 @@ export function useAbout(profile: Profile): AboutLogic {
     }
   }, [editingSkill]);
 
-  useEffect(() => {
-    setSkills([...(profile.skills || [])].sort((a, b) => a.name.localeCompare(b.name)));
-  }, [profile.skills]);
-
   const handleDeleteCategory = async (cat: Category) => {
     setCategoryBusy(true);
     try {
-      const toRemove = cat.name.toUpperCase();
-      await deleteCategory(cat.id);
-
-      if (toRemove) {
-        setSkills((prev) =>
-          prev.filter(
-            (skill) =>
-              skill.category.name.toUpperCase() !== toRemove,
-          ),
-        );
-      }
-      setCategories((prev) => prev.filter((c) => c.id !== cat.id));
+      updateProfile((current) => deleteSkillCategoryLocal(current, cat.name));
       setOpenCategories((prev) => {
         const next = { ...prev };
-        delete next[toRemove];
+        delete next[cat.name.toUpperCase()];
         return next;
       });
-      await loadCategories();
-      router.refresh();
-      window.dispatchEvent(new Event("categories-refresh"));
     } catch (err) {
       console.error("Failed to delete category", err);
     } finally {
@@ -179,9 +155,12 @@ export function useAbout(profile: Profile): AboutLogic {
     }
     setCategoryBusy(true);
     try {
-      await updateCategoryName(editingCategoryId, nextName);
-      await loadCategories();
-      router.refresh();
+      const currentCategory = categories.find((c) => c.id === editingCategoryId);
+      if (currentCategory) {
+        updateProfile((current) =>
+          renameSkillCategoryLocal(current, currentCategory.name, nextName),
+        );
+      }
     } catch (err) {
       console.error("Failed to edit category", err);
     } finally {
@@ -211,12 +190,13 @@ export function useAbout(profile: Profile): AboutLogic {
       setDraggingSkill(null);
       return;
     }
-    const fd = new FormData();
-    fd.set("skillId", String(draggingSkill.id));
-    fd.set("name", draggingSkill.name);
-    fd.set("category", targetCategory);
     startTransition(async () => {
-      await updateSkill(fd);
+      updateProfile((current) =>
+        updateSkillLocal(current, draggingSkill.id, {
+          name: draggingSkill.name,
+          categoryName: targetCategory,
+        }),
+      );
       setDraggingSkill(null);
     });
   };
@@ -252,7 +232,6 @@ export function useAbout(profile: Profile): AboutLogic {
     skills,
     groupedSkills,
     sortedCategories,
-    loadCategories,
     handleDeleteCategory,
     startEditCategory,
     saveCategoryEdit,

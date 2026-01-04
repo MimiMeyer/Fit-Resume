@@ -5,7 +5,6 @@ import { PenIcon } from "@/app/icons/pen";
 import { styles } from "../style-constants";
 import type { Education } from "@/types/education";
 import { Modal } from "../Modal";
-import { addEducation, deleteEducation } from "@/app/actions/education-actions";
 
 const dangerButton =
   "rounded border border-red-100 px-3 py-1 text-xs font-semibold text-red-700 transition hover:bg-red-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-500";
@@ -14,9 +13,11 @@ type Props = {
   profileId: number;
   educations: Education[];
   onEdit: (edu: Education) => void;
+  onAdd: (input: Omit<Education, "id">) => void;
+  onDelete: (id: number) => void;
 };
 
-function AddEducationModal({ profileId }: { profileId: number }) {
+function AddEducationModal({ profileId, onAdd }: { profileId: number; onAdd: Props["onAdd"] }) {
   const [isPending, startTransition] = useTransition();
   const [open, setOpen] = useState(false);
 
@@ -28,9 +29,27 @@ function AddEducationModal({ profileId }: { profileId: number }) {
       <Modal triggerLabel="" open={open} onClose={() => setOpen(false)} title="Add education">
         <form
           className={styles.formContainer}
-          action={(formData) => {
-            startTransition(async () => {
-              await addEducation(formData);
+          onSubmit={(e) => {
+            e.preventDefault();
+            const formData = new FormData(e.currentTarget);
+            const institution = String(formData.get("institution") ?? "").trim();
+            const degree = String(formData.get("degree") ?? "").trim() || null;
+            const field = String(formData.get("field") ?? "").trim() || null;
+            const startYearRaw = String(formData.get("startYear") ?? "").trim();
+            const endYearRaw = String(formData.get("endYear") ?? "").trim();
+            const startYear = startYearRaw ? Number(startYearRaw) : null;
+            const endYear = endYearRaw ? Number(endYearRaw) : null;
+            const details = String(formData.get("details") ?? "").trim() || null;
+            if (!institution) return;
+            startTransition(() => {
+              onAdd({
+                institution,
+                degree,
+                field,
+                startYear: Number.isFinite(startYear as number) ? startYear : null,
+                endYear: Number.isFinite(endYear as number) ? endYear : null,
+                details,
+              });
               setOpen(false);
             });
           }}
@@ -76,14 +95,14 @@ function AddEducationModal({ profileId }: { profileId: number }) {
   );
 }
 
-export function EducationSection({ profileId, educations, onEdit }: Props) {
+export function EducationSection({ profileId, educations, onEdit, onAdd, onDelete }: Props) {
   return (
     <section className={styles.sectionCard}>
       <div className={styles.sectionHeader}>
         <div className={styles.stackSm}>
           <h2 className={styles.sectionTitle}>Education</h2>
         </div>
-        <AddEducationModal profileId={profileId} />
+        <AddEducationModal profileId={profileId} onAdd={onAdd} />
       </div>
       {educations.length ? (
         <div className={styles.sectionBody}>
@@ -109,12 +128,9 @@ export function EducationSection({ profileId, educations, onEdit }: Props) {
                 >
                   <PenIcon className={styles.iconSm} />
                 </button>
-                <form action={deleteEducation}>
-                  <input type="hidden" name="id" value={edu.id} />
-                  <button type="submit" className={dangerButton}>
-                    Delete
-                  </button>
-                </form>
+                <button type="button" className={dangerButton} onClick={() => onDelete(edu.id)}>
+                  Delete
+                </button>
               </div>
             </div>
           ))}

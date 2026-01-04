@@ -1,18 +1,50 @@
 "use server";
 
 import { runResumeAgents } from "@/server/resume/resumeAgents";
-import { getProfileWithRelations } from "@/server/profile/profile.repo";
+import type { Profile } from "@/types/profile";
+import type { AgentProfileInput } from "@/types/resume-agent";
 
-export async function generateResume(jd: string) {
+function toAgentProfileInput(profile: Profile): AgentProfileInput {
+  return {
+    fullName: profile.fullName,
+    title: profile.title ?? null,
+    headline: profile.headline ?? null,
+    summary: profile.summary ?? null,
+    location: profile.location ?? null,
+    email: profile.email ?? null,
+    phone: profile.phone ?? null,
+    githubUrl: profile.githubUrl ?? null,
+    linkedinUrl: profile.linkedinUrl ?? null,
+    websiteUrl: profile.websiteUrl ?? null,
+    experiences: (profile.experiences ?? []).map((e) => ({
+      role: e.role,
+      company: e.company,
+      location: e.location ?? null,
+      period: e.period ?? null,
+      impact: e.impact ?? null,
+    })),
+    projects: (profile.projects ?? []).map((p) => ({
+      title: p.title,
+      description: p.description ?? null,
+      link: p.link ?? null,
+      technologies: p.technologies ?? [],
+    })),
+    skills: (profile.skills ?? []).map((s) => ({
+      name: s.name,
+      category: { name: s.category?.name ?? "UNCATEGORIZED" },
+    })),
+  };
+}
+
+export async function generateResume(profile: Profile, jd: string) {
   const trimmed = jd.trim();
   if (!trimmed) {
     throw new Error("Job description is required.");
   }
 
-  const profile = await getProfileWithRelations();
-  if (!profile) {
-    throw new Error("No profile found. Add details in Profile first.");
+  if (!profile?.fullName) {
+    throw new Error("Profile is required. Add details in Profile first.");
   }
 
-  return runResumeAgents(profile, trimmed);
+  return runResumeAgents(toAgentProfileInput(profile), trimmed);
 }

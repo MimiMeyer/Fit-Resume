@@ -5,7 +5,6 @@ import { PenIcon } from "@/app/icons/pen";
 import { styles } from "../style-constants";
 import type { Project } from "@/types/project";
 import { Modal } from "../Modal";
-import { addProject, deleteProject } from "@/app/actions/project-actions";
 
 const dangerButton =
   "rounded border border-red-100 px-3 py-1 text-xs font-semibold text-red-700 transition hover:bg-red-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-500";
@@ -14,9 +13,11 @@ type Props = {
   profileId: number;
   projects: Project[];
   onEdit: (project: Project) => void;
+  onAdd: (input: Omit<Project, "id">) => void;
+  onDelete: (id: number) => void;
 };
 
-function AddProjectModal({ profileId }: { profileId: number }) {
+function AddProjectModal({ profileId, onAdd }: { profileId: number; onAdd: Props["onAdd"] }) {
   const [isPending, startTransition] = useTransition();
   const [open, setOpen] = useState(false);
 
@@ -34,9 +35,19 @@ function AddProjectModal({ profileId }: { profileId: number }) {
       >
         <form
           className={styles.formContainer}
-          action={(formData) => {
-            startTransition(async () => {
-              await addProject(formData);
+          onSubmit={(e) => {
+            e.preventDefault();
+            const formData = new FormData(e.currentTarget);
+            const title = String(formData.get("title") ?? "").trim();
+            const description = String(formData.get("description") ?? "").trim() || null;
+            const technologies = String(formData.get("technologies") ?? "")
+              .split(",")
+              .map((t) => t.trim())
+              .filter(Boolean);
+            const link = String(formData.get("link") ?? "").trim() || null;
+            if (!title) return;
+            startTransition(() => {
+              onAdd({ title, description, technologies, link });
               setOpen(false);
             });
           }}
@@ -72,7 +83,7 @@ function AddProjectModal({ profileId }: { profileId: number }) {
   );
 }
 
-export function ProjectsSection({ profileId, projects, onEdit }: Props) {
+export function ProjectsSection({ profileId, projects, onEdit, onAdd, onDelete }: Props) {
   if (!projects.length) {
     return (
       <section className={styles.sectionCardMd}>
@@ -81,7 +92,7 @@ export function ProjectsSection({ profileId, projects, onEdit }: Props) {
             <h2 className={styles.sectionTitle}>Projects</h2>
             <p className={styles.mutedText}>Add your first project.</p>
           </div>
-          <AddProjectModal profileId={profileId} />
+          <AddProjectModal profileId={profileId} onAdd={onAdd} />
         </div>
         <p className={styles.bodyText}>
           No projects yet.
@@ -96,7 +107,7 @@ export function ProjectsSection({ profileId, projects, onEdit }: Props) {
         <div className={styles.stackSm}>
           <h2 className={styles.sectionTitle}>Projects</h2>
         </div>
-        <AddProjectModal profileId={profileId} />
+        <AddProjectModal profileId={profileId} onAdd={onAdd} />
       </div>
       <div className={styles.stackMd}>
         {projects.map((project) => (
@@ -134,12 +145,9 @@ export function ProjectsSection({ profileId, projects, onEdit }: Props) {
               >
                 <PenIcon className={styles.iconSm} />
               </button>
-              <form action={deleteProject}>
-                <input type="hidden" name="id" value={project.id} />
-                <button type="submit" className={dangerButton}>
-                  Delete
-                </button>
-              </form>
+              <button type="button" className={dangerButton} onClick={() => onDelete(project.id)}>
+                Delete
+              </button>
             </div>
           </article>
         ))}

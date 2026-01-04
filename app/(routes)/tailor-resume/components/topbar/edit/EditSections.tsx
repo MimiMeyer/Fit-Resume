@@ -1,10 +1,11 @@
 "use client";
 
 import { useMemo, useRef, useState, useTransition, type ReactNode } from "react";
-import { useRouter } from "next/navigation";
 import { Modal } from "@/app/(routes)/profile/Modal";
 import { ConfirmDialog } from "@/app/components/ConfirmDialog";
 import { EditSectionButtons } from "../EditSectionButtons";
+import type { Profile } from "@/types/profile";
+import { updateProfileDetails as updateProfileDetailsLocal } from "@/app/local/profile-store";
 import type {
   TailorCertificationDraft,
   TailorEducationDraft,
@@ -29,12 +30,6 @@ import {
   normalizeProjects,
   normalizeSkills,
 } from "./logic/normalize";
-import { updateProfileDetails } from "@/app/actions/profile-actions";
-import { saveExperiencesSection } from "@/app/actions/experience-actions";
-import { saveProjectsSection } from "@/app/actions/project-actions";
-import { saveEducationSection } from "@/app/actions/education-actions";
-import { saveCertificationsSection } from "@/app/actions/certification-actions";
-import { saveSkillsSection } from "@/app/actions/skill-actions";
 import { CertificationsEditor } from "./sections/CertificationsEditor";
 import { EducationEditor } from "./sections/EducationEditor";
 import { ExperienceEditor } from "./sections/ExperienceEditor";
@@ -43,7 +38,7 @@ import { ProjectsEditor } from "./sections/ProjectsEditor";
 import { SkillsEditor } from "./sections/SkillsEditor";
 
 type Props = {
-  profileId: number;
+  updateProfile: (updater: (current: Profile) => Profile, opts?: { flush?: boolean }) => void;
   profileDetails: {
     email: string | null;
     phone: string | null;
@@ -73,6 +68,10 @@ type OpenModal =
 
 type ConfirmState = null | { message: string };
 type InlineErrorState = null | { message: string };
+
+function newId() {
+  return Date.now() + Math.floor(Math.random() * 1000);
+}
 
 function SectionModalShell({
   open,
@@ -156,7 +155,7 @@ type SectionConfig = {
 };
 
 export function EditSections({
-  profileId,
+  updateProfile,
   profileDetails,
   draft,
   setDraft,
@@ -167,7 +166,6 @@ export function EditSections({
   educations,
   certifications,
 }: Props) {
-  const router = useRouter();
   const [open, setOpen] = useState<OpenModal>(null);
   const [isPending, startTransition] = useTransition();
   const confirmActionRef = useRef<(() => void) | null>(null);
@@ -223,18 +221,22 @@ export function EditSections({
       toDraft: (val) => val as Partial<TailorHeaderDraft>,
       save: async (val) => {
         const next = val as TailorHeaderDraft;
-        const fd = new FormData();
-        fd.set("fullName", next.fullName);
-        fd.set("title", next.title);
-        fd.set("headline", next.headline);
-        fd.set("summary", next.summary);
-        fd.set("email", profileDetails.email ?? "");
-        fd.set("phone", profileDetails.phone ?? "");
-        fd.set("location", profileDetails.location ?? "");
-        fd.set("githubUrl", profileDetails.githubUrl ?? "");
-        fd.set("linkedinUrl", profileDetails.linkedinUrl ?? "");
-        fd.set("websiteUrl", profileDetails.websiteUrl ?? "");
-        await updateProfileDetails(fd);
+        updateProfile(
+          (current) =>
+            updateProfileDetailsLocal(current, {
+              fullName: next.fullName,
+              title: next.title || null,
+              headline: next.headline || null,
+              summary: next.summary || null,
+              email: profileDetails.email ?? null,
+              phone: profileDetails.phone ?? null,
+              location: profileDetails.location ?? null,
+              githubUrl: profileDetails.githubUrl ?? null,
+              linkedinUrl: profileDetails.linkedinUrl ?? null,
+              websiteUrl: profileDetails.websiteUrl ?? null,
+            }),
+          { flush: true },
+        );
       },
       Editor: SummaryEditor as unknown as EditorComponent<unknown>,
       initial: header,
@@ -251,11 +253,23 @@ export function EditSections({
       errorFallback: "Failed to save Experience.",
       validate: (val) => validateExperiences(val as TailorExperienceDraft[]),
       toDraft: (val) => normalizeExperiences(val as TailorExperienceDraft[]),
-      save: (val) =>
-        saveExperiencesSection({
-          profileId,
-          experiences: normalizeExperiences(val as TailorExperienceDraft[]),
-        }),
+      save: async (val) => {
+        const next = normalizeExperiences(val as TailorExperienceDraft[]);
+        updateProfile(
+          (current) => ({
+            ...current,
+            experiences: next.map((e) => ({
+              id: e.id ?? newId(),
+              role: e.role,
+              company: e.company,
+              location: e.location || null,
+              period: e.period || null,
+              impact: e.impact || null,
+            })),
+          }),
+          { flush: true },
+        );
+      },
       Editor: ExperienceEditor as unknown as EditorComponent<unknown>,
       initial: experiences,
     },
@@ -271,8 +285,22 @@ export function EditSections({
       errorFallback: "Failed to save Projects.",
       validate: (val) => validateProjects(val as TailorProjectDraft[]),
       toDraft: (val) => normalizeProjects(val as TailorProjectDraft[]),
-      save: (val) =>
-        saveProjectsSection({ profileId, projects: normalizeProjects(val as TailorProjectDraft[]) }),
+      save: async (val) => {
+        const next = normalizeProjects(val as TailorProjectDraft[]);
+        updateProfile(
+          (current) => ({
+            ...current,
+            projects: next.map((p) => ({
+              id: p.id ?? newId(),
+              title: p.title,
+              description: p.description || null,
+              link: p.link || null,
+              technologies: p.technologies ?? [],
+            })),
+          }),
+          { flush: true },
+        );
+      },
       Editor: ProjectsEditor as unknown as EditorComponent<unknown>,
       initial: projects,
     },
@@ -288,7 +316,22 @@ export function EditSections({
       errorFallback: "Failed to save Skills.",
       validate: (val) => validateSkills(val as TailorSkillDraft[]),
       toDraft: (val) => normalizeSkills(val as TailorSkillDraft[]),
-      save: (val) => saveSkillsSection({ profileId, skills: normalizeSkills(val as TailorSkillDraft[]) }),
+      save: async (val) => {
+        const next = normalizeSkills(val as TailorSkillDraft[]);
+        updateProfile(
+          (current) => ({
+            ...current,
+            skills: next
+              .map((s) => ({
+                id: s.id ?? newId(),
+                name: s.name,
+                category: { name: s.category.trim().toUpperCase() || "UNCATEGORIZED" },
+              }))
+              .sort((a, b) => a.name.localeCompare(b.name)),
+          }),
+          { flush: true },
+        );
+      },
       Editor: SkillsEditor as unknown as EditorComponent<unknown>,
       initial: skills,
     },
@@ -304,8 +347,24 @@ export function EditSections({
       errorFallback: "Failed to save Education.",
       validate: (val) => validateEducations(val as TailorEducationDraft[]),
       toDraft: (val) => normalizeEducations(val as TailorEducationDraft[]),
-      save: (val) =>
-        saveEducationSection({ profileId, educations: normalizeEducations(val as TailorEducationDraft[]) }),
+      save: async (val) => {
+        const next = normalizeEducations(val as TailorEducationDraft[]);
+        updateProfile(
+          (current) => ({
+            ...current,
+            educations: next.map((e) => ({
+              id: e.id ?? newId(),
+              institution: e.institution,
+              degree: e.degree || null,
+              field: e.field || null,
+              startYear: e.startYear ?? null,
+              endYear: e.endYear ?? null,
+              details: e.details || null,
+            })),
+          }),
+          { flush: true },
+        );
+      },
       Editor: EducationEditor as unknown as EditorComponent<unknown>,
       initial: educations,
     },
@@ -321,11 +380,22 @@ export function EditSections({
       errorFallback: "Failed to save Certifications.",
       validate: (val) => validateCertifications(val as TailorCertificationDraft[]),
       toDraft: (val) => normalizeCertifications(val as TailorCertificationDraft[]),
-      save: (val) =>
-        saveCertificationsSection({
-          profileId,
-          certifications: normalizeCertifications(val as TailorCertificationDraft[]),
-        }),
+      save: async (val) => {
+        const next = normalizeCertifications(val as TailorCertificationDraft[]);
+        updateProfile(
+          (current) => ({
+            ...current,
+            certs: next.map((c) => ({
+              id: c.id ?? newId(),
+              name: c.name,
+              issuer: c.issuer || null,
+              issuedYear: c.issuedYear ?? null,
+              credentialUrl: c.credentialUrl || null,
+            })),
+          }),
+          { flush: true },
+        );
+      },
       Editor: CertificationsEditor as unknown as EditorComponent<unknown>,
       initial: certifications,
     },
@@ -347,7 +417,6 @@ export function EditSections({
           .save(next)
           .then(() => {
             setDraft(clearDraftSection(draft, section.draftKey));
-            router.refresh();
             closeConfirm();
             closeModal();
           })

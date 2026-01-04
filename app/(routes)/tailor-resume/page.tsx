@@ -1,14 +1,25 @@
-import { getProfileWithRelations } from "@/server/profile/profile.repo";
+"use client";
+
 import { CreateResumeView } from "./view";
+import { useProfile } from "@/app/local/useProfile";
 import { generateResume } from "@/server/resume/resume.service";
 
-export default async function CreateResumePage() {
-  const profile = await getProfileWithRelations();
+export default function TailorResumePage() {
+  const { profile, loadError, updateProfile } = useProfile();
 
-  async function handleGenerate(jobDescription: string) {
-    "use server";
-    return generateResume(jobDescription);
+  if (loadError) {
+    return <div className="text-sm text-rose-700">{loadError}</div>;
   }
 
-  return <CreateResumeView profile={profile} onGenerate={handleGenerate} />;
+  if (!profile) {
+    return <div className="text-sm text-zinc-600">Loading…</div>;
+  }
+
+  return (
+    <CreateResumeView
+      profile={profile}
+      updateProfile={updateProfile}
+      onGenerate={(jobDescription) => generateResume(profile, jobDescription)}
+    />
+  );
 }
