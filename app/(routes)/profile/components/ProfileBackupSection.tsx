@@ -85,12 +85,15 @@ export function ProfileBackupSection({
   }
 
   return (
-    <section className={styles.aboutCard}>
+    <section className={styles.backupCard}>
       <div className={styles.sectionHeaderSpaced}>
         <div className={styles.stackSm}>
-          <div className={styles.sectionTitle}>Save Your Progress</div>
+          <div className={styles.backupTitle}>Back Up Your Profile</div>
           <div className={styles.mutedText}>
-            Download a JSON backup to save your Profile. Upload it later to restore.
+            Your Profile is saved on this device in your browser.
+          </div>
+          <div className={styles.mutedText}>
+            Download a JSON backup to keep a copy or move it to another device. Import it later to restore.
           </div>
         </div>
         <div className={styles.actionsRow}>
@@ -100,7 +103,7 @@ export function ProfileBackupSection({
             disabled={isPending}
             onClick={() => fileInputRef.current?.click()}
           >
-            Upload JSON Backup
+            Import Backup
           </button>
           <button
             type="button"
@@ -108,7 +111,7 @@ export function ProfileBackupSection({
             disabled={isPending}
             onClick={onDownload}
           >
-            Download JSON Backup
+            Download Backup
           </button>
           <input
             ref={fileInputRef}
