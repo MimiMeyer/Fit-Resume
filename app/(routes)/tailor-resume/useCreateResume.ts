@@ -28,6 +28,7 @@ import type {
 import type { GeneratedResume } from "@/types/resume-agent";
 import type { Profile } from "@/types/profile";
 import { normalizeBullets } from "@/lib/normalizeBullets";
+import { escapeAttr, escapeHtml, sanitizeHref } from "@/lib/htmlSanitize";
 import type {
   TailorCertificationDraft,
   TailorEducationDraft,
@@ -234,12 +235,14 @@ function linkifyContact(part: string) {
   const trimmed = part.trim();
   if (!trimmed) return "";
   const isEmail = trimmed.includes("@");
-  if (isEmail) return trimmed;
+  if (isEmail) return escapeHtml(trimmed);
   const hasProtocol = /^https?:\/\//i.test(trimmed);
   const isUrlLike = trimmed.includes(".") || trimmed.includes("/");
-  const href = hasProtocol ? trimmed : isUrlLike ? `https://${trimmed.replace(/^\/+/, "")}` : "";
-  if (!href) return trimmed;
-  return `<a href="${href}" class="resume-link">${trimmed}</a>`;
+  const hrefRaw = hasProtocol ? trimmed : isUrlLike ? `https://${trimmed.replace(/^\/+/, "")}` : "";
+  if (!hrefRaw) return escapeHtml(trimmed);
+  const safeHref = sanitizeHref(hrefRaw);
+  if (!safeHref) return escapeHtml(trimmed);
+  return `<a href="${escapeAttr(safeHref)}" class="resume-link" target="_blank" rel="noreferrer">${escapeHtml(trimmed)}</a>`;
 }
 
 function applyAlpha(hex: string, alpha: number) {

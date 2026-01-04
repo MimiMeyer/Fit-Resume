@@ -7,6 +7,7 @@ import type {
   ResumeSectionId,
   ResumeSkillGroup,
 } from "../../../types";
+import { escapeAttr, escapeHtml, sanitizeHref } from "@/lib/htmlSanitize";
 
 type SectionHtmlMap = Record<ResumeSectionId, () => string>;
 
@@ -31,11 +32,11 @@ export function buildSectionHtml(args: {
                   (exp) => `
                     <li class="resume-bullet-item">
                       <div class="resume-bullet-head">
-                        <span class="resume-strong">${exp.role} - ${exp.company}</span>
-                        <span class="resume-muted">${exp.location}${exp.location && exp.period ? ` - ${exp.period}` : exp.period || ""}</span>
+                        <span class="resume-strong">${escapeHtml(exp.role)} - ${escapeHtml(exp.company)}</span>
+                        <span class="resume-muted">${escapeHtml(exp.location)}${exp.location && exp.period ? ` - ${escapeHtml(exp.period)}` : escapeHtml(exp.period || "")}</span>
                       </div>
                       <ul class="resume-subbullets">
-                        ${exp.bullets.map((b) => `<li>${b}</li>`).join("")}
+                        ${exp.bullets.map((b) => `<li>${escapeHtml(b)}</li>`).join("")}
                       </ul>
                     </li>`
                 )
@@ -53,16 +54,16 @@ export function buildSectionHtml(args: {
               <div class="resume-skill-inline-row single">
                 <span class="resume-skill-cat-inline">${group.category}:</span>
                 <span class="resume-skill-inline-items single">
-                  ${group.items.map((s) => `<span class="resume-skill-inline-item">${s}</span>`).join("")}
+                  ${group.items.map((s) => `<span class="resume-skill-inline-item">${escapeHtml(s)}</span>`).join("")}
                 </span>
               </div>
             `;
           }
           return `
             <div class="resume-skill-inline-row">
-              <div class="resume-skill-cat-inline">${group.category}:</div>
+              <div class="resume-skill-cat-inline">${escapeHtml(group.category)}:</div>
               <div class="resume-skill-inline-items">
-                ${group.items.map((s) => `<span class="resume-skill-inline-item">${s}</span>`).join("")}
+                ${group.items.map((s) => `<span class="resume-skill-inline-item">${escapeHtml(s)}</span>`).join("")}
               </div>
             </div>
           `;
@@ -86,10 +87,10 @@ export function buildSectionHtml(args: {
               .map(
                 (edu) => `
                     <div class="resume-row">
-                      <div class="resume-strong">${edu.degree}</div>
+                      <div class="resume-strong">${escapeHtml(edu.degree)}</div>
                     <div class="resume-edu-line">
-                      <div class="resume-meta-line">${edu.school}</div>
-                      ${edu.period ? `<div class="resume-meta-line edu-period">${edu.period}</div>` : ""}
+                      <div class="resume-meta-line">${escapeHtml(edu.school)}</div>
+                      ${edu.period ? `<div class="resume-meta-line edu-period">${escapeHtml(edu.period)}</div>` : ""}
                     </div>
                   </div>`
               )
@@ -102,15 +103,20 @@ export function buildSectionHtml(args: {
           <div class="resume-section-title">Projects</div>
           <div class="resume-card">
             ${projectsForView
-              .map(
-                (proj) => `
+              .map((proj) => {
+                const safeHref = sanitizeHref(proj.link || null);
+                const linkMarkup = safeHref
+                  ? ` - <a class="resume-link" href="${escapeAttr(safeHref)}" target="_blank" rel="noreferrer">link</a>`
+                  : "";
+
+                return `
                   <div class="resume-row">
                     <div class="resume-strong">
-                      ${proj.name}${proj.link ? ` - <a class="resume-link" href="${proj.link}">link</a>` : ""}
+                      ${escapeHtml(proj.name)}${linkMarkup}
                     </div>
-                    <div class="resume-meta-line">${proj.detail}</div>
-                  </div>`
-              )
+                    <div class="resume-meta-line">${escapeHtml(proj.detail)}</div>
+                  </div>`;
+              })
               .join("")}
           </div>
         </div>
@@ -123,11 +129,12 @@ export function buildSectionHtml(args: {
               ${certs
                 .map((c) => {
                   if (!c.name) return "";
-                  const issuer = c.issuer ? ` - ${c.issuer}` : "";
-                  const link = c.credentialUrl
-                    ? ` <a class="resume-link resume-cert-link" href="${c.credentialUrl}" target="_blank" rel="noreferrer">(link)</a>`
+                  const issuer = c.issuer ? ` - ${escapeHtml(c.issuer)}` : "";
+                  const safeHref = sanitizeHref(c.credentialUrl || null);
+                  const link = safeHref
+                    ? ` <a class="resume-link resume-cert-link" href="${escapeAttr(safeHref)}" target="_blank" rel="noreferrer">(link)</a>`
                     : "";
-                  return `<li><span class="resume-strong">${c.name}</span>${issuer}${link}</li>`;
+                  return `<li><span class="resume-strong">${escapeHtml(c.name)}</span>${issuer}${link}</li>`;
                 })
                 .filter(Boolean)
                 .join("") || ""}
@@ -164,15 +171,15 @@ export function buildPagesHtml({
           ? `
         <div class="resume-top">
           <div class="resume-top-header">
-            <h1>${profile.fullName}</h1>
+            <h1>${escapeHtml(profile.fullName)}</h1>
           </div>
             <div class="resume-summary-plain">
             ${
               profile.title
-                ? `<div class="resume-role-plain">${profile.title}</div>`
+                ? `<div class="resume-role-plain">${escapeHtml(profile.title)}</div>`
                 : ""
             }
-            <div class="summary">${profile.summary || ""}</div>
+            <div class="summary">${escapeHtml(profile.summary || "")}</div>
           </div>
           ${
             layoutMode === "single"

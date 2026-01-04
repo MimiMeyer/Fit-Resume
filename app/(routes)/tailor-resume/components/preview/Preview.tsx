@@ -376,7 +376,7 @@ export function Preview({
     >
       <div className="flex w-full justify-center">
         <div className="relative z-10 flex w-full max-w-full flex-col items-center" style={{ gap: "22px" }}>
-          <style dangerouslySetInnerHTML={{ __html: resumeStyles }} />
+          <style>{resumeStyles}</style>
           <div style={zoomStyle} className="resume-wrapper" ref={resumeWrapperRef}>
             <div className="resume-root" style={pageStyle}>
               <div
