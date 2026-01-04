@@ -3,14 +3,14 @@
 import { revalidatePath } from "next/cache";
 import {
   deleteCategory as deleteCategoryRepo,
-  getCategoriesWithCounts,
+  getCategoriesWithCounts as getCategoriesWithCountsRepo,
   updateCategoryName as updateCategoryNameRepo,
   type CategoryWithCount,
 } from "@/server/profile/profile.repo";
 
 
 export async function getCategories(): Promise<CategoryWithCount[]> {
-  return getCategoriesWithCounts();
+  return getCategoriesWithCountsRepo();
 }
 
 export async function updateCategoryName(id: number, name: string) {

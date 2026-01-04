@@ -34,4 +34,5 @@ export async function updateProfileDetails(formData: FormData) {
   });
 
   revalidatePath("/profile");
+  revalidatePath("/tailor-resume");
 }

@@ -325,15 +325,6 @@ export function AboutLayout({ profile }: Props) {
           <form
             className={styles.formContainer}
             action={(fd) => {
-              const categoryName =
-                editCategoryMode === "new"
-                  ? editCategoryOther.trim()
-                  : editCategoryValue.trim();
-              if (!categoryName) {
-                alert("Please select or add a category");
-                return;
-              }
-              fd.set("category", categoryName);
               startTransition(async () => {
                 await updateSkill(fd);
                 setEditingSkill(null);
@@ -354,39 +345,64 @@ export function AboutLayout({ profile }: Props) {
 
             <div className={styles.formSection}>
               <span className={styles.labelText}>Category</span>
-              <select
-                className={styles.input}
-                value={editCategoryMode === "existing" ? editCategoryValue : "__NEW__"}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  if (val === "__NEW__") {
-                    setEditCategoryMode("new");
-                    setEditCategoryValue("");
-                    setEditCategoryOther("");
-                  } else {
+              {editCategoryMode === "existing" ? (
+                <select
+                  name="category"
+                  required
+                  className={styles.input}
+                  value={editCategoryValue}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === "__NEW__") {
+                      setEditCategoryMode("new");
+                      setEditCategoryValue("");
+                      setEditCategoryOther("");
+                    } else {
+                      setEditCategoryMode("existing");
+                      setEditCategoryValue(val);
+                      setEditCategoryOther("");
+                    }
+                  }}
+                >
+                  <option value="">Select a category</option>
+                  {categories.map((cat) => (
+                    <option key={cat.id} value={cat.name}>
+                      {cat.name}
+                    </option>
+                  ))}
+                  <option value="__NEW__">+ New category</option>
+                </select>
+              ) : (
+                <select
+                  className={styles.input}
+                  value="__NEW__"
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === "__NEW__") return;
                     setEditCategoryMode("existing");
                     setEditCategoryValue(val);
                     setEditCategoryOther("");
-                  }
-                }}
-              >
-                <option value="">Select a category</option>
-                {categories.map((cat) => (
-                  <option key={cat.id} value={cat.name}>
-                    {cat.name}
-                  </option>
-                ))}
-                <option value="__NEW__">+ New category</option>
-              </select>
-              {editCategoryMode === "new" && (
+                  }}
+                >
+                  <option value="__NEW__">+ New category</option>
+                  {categories.map((cat) => (
+                    <option key={cat.id} value={cat.name}>
+                      {cat.name}
+                    </option>
+                  ))}
+                </select>
+              )}
+
+              {editCategoryMode === "new" ? (
                 <input
-                  name="categoryOther"
+                  name="category"
+                  required
                   placeholder="New category name"
                   className={styles.input}
                   value={editCategoryOther}
                   onChange={(e) => setEditCategoryOther(e.target.value)}
                 />
-              )}
+              ) : null}
             </div>
 
             <div className={styles.actionsRowPadded}>

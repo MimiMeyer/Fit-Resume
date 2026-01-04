@@ -2,8 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import {
-  createEducation,
+  createEducation as createEducationRepo,
   deleteEducation as deleteEducationRepo,
+  saveEducationSection as saveEducationSectionRepo,
   updateEducation as updateEducationRepo,
 } from "@/server/profile/profile.repo";
 
@@ -18,7 +19,7 @@ export async function addEducation(formData: FormData) {
   const details = (formData.get("details") as string | null)?.trim() || null;
   if (!profileId || !institution) return;
 
-  await createEducation({ profileId, institution, degree, field, startYear, endYear, details });
+  await createEducationRepo({ profileId, institution, degree, field, startYear, endYear, details });
   revalidatePath("/profile");
 }
 
@@ -41,4 +42,22 @@ export async function updateEducation(formData: FormData) {
 
   await updateEducationRepo(id, { institution, degree, field, startYear, endYear, details });
   revalidatePath("/profile");
+}
+
+export async function saveEducationSection(args: {
+  profileId: number;
+  educations: Array<{
+    id?: number;
+    institution: string;
+    degree: string;
+    field: string;
+    startYear: number | null;
+    endYear: number | null;
+    details: string;
+  }>;
+}) {
+  await saveEducationSectionRepo(args);
+
+  revalidatePath("/profile");
+  revalidatePath("/tailor-resume");
 }

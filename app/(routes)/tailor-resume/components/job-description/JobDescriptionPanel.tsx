@@ -1,9 +1,11 @@
-import { Dispatch, SetStateAction } from "react";
+"use client";
 
-type JdPanelProps = {
+import type { Dispatch, SetStateAction } from "react";
+
+type JobDescriptionPanelProps = {
   show: boolean;
-  jd: string;
-  setJd: Dispatch<SetStateAction<string>>;
+  jobDescription: string;
+  setJobDescription: Dispatch<SetStateAction<string>>;
   onGenerate: () => void;
   onToggle: () => void;
   isGenerating?: boolean;
@@ -11,22 +13,22 @@ type JdPanelProps = {
   error?: string | null;
 };
 
-export function JdPanel({
+export function JobDescriptionPanel({
   show,
-  jd,
-  setJd,
+  jobDescription,
+  setJobDescription,
   onGenerate,
   onToggle,
   isGenerating,
   hasGenerated,
   error,
-}: JdPanelProps) {
+}: JobDescriptionPanelProps) {
   if (!show) return null;
 
   return (
     <div className="flex flex-col gap-3 rounded-xl border border-zinc-100 bg-zinc-50 p-4">
       <div className="flex items-center justify-between">
-        <label className="text-sm font-semibold text-zinc-900" htmlFor="jd-input">
+        <label className="text-sm font-semibold text-zinc-900" htmlFor="job-description-input">
           Job description
         </label>
         <button
@@ -38,10 +40,10 @@ export function JdPanel({
         </button>
       </div>
       <textarea
-        id="jd-input"
+        id="job-description-input"
         className="min-h-[320px] w-full rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-800 focus:border-[var(--accent)] focus:outline-none"
-        value={jd}
-        onChange={(e) => setJd(e.target.value)}
+        value={jobDescription}
+        onChange={(e) => setJobDescription(e.target.value)}
         placeholder="Paste the job description here..."
       />
       <div className="flex items-center justify-between gap-2">
@@ -63,7 +65,7 @@ export function JdPanel({
           <div className="space-y-1">
             <div className="flex items-center gap-2 font-semibold text-zinc-800">
               <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-[var(--accent)]" />
-              <span>Running agents…</span>
+              <span>Running agents...</span>
             </div>
             <div className="h-1 w-full overflow-hidden rounded-full bg-zinc-200">
               <div className="h-full w-1/2 animate-pulse rounded-full bg-[var(--accent)]" />
@@ -77,3 +79,4 @@ export function JdPanel({
     </div>
   );
 }
+

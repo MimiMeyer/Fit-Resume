@@ -5,9 +5,9 @@ import { generateResume } from "@/server/resume/resume.service";
 export default async function CreateResumePage() {
   const profile = await getProfileWithRelations();
 
-  async function handleGenerate(jd: string) {
+  async function handleGenerate(jobDescription: string) {
     "use server";
-    return generateResume(jd);
+    return generateResume(jobDescription);
   }
 
   return <CreateResumeView profile={profile} onGenerate={handleGenerate} />;

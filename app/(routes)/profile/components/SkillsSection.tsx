@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, type Dispatch, type SetStateAction } from "react";
+import { useRef, useState, useTransition, type Dispatch, type SetStateAction } from "react";
 import { PenIcon } from "@/app/icons/pen";
 import { TrashIcon } from "@/app/icons/trash";
 import { styles } from "../style-constants";
@@ -60,6 +60,7 @@ function AddSkillModal({
   const [categorySearch, setCategorySearch] = useState("");
   const [existingCategories, setExistingCategories] = useState<string[]>([]);
   const [newCategory, setNewCategory] = useState("");
+  const categoryInputRef = useRef<HTMLInputElement | null>(null);
 
   const close = () => {
     setOpen(false);
@@ -95,13 +96,19 @@ function AddSkillModal({
       >
         <form
           className={styles.formContainer}
-          action={(fd) => {
-            const categoryName = selectedCategory.trim();
-            if (!categoryName) {
-              alert("Please select or add a category");
+          onSubmit={(e) => {
+            const category = selectedCategory.trim();
+            if (category) {
+              categoryInputRef.current?.setCustomValidity("");
               return;
             }
-            fd.set("category", categoryName);
+            e.preventDefault();
+            categoryInputRef.current?.setCustomValidity("Please select or add a category.");
+            categoryInputRef.current?.reportValidity();
+            openPicker();
+          }}
+          action={(fd) => {
+            fd.set("category", selectedCategory.trim());
 
             startTransition(async () => {
               await addSkill(fd);
@@ -119,13 +126,25 @@ function AddSkillModal({
           <div className={styles.formSection}>
             <span className={styles.labelText}>Category</span>
 
-            <button
-              type="button"
+            <input
+              ref={categoryInputRef}
+              name="category"
+              required
+              readOnly
+              value={selectedCategory}
+              placeholder="Choose category"
               onClick={() => openPicker()}
+              onChange={() => {
+                // no-op: category is selected via picker
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  openPicker();
+                }
+              }}
               className={styles.cancelButton}
-            >
-              {selectedCategory ? selectedCategory : "Choose category"}
-            </button>
+            />
 
             {categoryPickerOpen ? (
               <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/30 px-4 py-10 backdrop-blur-sm overflow-hidden">
@@ -137,7 +156,7 @@ function AddSkillModal({
                     </div>
                     <button
                       type="button"
-                      className="rounded-full px-2 py-1 text-sm font-semibold text-zinc-600 transition hover:bg-indigo-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]"
+                      className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-zinc-200 bg-white text-zinc-600 transition hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]"
                       aria-label="Close category picker"
                       onClick={() => {
                         setCategoryPickerOpen(false);

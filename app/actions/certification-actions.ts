@@ -2,8 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import {
-  createCertification,
+  createCertification as createCertificationRepo,
   deleteCertification as deleteCertificationRepo,
+  saveCertificationsSection as saveCertificationsSectionRepo,
   updateCertification as updateCertificationRepo,
 } from "@/server/profile/profile.repo";
 
@@ -16,7 +17,7 @@ export async function addCertification(formData: FormData) {
   const credentialUrl = (formData.get("credentialUrl") as string | null)?.trim() || null;
   if (!profileId || !name) return;
 
-  await createCertification({ profileId, name, issuer, issuedYear, credentialUrl });
+  await createCertificationRepo({ profileId, name, issuer, issuedYear, credentialUrl });
   revalidatePath("/profile");
 }
 
@@ -37,4 +38,20 @@ export async function updateCertification(formData: FormData) {
 
   await updateCertificationRepo(id, { name, issuer, issuedYear, credentialUrl });
   revalidatePath("/profile");
+}
+
+export async function saveCertificationsSection(args: {
+  profileId: number;
+  certifications: Array<{
+    id?: number;
+    name: string;
+    issuer: string;
+    issuedYear: number | null;
+    credentialUrl: string;
+  }>;
+}) {
+  await saveCertificationsSectionRepo(args);
+
+  revalidatePath("/profile");
+  revalidatePath("/tailor-resume");
 }
