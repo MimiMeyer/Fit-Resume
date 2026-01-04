@@ -2,7 +2,6 @@
 
 import { CreateResumeView } from "./view";
 import { useProfile } from "@/app/local/useProfile";
-import { generateResume } from "@/server/resume/resume.service";
 
 export default function TailorResumePage() {
   const { profile, loadError, updateProfile } = useProfile();
@@ -19,7 +18,6 @@ export default function TailorResumePage() {
     <CreateResumeView
       profile={profile}
       updateProfile={updateProfile}
-      onGenerate={(jobDescription) => generateResume(profile, jobDescription)}
     />
   );
 }

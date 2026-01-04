@@ -1,4 +1,4 @@
-import { anthropic } from "@ai-sdk/anthropic";
+import { createAnthropic } from "@ai-sdk/anthropic";
 import { generateText } from "ai";
 import type {
   AgentExperienceInput,
@@ -30,12 +30,15 @@ type ModelInput = {
   skillsByCategory: Record<string, string[]>;
 };
 
-function getAnthropicModel() {
-  if (!process.env.ANTHROPIC_API_KEY) {
-    throw new Error("ANTHROPIC_API_KEY is missing in environment");
+const ANTHROPIC_MODEL = "claude-sonnet-4-5-20250929";
+
+function getAnthropicModel(apiKey?: string) {
+  const trimmed = apiKey?.trim();
+  if (!trimmed) {
+    throw new Error("Claude API key is required.");
   }
-  const modelName = process.env.ANTHROPIC_MODEL || "claude-sonnet-4-5-20250929";
-  return anthropic(modelName);
+  const provider = createAnthropic({ apiKey: trimmed });
+  return provider(ANTHROPIC_MODEL);
 }
 
 function buildModelInput(profile: AgentProfileInput): ModelInput {
@@ -69,7 +72,7 @@ function buildModelInput(profile: AgentProfileInput): ModelInput {
   };
 }
 
-async function summaryAgent(input: ModelInput, jd: string) {
+async function summaryAgent(input: ModelInput, jd: string, apiKey?: string) {
   const originalSummary = (input.profile.summary || "").trim();
 
   if (!originalSummary) {
@@ -77,7 +80,7 @@ async function summaryAgent(input: ModelInput, jd: string) {
   }
 
   const { text } = await generateText({
-    model: getAnthropicModel(),
+    model: getAnthropicModel(apiKey),
     temperature: 0.2,
     maxOutputTokens: 200,
     system: `
@@ -127,11 +130,15 @@ Hard Rules:
   return text.trim();
 }
 
-async function experienceAgent(input: ModelInput, jd: string): Promise<GeneratedExperience[]> {
+async function experienceAgent(
+  input: ModelInput,
+  jd: string,
+  apiKey?: string,
+): Promise<GeneratedExperience[]> {
   const experiences = input.experiences;
   if (!experiences.length) return [];
 
-  const model = getAnthropicModel();
+  const model = getAnthropicModel(apiKey);
   const rendered: GeneratedExperience[] = [];
 
   for (const exp of experiences) {
@@ -206,11 +213,11 @@ Hard Rules:
   return rendered;
 }
 
-async function projectsAgent(input: ModelInput, jd: string): Promise<GeneratedProject[]> {
+async function projectsAgent(input: ModelInput, jd: string, apiKey?: string): Promise<GeneratedProject[]> {
   const projects = input.projects;
   if (!projects.length) return [];
 
-  const model = getAnthropicModel();
+  const model = getAnthropicModel(apiKey);
 
   const { text } = await generateText({
     model,
@@ -284,7 +291,11 @@ Hard Rules:
   return parsed;
 }
 
-async function skillsAgent(input: ModelInput, jd: string): Promise<Record<string, string[]>> {
+async function skillsAgent(
+  input: ModelInput,
+  jd: string,
+  apiKey?: string,
+): Promise<Record<string, string[]>> {
   const skillsByCategory = input.skillsByCategory;
   const experiences = input.experiences;
   const projects = input.projects;
@@ -306,7 +317,7 @@ async function skillsAgent(input: ModelInput, jd: string): Promise<Record<string
     .trim();
 
   const { text } = await generateText({
-    model: getAnthropicModel(),
+    model: getAnthropicModel(apiKey),
     temperature: 0.1,
     maxOutputTokens: 200,
     system: `
@@ -369,14 +380,18 @@ Hard Rules:
   return grouped;
 }
 
-export async function runResumeAgents(profile: AgentProfileInput, jd: string): Promise<GeneratedResume> {
+export async function runResumeAgents(
+  profile: AgentProfileInput,
+  jd: string,
+  apiKey?: string,
+): Promise<GeneratedResume> {
   const input = buildModelInput(profile);
 
   const [summary, experiences, projects, skillsByCategory] = await Promise.all([
-    summaryAgent(input, jd),
-    experienceAgent(input, jd),
-    projectsAgent(input, jd),
-    skillsAgent(input, jd),
+    summaryAgent(input, jd, apiKey),
+    experienceAgent(input, jd, apiKey),
+    projectsAgent(input, jd, apiKey),
+    skillsAgent(input, jd, apiKey),
   ]);
 
   return {

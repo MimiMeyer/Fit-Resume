@@ -4,7 +4,6 @@ import { JobDescriptionPanel } from "./components/job-description/JobDescription
 import { Preview } from "./components/preview/Preview";
 import { Toolbar } from "./components/topbar/Toolbar";
 import { EditSections } from "./components/topbar/edit/EditSections";
-import type { GeneratedResume } from "@/types/resume-agent";
 import type { Profile } from "@/types/profile";
 import { styles } from "./style-constants";
 import { useCreateResume } from "./useCreateResume";
@@ -13,16 +12,17 @@ const ZOOM_STEP = 0.05;
 
 export function CreateResumeView({
   profile,
-  onGenerate,
   updateProfile,
 }: {
   profile: Profile;
-  onGenerate: (jobDescription: string) => Promise<GeneratedResume>;
   updateProfile: (updater: (current: Profile) => Profile, opts?: { flush?: boolean }) => void;
 }) {
   const {
     jobDescription,
     setJobDescription,
+    claudeApiKey,
+    setClaudeApiKey,
+    promptForApiKey,
     generated,
     generateError,
     isGenerating,
@@ -66,7 +66,7 @@ export function CreateResumeView({
     skillsForEdit,
     educationsForEdit,
     certificationsForEdit,
-  } = useCreateResume(profile, { onGenerate });
+  } = useCreateResume(profile);
 
   const hasDraft = !!draft;
 
@@ -110,6 +110,9 @@ export function CreateResumeView({
               show
               jobDescription={jobDescription}
               setJobDescription={setJobDescription}
+              claudeApiKey={claudeApiKey}
+              setClaudeApiKey={setClaudeApiKey}
+              promptForApiKey={promptForApiKey}
               onGenerate={handleGenerate}
               onToggle={() => setShowJobDescription((s) => !s)}
               isGenerating={isGenerating}

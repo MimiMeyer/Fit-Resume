@@ -287,9 +287,10 @@ function mixColor(hex: string, amt: number) {
 
 export function useCreateResume(
   profile: Profile,
-  opts: { onGenerate: (jobDescription: string) => Promise<GeneratedResume> },
 ) {
   const [jobDescription, setJobDescription] = useState("");
+  const [claudeApiKey, setClaudeApiKey] = useState("");
+  const [promptForApiKey, setPromptForApiKey] = useState(false);
   const [generated, setGenerated] = useState<GeneratedResume | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generateError, setGenerateError] = useState<string | null>(null);
@@ -313,6 +314,13 @@ export function useCreateResume(
 
   const resumeRef = useRef<HTMLDivElement>(null);
   const resumeWrapperRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!promptForApiKey) return;
+    if (!claudeApiKey.trim()) return;
+    setPromptForApiKey(false);
+    setGenerateError(null);
+  }, [claudeApiKey, promptForApiKey]);
 
   useEffect(() => {
     const next = safeParseDraft(sessionStorage.getItem(TAILOR_RESUME_DRAFT_CACHE_KEY));
@@ -664,11 +672,35 @@ export function useCreateResume(
   ]);
 
   const handleGenerate = async () => {
-    if (!jobDescription.trim()) return;
+    const trimmedJd = jobDescription.trim();
+    if (!trimmedJd) return;
+
+    if (!claudeApiKey.trim()) {
+      setPromptForApiKey(true);
+      setGenerateError("Add your API key to generate suggestions.");
+      setShowJobDescription(true);
+      return;
+    }
+
     setIsGenerating(true);
     setGenerateError(null);
     try {
-      const data = await opts.onGenerate(jobDescription);
+      const res = await fetch("/api/tailor-resume/generate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-claude-api-key": claudeApiKey.trim(),
+        },
+        body: JSON.stringify({ profile, jobDescription: trimmedJd }),
+        cache: "no-store",
+      });
+
+      if (!res.ok) {
+        const payload = (await res.json().catch(() => null)) as null | { error?: string };
+        throw new Error(payload?.error || "Unable to generate suggestions.");
+      }
+
+      const data = (await res.json()) as GeneratedResume;
       setGenerated({
         summary: data.summary,
         experiences: data.experiences || [],
@@ -679,8 +711,9 @@ export function useCreateResume(
       sessionStorage.removeItem(TAILOR_RESUME_DRAFT_CACHE_KEY);
       sessionStorage.removeItem(LEGACY_RESUME_EDITS_CACHE_KEY);
       setShowJobDescription(false);
+      setPromptForApiKey(false);
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Unable to generate resume.";
+      const message = err instanceof Error ? err.message : "Unable to generate suggestions.";
       setGenerateError(message);
     } finally {
       setIsGenerating(false);
@@ -804,6 +837,9 @@ export function useCreateResume(
   return {
     jobDescription,
     setJobDescription,
+    claudeApiKey,
+    setClaudeApiKey,
+    promptForApiKey,
     generated,
     generateError,
     isGenerating,
