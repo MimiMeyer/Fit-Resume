@@ -7,8 +7,7 @@ import type { Experience } from "@/types/experience";
 import type { Project } from "@/types/project";
 import type { Skill } from "@/types/skill";
 
-type StoredProfileEnvelopeV1 = {
-  schemaVersion: 1;
+type StoredProfileEnvelope = {
   savedAt: string;
   profile: Profile;
 };
@@ -16,7 +15,7 @@ type StoredProfileEnvelopeV1 = {
 const DB_NAME = "fitresume";
 const DB_VERSION = 1;
 const STORE_NAME = "kv";
-const PROFILE_KEY = "profile.v1";
+const PROFILE_KEY = "profile";
 
 function openDb(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -59,8 +58,7 @@ function newId(): number {
 export function createEmptyProfile(): Profile {
   return {
     id: 1,
-    fullName: "Your Name",
-    headline: null,
+    fullName: "",
     summary: null,
     title: null,
     email: null,
@@ -78,8 +76,8 @@ export function createEmptyProfile(): Profile {
 }
 
 export async function loadProfile(): Promise<Profile> {
-  const stored = await kvGet<StoredProfileEnvelopeV1>(PROFILE_KEY);
-  if (!stored || stored.schemaVersion !== 1 || !stored.profile) {
+  const stored = await kvGet<StoredProfileEnvelope>(PROFILE_KEY);
+  if (!stored || !stored.profile) {
     const profile = createEmptyProfile();
     await saveProfile(profile);
     return profile;
@@ -88,8 +86,7 @@ export async function loadProfile(): Promise<Profile> {
 }
 
 export async function saveProfile(profile: Profile): Promise<void> {
-  const envelope: StoredProfileEnvelopeV1 = {
-    schemaVersion: 1,
+  const envelope: StoredProfileEnvelope = {
     savedAt: new Date().toISOString(),
     profile,
   };
@@ -212,4 +209,3 @@ export function deleteSkillCategory(profile: Profile, categoryName: string): Pro
   if (!target) return profile;
   return { ...profile, skills: profile.skills.filter((s) => s.category.name.toUpperCase() !== target) };
 }
-

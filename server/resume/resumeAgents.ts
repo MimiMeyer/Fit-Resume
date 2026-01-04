@@ -12,7 +12,7 @@ import type {
 type ModelInput = {
   profile: Pick<
     AgentProfileInput,
-    "fullName" | "title" | "headline" | "summary"
+    "fullName" | "title" | "summary"
   >;
   experiences: Array<{
     role: string;
@@ -50,7 +50,6 @@ function buildModelInput(profile: AgentProfileInput): ModelInput {
     profile: {
       fullName: profile.fullName,
       title: profile.title,
-      headline: profile.headline,
       summary: profile.summary,
     },
     experiences: profile.experiences.map((exp: AgentExperienceInput) => ({
@@ -58,10 +57,7 @@ function buildModelInput(profile: AgentProfileInput): ModelInput {
       company: exp.company,
       period: exp.period,
       location: exp.location,
-      impactBullets: (exp.impact ?? "")
-        .split("\n")
-        .map((line) => line.trim())
-        .filter(Boolean),
+      impactBullets: (exp.impactBullets ?? []).map((line) => line.trim()).filter(Boolean),
     })),
     projects: profile.projects.map((proj: AgentProjectInput) => ({
       title: proj.title,
@@ -114,7 +110,6 @@ Hard Rules:
             text: `PROFILE CONTEXT (for factual grounding only):\n${JSON.stringify(
               {
                 title: input.profile.title,
-                headline: input.profile.headline,
                 experiences: input.experiences,
                 projects: input.projects,
                 skillsByCategory: input.skillsByCategory,
@@ -168,7 +163,7 @@ You rewrite resume bullets to better match a job description.
 Goals:
 - Align tone and terminology with the JD while keeping facts intact.
 - Highlight relevant impact using recruiter-friendly language.
-- Keep bullets concise and easy to scan (up to 4 per role).
+- Keep bullets concise and easy to scan.
 
 Hard Rules:
 1) Use ONLY the provided bullets; do not add new responsibilities, systems, technologies, or metrics.
@@ -177,7 +172,7 @@ Hard Rules:
 4) Keywords introduced from the JD must describe the same type of work.
 5) You MUST NOT introduce keywords that imply new domains, systems, or ownership.
 6) Do not change role/company/period/location; rewrite bullet text only.
-7) Output up to 4 bullets, each prefixed with "- "; no headers or explanations.
+7) Output bullets, each prefixed with "- "; no headers or explanations.
 8) Keep tone professional and direct; avoid hype and buzzwords.
 `.trim(),
       messages: [
@@ -187,7 +182,7 @@ Hard Rules:
             { type: "text", text: `JOB DESCRIPTION:\n${jd}` },
             { type: "text", text: `ROLE: ${header}${meta}` },
             { type: "text", text: `ORIGINAL BULLETS:\n${bullets.map((b: string) => `- ${b}`).join("\n")}` },
-            { type: "text", text: "Rewrite the bullets following all rules above. Limit to 4 bullets." },
+            { type: "text", text: "Rewrite the bullets following all rules above. Keep the same number of bullets." },
           ],
         },
       ],
@@ -197,7 +192,6 @@ Hard Rules:
       .split(/\r?\n/)
       .map((line) => line.trim())
       .filter(Boolean)
-      .slice(0, 4)
       .map((line) => line.replace(/^[-\u2022]\s*/, "").trim());
 
     rendered.push({
@@ -223,22 +217,20 @@ async function projectsAgent(input: ModelInput, jd: string): Promise<GeneratedPr
     temperature: 0.2,
     maxOutputTokens: 200,
     system: `
-You select the two best-fitting projects for a job description and rewrite ONLY their descriptions.
+You rewrite project descriptions to better match a job description.
 
 Goals:
-- Choose the projects that best match the JD (if 2 or fewer projects exist, include all).
 - Rewrite each description to 1-1.5 concise sentences aligned to the JD.
 - Produce a clean, recruiter-friendly output.
 
 Hard Rules:
 1) Use ONLY details present in the original project descriptions and technologies; do not invent facts, metrics, or tools.
-2) If there are 2 or fewer projects, include all of them. If more than 2, pick the two that best match the JD.
-3) Preserve titles, technologies, and links; rewrite description text only.
-4) Output plain text in this format:
+2) Preserve titles, technologies, and links; rewrite description text only.
+3) Output plain text in this format (repeat once per project, in the same order as input):
    <Title> | Tech: <tech list> | Link: <link>
    - <rewritten description>
-5) Avoid adding interpretive or evaluative phrases; focus on what was built and what it does.
-6) Do not add extra sections or commentary.
+4) Avoid adding interpretive or evaluative phrases; focus on what was built and what it does.
+5) Do not add extra sections or commentary.
 `.trim(),
     messages: [
       {
@@ -258,7 +250,7 @@ Hard Rules:
               2,
             )}`,
           },
-          { type: "text", text: "Return exactly 2 formatted project entries as instructed." },
+          { type: "text", text: "Return one formatted entry per project, in order." },
         ],
       },
     ],
@@ -289,7 +281,7 @@ Hard Rules:
     }
   }
 
-  return parsed.slice(0, 2);
+  return parsed;
 }
 
 async function skillsAgent(input: ModelInput, jd: string): Promise<Record<string, string[]>> {

@@ -8,7 +8,6 @@ function toAgentProfileInput(profile: Profile): AgentProfileInput {
   return {
     fullName: profile.fullName,
     title: profile.title ?? null,
-    headline: profile.headline ?? null,
     summary: profile.summary ?? null,
     location: profile.location ?? null,
     email: profile.email ?? null,
@@ -21,7 +20,7 @@ function toAgentProfileInput(profile: Profile): AgentProfileInput {
       company: e.company,
       location: e.location ?? null,
       period: e.period ?? null,
-      impact: e.impact ?? null,
+      impactBullets: e.impactBullets ?? [],
     })),
     projects: (profile.projects ?? []).map((p) => ({
       title: p.title,

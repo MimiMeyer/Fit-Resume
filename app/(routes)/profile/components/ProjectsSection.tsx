@@ -90,7 +90,6 @@ export function ProjectsSection({ profileId, projects, onEdit, onAdd, onDelete }
         <div className={styles.sectionHeaderSpaced}>
           <div className={styles.stackSm}>
             <h2 className={styles.sectionTitle}>Projects</h2>
-            <p className={styles.mutedText}>Add your first project.</p>
           </div>
           <AddProjectModal profileId={profileId} onAdd={onAdd} />
         </div>

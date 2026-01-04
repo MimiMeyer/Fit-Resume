@@ -28,7 +28,7 @@ export function validateHeaderDraft(draft: TailorHeaderDraft): string | null {
 
 export function validateExperiences(items: TailorExperienceDraft[]): string | null {
   const normalized = normalizeList(items, (e) =>
-    allBlank([e.role, e.company, e.location, e.period, e.impact]),
+    allBlank([e.role, e.company, e.location, e.period, (e.impactBullets || []).join(" ")]),
   );
   const invalid = normalized.find((e) => isBlankString(e.role) || isBlankString(e.company));
   if (invalid) return "Each experience needs at least Role and Company (or delete the blank item).";

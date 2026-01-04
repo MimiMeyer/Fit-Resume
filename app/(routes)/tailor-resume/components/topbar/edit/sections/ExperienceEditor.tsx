@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { TailorExperienceDraft } from "../../../../model/edit-state";
 import { ActionRow } from "../shared/ActionRow";
 import { useAutoScrollOnAdd } from "../shared/useAutoScrollOnAdd";
+import { BulletTextarea } from "@/app/components/BulletTextarea";
 
 export function ExperienceEditor({
   initial,
@@ -33,7 +34,7 @@ export function ExperienceEditor({
             markAdded();
             setItems((prev) => [
               ...prev,
-              { id: undefined, role: "", company: "", location: "", period: "", impact: "" },
+              { id: undefined, role: "", company: "", location: "", period: "", impactBullets: [] },
             ]);
           }}
         >
@@ -109,19 +110,17 @@ export function ExperienceEditor({
                 </label>
               </div>
 
-              <label className="grid gap-1 text-sm">
-                <span className="font-semibold text-zinc-800">Impact (one bullet per line)</span>
-                <textarea
-                  rows={5}
-                  className="rounded-lg border border-zinc-200 bg-white px-3 py-2"
-                  value={exp.impact}
-                  onChange={(e) =>
-                    setItems((prev) =>
-                      prev.map((p, i) => (i === idx ? { ...p, impact: e.target.value } : p)),
-                    )
-                  }
-                />
-              </label>
+              <BulletTextarea
+                label="Impact"
+                bullets={exp.impactBullets}
+                onChange={(nextBullets) =>
+                  setItems((prev) =>
+                    prev.map((p, i) => (i === idx ? { ...p, impactBullets: nextBullets } : p)),
+                  )
+                }
+                rows={5}
+                placeholder="• Impact bullet"
+              />
             </div>
           </div>
         ))}

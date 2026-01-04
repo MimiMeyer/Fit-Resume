@@ -27,6 +27,7 @@ import type {
 } from "./types";
 import type { GeneratedResume } from "@/types/resume-agent";
 import type { Profile } from "@/types/profile";
+import { normalizeBullets } from "@/lib/normalizeBullets";
 import type {
   TailorCertificationDraft,
   TailorEducationDraft,
@@ -51,7 +52,7 @@ const SECTION_ORDER: ResumeSectionId[] = [
 ];
 
 const emptyProfileFallback = {
-  fullName: "Your Name",
+  fullName: "",
   title: "",
   summary: "",
 };
@@ -177,10 +178,6 @@ function safeParseBorders(raw: string | null): ResumeBorders | null {
   }
 }
 
-function joinLines(lines: string[]) {
-  return lines.map((l) => l.trim()).filter(Boolean).join("\n");
-}
-
 function normalizeTailorExperienceDraft(input: TailorExperienceDraft): TailorExperienceDraft {
   return {
     id: input.id,
@@ -188,7 +185,7 @@ function normalizeTailorExperienceDraft(input: TailorExperienceDraft): TailorExp
     company: input.company.trim(),
     location: input.location.trim(),
     period: input.period.trim(),
-    impact: input.impact.trim(),
+    impactBullets: (input.impactBullets ?? []).map((l) => l.trim()).filter(Boolean),
   };
 }
 
@@ -370,20 +367,6 @@ export function useCreateResume(
 
   const clampZoom = (value: number) => Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, value));
 
-  const contactParts = useMemo(
-    () =>
-      [profile.location, profile.phone, profile.email, profile.githubUrl, profile.linkedinUrl].filter(
-        Boolean,
-      ) as string[],
-    [
-      profile.email,
-      profile.githubUrl,
-      profile.linkedinUrl,
-      profile.location,
-      profile.phone,
-    ],
-  );
-
   const headerForEdit: TailorHeaderDraft = useMemo(() => {
     const fromDraft = draft?.header ?? {};
 
@@ -391,17 +374,61 @@ export function useCreateResume(
       (fromDraft.fullName !== undefined ? fromDraft.fullName : profile.fullName) ||
       emptyProfileFallback.fullName;
     const title = fromDraft.title !== undefined ? fromDraft.title : profile.title ?? "";
-    const headline = fromDraft.headline !== undefined ? fromDraft.headline : profile.headline ?? "";
     const summary =
       fromDraft.summary !== undefined ? fromDraft.summary : generated?.summary ?? profile.summary ?? "";
+    const email = fromDraft.email !== undefined ? fromDraft.email : profile.email ?? "";
+    const phone = fromDraft.phone !== undefined ? fromDraft.phone : profile.phone ?? "";
+    const location = fromDraft.location !== undefined ? fromDraft.location : profile.location ?? "";
+    const linkedinUrl =
+      fromDraft.linkedinUrl !== undefined ? fromDraft.linkedinUrl : profile.linkedinUrl ?? "";
+    const githubUrl = fromDraft.githubUrl !== undefined ? fromDraft.githubUrl : profile.githubUrl ?? "";
+    const websiteUrl =
+      fromDraft.websiteUrl !== undefined ? fromDraft.websiteUrl : profile.websiteUrl ?? "";
 
     return {
       fullName: fullName.trim(),
       title: title.trim(),
-      headline: headline.trim(),
       summary: summary,
+      email: email.trim(),
+      phone: phone.trim(),
+      location: location.trim(),
+      linkedinUrl: linkedinUrl.trim(),
+      githubUrl: githubUrl.trim(),
+      websiteUrl: websiteUrl.trim(),
     };
-  }, [draft?.header, generated?.summary, profile.fullName, profile.headline, profile.summary, profile.title]);
+  }, [
+    draft?.header,
+    generated?.summary,
+    profile.email,
+    profile.fullName,
+    profile.githubUrl,
+    profile.linkedinUrl,
+    profile.location,
+    profile.phone,
+    profile.summary,
+    profile.title,
+    profile.websiteUrl,
+  ]);
+
+  const contactParts = useMemo(
+    () =>
+      [
+        headerForEdit.location,
+        headerForEdit.phone,
+        headerForEdit.email,
+        headerForEdit.websiteUrl,
+        headerForEdit.githubUrl,
+        headerForEdit.linkedinUrl,
+      ].filter(Boolean) as string[],
+    [
+      headerForEdit.email,
+      headerForEdit.githubUrl,
+      headerForEdit.linkedinUrl,
+      headerForEdit.location,
+      headerForEdit.phone,
+      headerForEdit.websiteUrl,
+    ],
+  );
 
   const summaryForView = headerForEdit.summary;
 
@@ -415,7 +442,7 @@ export function useCreateResume(
         company: exp.company,
         location: exp.location || "",
         period: exp.period || "",
-        impact: joinLines(exp.bullets || []),
+        impactBullets: normalizeBullets(exp.bullets || []),
       }));
     }
 
@@ -425,7 +452,7 @@ export function useCreateResume(
       company: exp.company,
       location: exp.location || "",
       period: exp.period || "",
-      impact: exp.impact || "",
+      impactBullets: exp.impactBullets || [],
     }));
   }, [draft?.experiences, generated?.experiences, profile.experiences]);
 
@@ -439,7 +466,7 @@ export function useCreateResume(
           company: exp.company,
           location: exp.location,
           period: exp.period,
-          bullets: exp.impact ? exp.impact.split("\n").map((l) => l.trim()).filter(Boolean).slice(0, 4) : [],
+          bullets: normalizeBullets(exp.impactBullets || []),
         })),
     [experiencesForEdit],
   );
@@ -497,7 +524,6 @@ export function useCreateResume(
       (projectsForEdit || [])
         .map((proj) => normalizeTailorProjectDraft(proj))
         .filter((proj) => proj.title)
-        .slice(0, 2)
         .map((proj) => ({
           name: proj.title,
           detail: proj.description || "",
@@ -594,8 +620,7 @@ export function useCreateResume(
       layoutMode,
       profile: {
         fullName: headerForEdit.fullName || emptyProfileFallback.fullName,
-        title: headerForEdit.title || headerForEdit.headline || emptyProfileFallback.title,
-        headline: headerForEdit.headline,
+        title: headerForEdit.title || emptyProfileFallback.title,
         summary: summaryForView || emptyProfileFallback.summary,
       },
       contactParts: contactParts.map((part) => linkifyContact(part)),
@@ -627,7 +652,6 @@ export function useCreateResume(
     palette,
     certificationsForEdit,
     headerForEdit.fullName,
-    headerForEdit.headline,
     headerForEdit.title,
     projectsForView,
     skillGroups,

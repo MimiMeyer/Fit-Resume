@@ -88,14 +88,6 @@ export function CreateResumeView({
         </div>
         <EditSections
           updateProfile={updateProfile}
-          profileDetails={{
-            email: profile.email ?? null,
-            phone: profile.phone ?? null,
-            location: profile.location ?? null,
-            githubUrl: profile.githubUrl ?? null,
-            linkedinUrl: profile.linkedinUrl ?? null,
-            websiteUrl: profile.websiteUrl ?? null,
-          }}
           draft={draft}
           setDraft={setDraft}
           header={headerForEdit}

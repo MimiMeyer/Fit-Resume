@@ -30,6 +30,7 @@ import {
   normalizeProjects,
   normalizeSkills,
 } from "./logic/normalize";
+import { normalizeBullets } from "@/lib/normalizeBullets";
 import { CertificationsEditor } from "./sections/CertificationsEditor";
 import { EducationEditor } from "./sections/EducationEditor";
 import { ExperienceEditor } from "./sections/ExperienceEditor";
@@ -39,14 +40,6 @@ import { SkillsEditor } from "./sections/SkillsEditor";
 
 type Props = {
   updateProfile: (updater: (current: Profile) => Profile, opts?: { flush?: boolean }) => void;
-  profileDetails: {
-    email: string | null;
-    phone: string | null;
-    location: string | null;
-    linkedinUrl: string | null;
-    githubUrl: string | null;
-    websiteUrl: string | null;
-  };
   draft: TailorResumeDraft | null;
   setDraft: (next: TailorResumeDraft | null) => void;
   header: TailorHeaderDraft;
@@ -156,7 +149,6 @@ type SectionConfig = {
 
 export function EditSections({
   updateProfile,
-  profileDetails,
   draft,
   setDraft,
   header,
@@ -226,14 +218,13 @@ export function EditSections({
             updateProfileDetailsLocal(current, {
               fullName: next.fullName,
               title: next.title || null,
-              headline: next.headline || null,
               summary: next.summary || null,
-              email: profileDetails.email ?? null,
-              phone: profileDetails.phone ?? null,
-              location: profileDetails.location ?? null,
-              githubUrl: profileDetails.githubUrl ?? null,
-              linkedinUrl: profileDetails.linkedinUrl ?? null,
-              websiteUrl: profileDetails.websiteUrl ?? null,
+              email: next.email.trim() || null,
+              phone: next.phone.trim() || null,
+              location: next.location.trim() || null,
+              githubUrl: next.githubUrl.trim() || null,
+              linkedinUrl: next.linkedinUrl.trim() || null,
+              websiteUrl: next.websiteUrl.trim() || null,
             }),
           { flush: true },
         );
@@ -264,7 +255,7 @@ export function EditSections({
               company: e.company,
               location: e.location || null,
               period: e.period || null,
-              impact: e.impact || null,
+              impactBullets: normalizeBullets(e.impactBullets || []),
             })),
           }),
           { flush: true },

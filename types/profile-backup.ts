@@ -1,9 +1,7 @@
-export type ProfileBackupV1 = {
-  schemaVersion: 1;
+export type ProfileBackup = {
   exportedAt: string; // ISO string
   profile: {
     fullName: string;
-    headline?: string | null;
     summary?: string | null;
     title?: string | null;
     email?: string | null;
@@ -18,7 +16,7 @@ export type ProfileBackupV1 = {
     company: string;
     location?: string | null;
     period?: string | null;
-    impact?: string | null;
+    impactBullets: string[];
   }>;
   projects: Array<{
     title: string;
@@ -45,6 +43,4 @@ export type ProfileBackupV1 = {
     category: string;
   }>;
 };
-
-export type ProfileBackup = ProfileBackupV1;
 

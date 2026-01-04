@@ -21,7 +21,9 @@ function normalizeList<T>(items: T[], isBlank: (item: T) => boolean) {
 }
 
 export function normalizeExperiences(items: TailorExperienceDraft[]) {
-  return normalizeList(items, (e) => allBlank([e.role, e.company, e.location, e.period, e.impact]));
+  return normalizeList(items, (e) =>
+    allBlank([e.role, e.company, e.location, e.period, (e.impactBullets || []).join(" ")]),
+  );
 }
 
 export function normalizeProjects(items: TailorProjectDraft[]) {

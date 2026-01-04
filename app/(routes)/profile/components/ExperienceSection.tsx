@@ -5,6 +5,8 @@ import { PenIcon } from "@/app/icons/pen";
 import { styles } from "../style-constants";
 import type { Experience } from "@/types/experience";
 import { Modal } from "../Modal";
+import { BulletTextarea } from "@/app/components/BulletTextarea";
+import { normalizeBullets } from "@/lib/normalizeBullets";
 
 const dangerButton =
   "rounded border border-red-100 px-3 py-1 text-xs font-semibold text-red-700 transition hover:bg-red-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-500";
@@ -20,10 +22,18 @@ type Props = {
 function AddExperienceModal({ profileId, onAdd }: { profileId: number; onAdd: Props["onAdd"] }) {
   const [isPending, startTransition] = useTransition();
   const [open, setOpen] = useState(false);
+  const [impactBullets, setImpactBullets] = useState<string[]>([""]);
 
   return (
     <>
-      <button type="button" className={styles.primaryButton} onClick={() => setOpen(true)}>
+      <button
+        type="button"
+        className={styles.primaryButton}
+        onClick={() => {
+          setImpactBullets([""]);
+          setOpen(true);
+        }}
+      >
         Add Role
       </button>
       <Modal
@@ -42,10 +52,10 @@ function AddExperienceModal({ profileId, onAdd }: { profileId: number; onAdd: Pr
             const company = String(formData.get("company") ?? "").trim();
             const location = String(formData.get("location") ?? "").trim() || null;
             const period = String(formData.get("period") ?? "").trim() || null;
-            const impact = String(formData.get("impact") ?? "").trim() || null;
+            const normalizedBullets = normalizeBullets(impactBullets);
             if (!role || !company) return;
             startTransition(() => {
-              onAdd({ role, company, location, period, impact });
+              onAdd({ role, company, location, period, impactBullets: normalizedBullets });
               setOpen(false);
             });
           }}
@@ -68,8 +78,14 @@ function AddExperienceModal({ profileId, onAdd }: { profileId: number; onAdd: Pr
             <input name="period" className={styles.input} />
           </label>
           <label className={styles.formField}>
-            <span className={styles.labelText}>Impact</span>
-            <textarea name="impact" rows={3} className={styles.input} />
+            <BulletTextarea
+              label="Impact"
+              bullets={impactBullets}
+              onChange={setImpactBullets}
+              className={styles.input}
+              rows={5}
+              placeholder="• Impact bullet"
+            />
           </label>
           <div className={styles.actionsRowPadded}>
             <button type="submit" disabled={isPending} className={styles.primaryButton}>
@@ -92,7 +108,6 @@ export function ExperienceSection({ profileId, experiences, onEdit, onAdd, onDel
         <div className={styles.sectionHeaderSpaced}>
           <div className={styles.stackSm}>
             <h2 className={styles.sectionTitle}>Experience</h2>
-            <p className={styles.mutedText}>Add your first role.</p>
           </div>
           <AddExperienceModal profileId={profileId} onAdd={onAdd} />
         </div>
@@ -119,17 +134,14 @@ export function ExperienceSection({ profileId, experiences, onEdit, onAdd, onDel
                 {exp.location ? ` • ${exp.location}` : ""}
                 {exp.period ? ` • ${exp.period}` : ""}
               </p>
-              {exp.impact && exp.impact.split("\n").filter(Boolean).length > 0 && (
+              {exp.impactBullets.length > 0 && (
                 <ul className={styles.bulletList}>
-                  {exp.impact
-                    .split("\n")
-                    .filter(Boolean)
-                    .map((line: string, idx: number) => (
-                      <li key={idx} className={styles.bulletRow}>
-                        <span className={styles.bulletDot} />
-                        <span>{line}</span>
-                      </li>
-                    ))}
+                  {exp.impactBullets.map((line: string, idx: number) => (
+                    <li key={idx} className={styles.bulletRow}>
+                      <span className={styles.bulletDot} />
+                      <span>{line}</span>
+                    </li>
+                  ))}
                 </ul>
               )}
             </div>

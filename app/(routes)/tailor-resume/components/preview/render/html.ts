@@ -153,7 +153,7 @@ export function buildPagesHtml({
   sectionHtml: SectionHtmlMap;
   showPageNumbers: boolean;
   layoutMode: ResumeLayoutMode;
-  profile: { fullName: string; title?: string | null; headline?: string | null; summary?: string | null };
+  profile: { fullName: string; title?: string | null; summary?: string | null };
   contactParts: string[];
   paginatedGap?: boolean;
 }) {
@@ -166,10 +166,10 @@ export function buildPagesHtml({
           <div class="resume-top-header">
             <h1>${profile.fullName}</h1>
           </div>
-          <div class="resume-summary-plain">
+            <div class="resume-summary-plain">
             ${
-              profile.title || profile.headline
-                ? `<div class="resume-role-plain">${profile.title || profile.headline}</div>`
+              profile.title
+                ? `<div class="resume-role-plain">${profile.title}</div>`
                 : ""
             }
             <div class="summary">${profile.summary || ""}</div>

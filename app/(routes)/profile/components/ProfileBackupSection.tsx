@@ -5,7 +5,7 @@ import { styles } from "../style-constants";
 import type { Profile } from "@/types/profile";
 import type { ProfileBackup } from "@/types/profile-backup";
 import { ConfirmDialog } from "@/app/components/ConfirmDialog";
-import { parseProfileBackupV1, profileFromBackup, toProfileBackup } from "@/lib/profile-backup";
+import { parseProfileBackup, profileFromBackup, toProfileBackup } from "@/lib/profile-backup";
 
 function downloadJson(filename: string, data: unknown) {
   const json = JSON.stringify(data, null, 2);
@@ -139,7 +139,7 @@ export function ProfileBackupSection({
           setStatus({ message: "", tone: "" });
           startTransition(() => {
             try {
-              const parsed = parseProfileBackupV1(backup);
+              const parsed = parseProfileBackup(backup);
               const next = profileFromBackup(parsed, profile);
               onReplaceProfile(next);
               setStatus({ message: "Backup imported.", tone: "success" });

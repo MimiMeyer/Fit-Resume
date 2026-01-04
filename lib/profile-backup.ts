@@ -1,5 +1,5 @@
 import type { Profile } from "@/types/profile";
-import type { ProfileBackupV1 } from "@/types/profile-backup";
+import type { ProfileBackup } from "@/types/profile-backup";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
@@ -23,13 +23,11 @@ function newId(): number {
   return Date.now() + Math.floor(Math.random() * 1000);
 }
 
-export function toProfileBackup(profile: Profile): ProfileBackupV1 {
+export function toProfileBackup(profile: Profile): ProfileBackup {
   return {
-    schemaVersion: 1,
     exportedAt: new Date().toISOString(),
     profile: {
       fullName: profile.fullName,
-      headline: profile.headline ?? null,
       summary: profile.summary ?? null,
       title: profile.title ?? null,
       email: profile.email ?? null,
@@ -44,7 +42,7 @@ export function toProfileBackup(profile: Profile): ProfileBackupV1 {
       company: e.company,
       location: e.location ?? null,
       period: e.period ?? null,
-      impact: e.impact ?? null,
+      impactBullets: (e.impactBullets ?? []).map((line) => line.trim()).filter(Boolean),
     })),
     projects: (profile.projects ?? []).map((p) => ({
       title: p.title,
@@ -73,9 +71,8 @@ export function toProfileBackup(profile: Profile): ProfileBackupV1 {
   };
 }
 
-export function parseProfileBackupV1(value: unknown): ProfileBackupV1 {
+export function parseProfileBackup(value: unknown): ProfileBackup {
   if (!isRecord(value)) throw new Error("Invalid JSON: expected an object.");
-  if (value.schemaVersion !== 1) throw new Error("Unsupported backup version.");
 
   const profile = isRecord(value.profile) ? value.profile : null;
   if (!profile || !isString(profile.fullName) || !profile.fullName.trim()) {
@@ -89,11 +86,9 @@ export function parseProfileBackupV1(value: unknown): ProfileBackupV1 {
   const skills = Array.isArray(value.skills) ? value.skills.filter(isRecord) : [];
 
   return {
-    schemaVersion: 1,
     exportedAt: isString(value.exportedAt) ? value.exportedAt : new Date().toISOString(),
     profile: {
       fullName: profile.fullName.trim(),
-      headline: asNullableString(profile.headline),
       summary: asNullableString(profile.summary),
       title: asNullableString(profile.title),
       email: asNullableString(profile.email),
@@ -109,7 +104,9 @@ export function parseProfileBackupV1(value: unknown): ProfileBackupV1 {
         company: isString(e.company) ? e.company.trim() : "",
         location: asNullableString(e.location),
         period: asNullableString(e.period),
-        impact: asNullableString(e.impact),
+        impactBullets: Array.isArray(e.impactBullets)
+          ? e.impactBullets.filter(isString).map((t) => t.trim()).filter(Boolean)
+          : [],
       }))
       .filter((e) => e.role && e.company),
     projects: projects
@@ -149,11 +146,10 @@ export function parseProfileBackupV1(value: unknown): ProfileBackupV1 {
   };
 }
 
-export function profileFromBackup(backup: ProfileBackupV1, base?: Profile): Profile {
+export function profileFromBackup(backup: ProfileBackup, base?: Profile): Profile {
   const current = base ?? {
     id: 1,
-    fullName: "Your Name",
-    headline: null,
+    fullName: "",
     summary: null,
     title: null,
     email: null,
@@ -172,7 +168,6 @@ export function profileFromBackup(backup: ProfileBackupV1, base?: Profile): Prof
   return {
     ...current,
     fullName: backup.profile.fullName,
-    headline: backup.profile.headline ?? null,
     summary: backup.profile.summary ?? null,
     title: backup.profile.title ?? null,
     email: backup.profile.email ?? null,
@@ -194,4 +189,3 @@ export function profileFromBackup(backup: ProfileBackupV1, base?: Profile): Prof
       .sort((a, b) => a.name.localeCompare(b.name)),
   };
 }
-

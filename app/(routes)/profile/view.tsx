@@ -1,5 +1,6 @@
 ﻿"use client";
 
+import { useState } from "react";
 import { useAbout } from "./useAbout";
 import type { Profile } from "@/types/profile";
 import { styles } from "./style-constants";
@@ -11,6 +12,8 @@ import { CertificationsSection } from "./components/CertificationsSection";
 import { ProjectsSection } from "./components/ProjectsSection";
 import { SkillsSection } from "./components/SkillsSection";
 import { ProfileBackupSection } from "./components/ProfileBackupSection";
+import { BulletTextarea } from "@/app/components/BulletTextarea";
+import { normalizeBullets } from "@/lib/normalizeBullets";
 import {
   addCertification,
   addEducation,
@@ -68,7 +71,6 @@ function EditProfileModal({
 
           onSave({
             fullName,
-            headline: String(formData.get("headline") ?? "").trim() || null,
             summary: String(formData.get("summary") ?? "").trim() || null,
             title: String(formData.get("title") ?? "").trim() || null,
             email: String(formData.get("email") ?? "").trim() || null,
@@ -93,7 +95,12 @@ function EditProfileModal({
         </label>
         <label className={styles.formField}>
           <span className={styles.labelText}>Title</span>
-          <input name="title" defaultValue={profile.title ?? ""} className={styles.input} />
+          <input
+            name="title"
+            defaultValue={profile.title ?? ""}
+            className={styles.input}
+            placeholder="Job title / position (e.g., Software Engineer)"
+          />
         </label>
         <label className={styles.formField}>
           <span className={styles.labelText}>Email</span>
@@ -117,14 +124,6 @@ function EditProfileModal({
           <input
             name="location"
             defaultValue={profile.location ?? ""}
-            className={styles.input}
-          />
-        </label>
-        <label className={styles.formField}>
-          <span className={styles.labelText}>Headline</span>
-          <input
-            name="headline"
-            defaultValue={profile.headline ?? ""}
             className={styles.input}
           />
         </label>
@@ -205,6 +204,8 @@ export function AboutLayout({ profile, isPending, startTransition, updateProfile
     handleSkillDrop,
   } = useAbout(profile, { isPending, startTransition }, (updater) => updateProfile(updater));
 
+  const [editingExpBullets, setEditingExpBullets] = useState<string[]>([]);
+
   return (
     <div className={styles.pageRoot}>
       <ProfileBackupSection
@@ -227,7 +228,10 @@ export function AboutLayout({ profile, isPending, startTransition, updateProfile
       <ExperienceSection
         profileId={profile.id}
         experiences={profile.experiences}
-        onEdit={setEditingExp}
+        onEdit={(exp) => {
+          setEditingExpBullets(exp.impactBullets ?? []);
+          setEditingExp(exp);
+        }}
         onAdd={(input) => updateProfile((current) => addExperience(current, input), { flush: true })}
         onDelete={(id) => updateProfile((current) => deleteExperience(current, id), { flush: true })}
       />
@@ -291,7 +295,15 @@ export function AboutLayout({ profile, isPending, startTransition, updateProfile
       />
 
       {/* Edit Modals */}
-      <Modal triggerLabel="" title="Edit Experience" open={!!editingExp} onClose={() => setEditingExp(null)}>
+      <Modal
+        triggerLabel=""
+        title="Edit Experience"
+        open={!!editingExp}
+        onClose={() => {
+          setEditingExp(null);
+          setEditingExpBullets([]);
+        }}
+      >
         {editingExp && (
           <form
             className={styles.formContainer}
@@ -303,12 +315,12 @@ export function AboutLayout({ profile, isPending, startTransition, updateProfile
               const company = String(fd.get("company") ?? "").trim();
               const location = String(fd.get("location") ?? "").trim() || null;
               const period = String(fd.get("period") ?? "").trim() || null;
-              const impact = String(fd.get("impact") ?? "").trim() || null;
+              const impactBullets = normalizeBullets(editingExpBullets);
               if (!id || !role || !company) return;
               startTransition(() => {
                 updateProfile(
                   (current) =>
-                    updateExperience(current, id, { role, company, location, period, impact }),
+                    updateExperience(current, id, { role, company, location, period, impactBullets }),
                   { flush: true },
                 );
                 setEditingExp(null);
@@ -320,7 +332,14 @@ export function AboutLayout({ profile, isPending, startTransition, updateProfile
             <label className={styles.formField}><span className={styles.labelText}>Company</span><input name="company" defaultValue={editingExp.company} className={styles.input} required /></label>
             <label className={styles.formField}><span className={styles.labelText}>Location</span><input name="location" defaultValue={editingExp.location ?? ""} className={styles.input} /></label>
             <label className={styles.formField}><span className={styles.labelText}>Period</span><input name="period" defaultValue={editingExp.period ?? ""} className={styles.input} /></label>
-            <label className={styles.formField}><span className={styles.labelText}>Impact</span><textarea name="impact" rows={3} defaultValue={editingExp.impact ?? ""} className={styles.input} /></label>
+            <BulletTextarea
+              label="Impact"
+              bullets={editingExpBullets}
+              onChange={setEditingExpBullets}
+              className={styles.input}
+              rows={5}
+              placeholder="• Impact bullet"
+            />
             <div className={styles.actionsRowPadded}><button type="submit" disabled={isPending} className={styles.primaryButton}>{isPending ? "Saving..." : "Save"}</button><button type="button" data-close-modal="true" className={styles.cancelButton}>Cancel</button></div>
           </form>
         )}
