@@ -253,18 +253,17 @@ export async function replaceProfileFromBackup(raw: unknown) {
     }
 
     if (backup.skills.length) {
-      await tx.skill.createMany({
-        data: backup.skills
-          .map((s) => ({
-            profileId,
-            name: s.name,
-            categoryId: categoryMap.get(normalizeCategoryName(s.category)),
-          }))
-          .filter((s): s is { profileId: number; name: string; categoryId: number } =>
-            typeof s.categoryId === "number",
-          ),
-        skipDuplicates: true,
-      });
+      for (const skill of backup.skills) {
+        const categoryName = normalizeCategoryName(skill.category);
+        const categoryId = categoryMap.get(categoryName);
+        if (!categoryId) continue;
+
+        await tx.skill.upsert({
+          where: { name: skill.name },
+          update: { profileId, categoryId },
+          create: { profileId, name: skill.name, categoryId },
+        });
+      }
     }
   });
 }
