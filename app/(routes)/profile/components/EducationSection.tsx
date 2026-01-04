@@ -121,7 +121,7 @@ export function EducationSection({ profileId, educations, onEdit }: Props) {
         </div>
       ) : (
         <p className={styles.bodyText}>
-          No education added yet. Use the form above to add one.
+          No education yet.
         </p>
       )}
     </section>
