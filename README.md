@@ -28,6 +28,10 @@ FitResume is an AI-powered resume tailoring companion. Maintain an About Me sour
 - Create Resume page calls a server action to generate tailored summary/experience/projects/skills from your profile + pasted JD; output lives in state only (not saved) and supports PDF/Doc download with auto-pagination.
 - CLI scaffold: `scripts/agentic-cli.ts` to run the agentic flow locally against Prisma data.
 
+## Backup & Restore
+- On the Profile page, you can download a JSON backup of your Profile and upload it later to restore.
+- Uploading a backup replaces your current Profile data.
+
 ## Getting Started
 ```bash
 pnpm install

@@ -3,7 +3,7 @@
 import { useMemo, useRef, useState, useTransition, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { Modal } from "@/app/(routes)/profile/Modal";
-import { ConfirmDialog } from "./dialogs/ConfirmDialog";
+import { ConfirmDialog } from "@/app/components/ConfirmDialog";
 import { EditSectionButtons } from "../EditSectionButtons";
 import type {
   TailorCertificationDraft,

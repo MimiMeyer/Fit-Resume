@@ -87,7 +87,7 @@ export function ExperienceSection({ profileId, experiences, onEdit }: Props) {
           </div>
           <AddExperienceModal profileId={profileId} />
         </div>
-        <p className={styles.bodyText}>No experience added yet. Use the form above to add one.</p>
+        <p className={styles.bodyText}>No experience yet.</p>
       </section>
     );
   }

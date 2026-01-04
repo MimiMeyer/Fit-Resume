@@ -16,6 +16,7 @@ import { EducationSection } from "./components/EducationSection";
 import { CertificationsSection } from "./components/CertificationsSection";
 import { ProjectsSection } from "./components/ProjectsSection";
 import { SkillsSection } from "./components/SkillsSection";
+import { ProfileBackupSection } from "./components/ProfileBackupSection";
 
 type Props = {
   profile: Profile;
@@ -176,6 +177,7 @@ export function AboutLayout({ profile }: Props) {
 
   return (
     <div className={styles.pageRoot}>
+      <ProfileBackupSection />
       <ProfileHeader profile={profile} onEdit={() => setEditOpen(true)} />
       <EditProfileModal
         profile={profile}

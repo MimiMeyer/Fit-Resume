@@ -106,7 +106,7 @@ export function CertificationsSection({ profileId, certs, onEdit }: Props) {
         </div>
       ) : (
         <p className={styles.bodyText}>
-          No certifications yet. Use the form above to add one.
+          No certifications yet.
         </p>
       )}
     </section>

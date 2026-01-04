@@ -84,7 +84,7 @@ export function ProjectsSection({ profileId, projects, onEdit }: Props) {
           <AddProjectModal profileId={profileId} />
         </div>
         <p className={styles.bodyText}>
-          No projects added yet. Use the form above to add one.
+          No projects yet.
         </p>
       </section>
     );

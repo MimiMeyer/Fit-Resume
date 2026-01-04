@@ -415,7 +415,7 @@ export function SkillsSection({
         </div>
       ) : (
         <p className={styles.bodyText}>
-          No skills added yet. Use the form above to add one.
+          No skills yet.
         </p>
       )}
     </section>

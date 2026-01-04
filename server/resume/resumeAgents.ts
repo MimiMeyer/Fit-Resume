@@ -9,6 +9,27 @@ import type {
   GeneratedResume,
 } from "@/types/resume-agent";
 
+type ModelInput = {
+  profile: Pick<
+    AgentProfileInput,
+    "fullName" | "title" | "headline" | "summary"
+  >;
+  experiences: Array<{
+    role: string;
+    company: string;
+    period?: string | null;
+    location?: string | null;
+    impactBullets: string[];
+  }>;
+  projects: Array<{
+    title: string;
+    description?: string | null;
+    technologies: string[];
+    link?: string | null;
+  }>;
+  skillsByCategory: Record<string, string[]>;
+};
+
 function getAnthropicModel() {
   if (!process.env.ANTHROPIC_API_KEY) {
     throw new Error("ANTHROPIC_API_KEY is missing in environment");
@@ -17,7 +38,7 @@ function getAnthropicModel() {
   return anthropic(modelName);
 }
 
-function buildModelInput(profile: AgentProfileInput) {
+function buildModelInput(profile: AgentProfileInput): ModelInput {
   const groupedSkills: Record<string, string[]> = {};
   for (const skill of profile.skills) {
     const cat = skill.category.name.toUpperCase();
@@ -52,9 +73,8 @@ function buildModelInput(profile: AgentProfileInput) {
   };
 }
 
-async function summaryAgent(input: any, jd: string) {
-  const profile = input.profile || {};
-  const originalSummary = (profile.summary || "").trim();
+async function summaryAgent(input: ModelInput, jd: string) {
+  const originalSummary = (input.profile.summary || "").trim();
 
   if (!originalSummary) {
     return "";
@@ -93,8 +113,8 @@ Hard Rules:
             type: "text",
             text: `PROFILE CONTEXT (for factual grounding only):\n${JSON.stringify(
               {
-                title: profile.title,
-                headline: profile.headline,
+                title: input.profile.title,
+                headline: input.profile.headline,
                 experiences: input.experiences,
                 projects: input.projects,
                 skillsByCategory: input.skillsByCategory,
@@ -112,8 +132,8 @@ Hard Rules:
   return text.trim();
 }
 
-async function experienceAgent(input: any, jd: string): Promise<GeneratedExperience[]> {
-  const experiences = input.experiences || [];
+async function experienceAgent(input: ModelInput, jd: string): Promise<GeneratedExperience[]> {
+  const experiences = input.experiences;
   if (!experiences.length) return [];
 
   const model = getAnthropicModel();
@@ -192,8 +212,8 @@ Hard Rules:
   return rendered;
 }
 
-async function projectsAgent(input: any, jd: string): Promise<GeneratedProject[]> {
-  const projects = input.projects || [];
+async function projectsAgent(input: ModelInput, jd: string): Promise<GeneratedProject[]> {
+  const projects = input.projects;
   if (!projects.length) return [];
 
   const model = getAnthropicModel();
@@ -228,7 +248,7 @@ Hard Rules:
           {
             type: "text",
             text: `PROJECTS:\n${JSON.stringify(
-              projects.map((p: any) => ({
+              projects.map((p) => ({
                 title: p.title,
                 description: p.description,
                 technologies: p.technologies,
@@ -272,14 +292,14 @@ Hard Rules:
   return parsed.slice(0, 2);
 }
 
-async function skillsAgent(input: any, jd: string): Promise<Record<string, string[]>> {
-  const skillsByCategory = input.skillsByCategory || {};
-  const experiences = input.experiences || [];
-  const projects = input.projects || [];
+async function skillsAgent(input: ModelInput, jd: string): Promise<Record<string, string[]>> {
+  const skillsByCategory = input.skillsByCategory;
+  const experiences = input.experiences;
+  const projects = input.projects;
 
   const expText = experiences
     .map(
-      (exp: any) =>
+      (exp) =>
         `${exp.role || ""} ${exp.company || ""} ${exp.period || ""} ${exp.location || ""}\n${(exp.impactBullets || []).join("\n")}`,
     )
     .join("\n\n")
@@ -287,7 +307,7 @@ async function skillsAgent(input: any, jd: string): Promise<Record<string, strin
 
   const projectText = projects
     .map(
-      (p: any) =>
+      (p) =>
         `${p.title || ""}\n${p.description || ""}\nTech: ${(p.technologies || []).join(", ")}`,
     )
     .join("\n\n")

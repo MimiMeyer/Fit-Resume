@@ -67,7 +67,7 @@ const sections = [
     icon: <ProfileIcon />,
     flow: ["Fill out your profile", "Use it everywhere"],
     detail:
-      "Add your basics plus experience, projects, education, certifications, and skills.",
+      "Add your basics plus experience, projects, education, certifications, and skills. You can also download a JSON backup to save it.",
   },
   {
     title: "Tailor Resume",

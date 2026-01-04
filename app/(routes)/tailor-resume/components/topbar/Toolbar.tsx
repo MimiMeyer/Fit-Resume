@@ -1,5 +1,5 @@
 ﻿"use client";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toolbarStyles } from "../../style-constants";
 import type { ResumeBorders, ResumeFontFamilies, ResumeFontSizes, ResumeSpacing } from "../../types";
 import {
@@ -82,7 +82,6 @@ export function Toolbar(props: ToolbarProps) {
 
   const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v));
   const accentOpacityPercent = Math.round(accentOpacity * 100);
-  const accentDefaults = useMemo(() => ({ opacity: 1 }), []);
   const fontSizeDefaults = DEFAULT_FONT_SIZES;
   const fontFamilyDefaults = DEFAULT_FONT_FAMILIES;
   const borderDefaults = DEFAULT_BORDERS;
