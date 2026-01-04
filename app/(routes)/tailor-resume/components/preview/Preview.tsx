@@ -1,3 +1,5 @@
+"use client";
+
 import { CSSProperties, MutableRefObject, useEffect, useRef, useState } from "react";
 
 type PreviewProps = {

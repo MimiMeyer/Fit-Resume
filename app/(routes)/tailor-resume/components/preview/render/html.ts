@@ -6,7 +6,7 @@ import type {
   ResumeProjectForView,
   ResumeSectionId,
   ResumeSkillGroup,
-} from "../types";
+} from "../../../types";
 
 type SectionHtmlMap = Record<ResumeSectionId, () => string>;
 

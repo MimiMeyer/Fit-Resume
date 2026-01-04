@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
-import { buildResumeStyles } from "./engine/css";
-import { buildPagesHtml, buildSectionHtml } from "./engine/html";
-import { buildDefaultResumePdfFileName, downloadResumePdf } from "./engine/pdf";
-import { measureSections, paginateByMeasurement } from "./engine/pagination";
+import { buildResumeStyles } from "./components/preview/render/css";
+import { buildPagesHtml, buildSectionHtml } from "./components/preview/render/html";
+import { buildDefaultResumePdfFileName, downloadResumePdf } from "./components/preview/render/pdf";
+import { measureSections, paginateByMeasurement } from "./components/preview/render/pagination";
 import {
   DEFAULT_BORDERS,
   DEFAULT_FONT_FAMILIES,
@@ -35,7 +35,7 @@ import type {
   TailorProjectDraft,
   TailorResumeDraft,
   TailorSkillDraft,
-} from "./draft";
+} from "./model/edit-state";
 
 const PAGE_WIDTH_PX = 794; // A4 width at 96 DPI
 const PAGE_HEIGHT_PX = 1123; // A4 height at 96 DPI
@@ -287,9 +287,9 @@ function mixColor(hex: string, amt: number) {
 
 export function useCreateResume(
   profile: Profile,
-  opts: { onGenerate: (jd: string) => Promise<GeneratedResume> },
+  opts: { onGenerate: (jobDescription: string) => Promise<GeneratedResume> },
 ) {
-  const [jd, setJd] = useState("");
+  const [jobDescription, setJobDescription] = useState("");
   const [generated, setGenerated] = useState<GeneratedResume | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generateError, setGenerateError] = useState<string | null>(null);
@@ -637,11 +637,11 @@ export function useCreateResume(
   ]);
 
   const handleGenerate = async () => {
-    if (!jd.trim()) return;
+    if (!jobDescription.trim()) return;
     setIsGenerating(true);
     setGenerateError(null);
     try {
-      const data = await opts.onGenerate(jd);
+      const data = await opts.onGenerate(jobDescription);
       setGenerated({
         summary: data.summary,
         experiences: data.experiences || [],
@@ -775,8 +775,8 @@ export function useCreateResume(
   };
 
   return {
-    jd,
-    setJd,
+    jobDescription,
+    setJobDescription,
     generated,
     generateError,
     isGenerating,

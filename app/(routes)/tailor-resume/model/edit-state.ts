@@ -1,4 +1,4 @@
-import type { ResumeSectionId } from "./types";
+import type { ResumeSectionId } from "../types";
 
 export type TailorHeaderDraft = {
   fullName: string;

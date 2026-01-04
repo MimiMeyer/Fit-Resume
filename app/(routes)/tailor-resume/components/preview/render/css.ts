@@ -4,8 +4,8 @@ import type {
   ResumeFontSizes,
   ResumePalette,
   ResumeSpacing,
-} from "../types";
-import { DEFAULT_FONT_FAMILIES, DEFAULT_FONT_SIZES, DEFAULT_SPACING } from "../types";
+} from "../../../types";
+import { DEFAULT_FONT_FAMILIES, DEFAULT_FONT_SIZES, DEFAULT_SPACING } from "../../../types";
 
 type BuildStylesArgs = {
   pageWidth: number;

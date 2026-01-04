@@ -1,13 +1,13 @@
 ﻿"use client";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { toolbarStyles } from "../style-constants";
-import type { ResumeBorders, ResumeFontFamilies, ResumeFontSizes, ResumeSpacing } from "../types";
+import { toolbarStyles } from "../../style-constants";
+import type { ResumeBorders, ResumeFontFamilies, ResumeFontSizes, ResumeSpacing } from "../../types";
 import {
   DEFAULT_BORDERS,
   DEFAULT_FONT_FAMILIES,
   DEFAULT_FONT_SIZES,
   DEFAULT_SPACING,
-} from "../types";
+} from "../../types";
 
 type ToolbarProps = {
   layoutMode: "single" | "two";
@@ -31,7 +31,7 @@ type ToolbarProps = {
   onDownloadPdf: (fileName?: string) => void;
   pdfGenerating: boolean;
   pdfError: string | null;
-  onShowJd?: () => void;
+  onShowJobDescription?: () => void;
 };
 
 const RESET_GLYPH = "↺";
@@ -77,7 +77,7 @@ export function Toolbar(props: ToolbarProps) {
     onDownloadPdf,
     pdfGenerating,
     pdfError,
-    onShowJd,
+    onShowJobDescription,
   } = props;
 
   const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v));
@@ -168,9 +168,9 @@ export function Toolbar(props: ToolbarProps) {
     <div className="relative z-30 flex flex-wrap items-center justify-between gap-3 overflow-visible">
       <>
           <div className="flex w-full items-center gap-2">
-            {onShowJd ? (
+            {onShowJobDescription ? (
               <div className="shrink-0">
-                <button onClick={onShowJd} className="rounded-full border border-zinc-200 bg-white px-3 py-1 text-xs font-semibold text-[var(--accent)] shadow-sm transition hover:border-[var(--accent)]">Show job description</button>
+                <button onClick={onShowJobDescription} className="rounded-full border border-zinc-200 bg-white px-3 py-1 text-xs font-semibold text-[var(--accent)] shadow-sm transition hover:border-[var(--accent)]">Show job description</button>
               </div>
             ) : null}
 

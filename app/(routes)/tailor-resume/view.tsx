@@ -1,9 +1,9 @@
 "use client";
 
-import { JdPanel } from "./components/JdPanel";
-import { Preview } from "./components/Preview";
-import { Toolbar } from "./components/Toolbar";
-import { ContentPanel } from "./components/ContentPanel";
+import { JobDescriptionPanel } from "./components/job-description/JobDescriptionPanel";
+import { Preview } from "./components/preview/Preview";
+import { Toolbar } from "./components/topbar/Toolbar";
+import { EditSections } from "./components/topbar/edit/EditSections";
 import type { GeneratedResume } from "@/types/resume-agent";
 import type { Profile } from "@/types/profile";
 import { styles } from "./style-constants";
@@ -16,11 +16,11 @@ export function CreateResumeView({
   onGenerate,
 }: {
   profile: Profile;
-  onGenerate: (jd: string) => Promise<GeneratedResume>;
+  onGenerate: (jobDescription: string) => Promise<GeneratedResume>;
 }) {
   const {
-    jd,
-    setJd,
+    jobDescription,
+    setJobDescription,
     generated,
     generateError,
     isGenerating,
@@ -78,12 +78,13 @@ export function CreateResumeView({
               type="button"
               onClick={resetToProfile}
               className={styles.resetButton}
+              title="Clears resume changes and reloads from profile"
             >
-              Reset to Profile
+              Reset resume changes
             </button>
           ) : null}
         </div>
-        <ContentPanel
+        <EditSections
           profileId={profile.id}
           profileDetails={{
             email: profile.email ?? null,
@@ -111,10 +112,10 @@ export function CreateResumeView({
       >
         {showJobDescription ? (
           <div className="flex flex-col gap-3">
-            <JdPanel
+            <JobDescriptionPanel
               show
-              jd={jd}
-              setJd={setJd}
+              jobDescription={jobDescription}
+              setJobDescription={setJobDescription}
               onGenerate={handleGenerate}
               onToggle={() => setShowJobDescription((s) => !s)}
               isGenerating={isGenerating}
@@ -147,7 +148,7 @@ export function CreateResumeView({
             defaultPdfFileName={defaultPdfFileName}
             pdfGenerating={pdfGenerating}
             pdfError={pdfError}
-            onShowJd={
+            onShowJobDescription={
               !showJobDescription ? () => setShowJobDescription(true) : undefined
             }
           />

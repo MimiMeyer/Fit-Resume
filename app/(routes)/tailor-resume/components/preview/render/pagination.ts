@@ -1,4 +1,4 @@
-import type { ResumeLayoutMode, ResumeSectionId } from "../types";
+import type { ResumeLayoutMode, ResumeSectionId } from "../../../types";
 
 export function measureSections(
   root: HTMLElement,
