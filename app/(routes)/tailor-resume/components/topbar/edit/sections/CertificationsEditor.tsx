@@ -74,7 +74,7 @@ export function CertificationsEditor({
       <div className="flex justify-end">
         <button
           type="button"
-          className="text-sm font-semibold text-[var(--accent)]"
+          className="text-xs font-semibold text-[var(--accent)] sm:text-sm"
           onClick={() => {
             markAdded();
             setItems((prev) => [
@@ -93,7 +93,7 @@ export function CertificationsEditor({
             <div className="flex items-center justify-end gap-2">
               <button
                 type="button"
-                className="text-sm font-semibold text-red-600"
+                className="text-xs font-semibold text-red-600 sm:text-sm"
                 onClick={() => setItems((prev) => prev.filter((_, i) => i !== idx))}
               >
                 Delete
@@ -101,8 +101,8 @@ export function CertificationsEditor({
             </div>
 
             <div className="mt-3 grid gap-3">
-              <div className="grid grid-cols-2 gap-2">
-                <label className="grid gap-1 text-sm">
+              <div className="grid gap-2 sm:grid-cols-2">
+                <label className="grid gap-1 text-xs sm:text-sm">
                   <span className="font-semibold text-zinc-800">Name</span>
                   <input
                     className={dirtyInputClass(!!fieldDiffs[idx]?.nameDirty)}
@@ -114,7 +114,7 @@ export function CertificationsEditor({
                     }
                   />
                 </label>
-                <label className="grid gap-1 text-sm">
+                <label className="grid gap-1 text-xs sm:text-sm">
                   <span className="font-semibold text-zinc-800">Issuer</span>
                   <input
                     className={dirtyInputClass(!!fieldDiffs[idx]?.issuerDirty)}
@@ -127,8 +127,8 @@ export function CertificationsEditor({
                   />
                 </label>
               </div>
-              <div className="grid grid-cols-2 gap-2">
-                <label className="grid gap-1 text-sm">
+              <div className="grid gap-2 sm:grid-cols-2">
+                <label className="grid gap-1 text-xs sm:text-sm">
                   <span className="font-semibold text-zinc-800">Issued year</span>
                   <input
                     type="number"
@@ -143,7 +143,7 @@ export function CertificationsEditor({
                   />
                 </label>
               </div>
-              <label className="grid gap-1 text-sm">
+              <label className="grid gap-1 text-xs sm:text-sm">
                 <span className="font-semibold text-zinc-800">Credential URL</span>
                 <input
                   className={dirtyInputClass(!!fieldDiffs[idx]?.credentialUrlDirty)}

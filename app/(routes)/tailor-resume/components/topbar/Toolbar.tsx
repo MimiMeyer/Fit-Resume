@@ -153,27 +153,46 @@ export function Toolbar(props: ToolbarProps) {
     targets.page && targets.summary && targets.section && targets.content;
 
   const ZoomPill = () => (
-    <div className="flex items-center gap-2 rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1.5 text-[11px] font-semibold text-zinc-700">
-      <button aria-label="Zoom out" onClick={() => onZoomChange(zoomPercent - zoomStep)} className="rounded-full px-2 py-1 transition hover:bg-white">-</button>
+    <div className="flex items-center gap-2 rounded-full border border-zinc-200 bg-zinc-50 px-2 py-1 text-[10px] font-semibold text-zinc-700 sm:px-3 sm:py-1.5 sm:text-[11px]">
+      <button
+        aria-label="Zoom out"
+        onClick={() => onZoomChange(zoomPercent - zoomStep)}
+        className="rounded-full px-1.5 py-0.5 transition hover:bg-white sm:px-2 sm:py-1"
+      >
+        -
+      </button>
       <div className="flex items-center gap-2">
         <span className="text-zinc-600">Zoom</span>
-        <span className="rounded-full bg-white px-2 py-0.5 text-zinc-900 shadow-sm">{zoomPercent}%</span>
+        <span className="rounded-full bg-white px-1.5 py-0.5 text-zinc-900 shadow-sm sm:px-2">
+          {zoomPercent}%
+        </span>
       </div>
-      <button aria-label="Zoom in" onClick={() => onZoomChange(zoomPercent + zoomStep)} className="rounded-full px-2 py-1 transition hover:bg-white">+</button>
+      <button
+        aria-label="Zoom in"
+        onClick={() => onZoomChange(zoomPercent + zoomStep)}
+        className="rounded-full px-1.5 py-0.5 transition hover:bg-white sm:px-2 sm:py-1"
+      >
+        +
+      </button>
     </div>
   );
 
   return (
-    <div className="relative z-30 flex flex-col gap-3 overflow-visible sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+    <div className="relative z-30 flex flex-col gap-2 overflow-visible sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
       <>
-          <div className="flex w-full items-center gap-2">
+          <div className="flex w-full flex-wrap items-center gap-2">
             {onShowJobDescription ? (
               <div className="shrink-0">
-                <button onClick={onShowJobDescription} className="rounded-full border border-zinc-200 bg-white px-3 py-1 text-xs font-semibold text-[var(--accent)] shadow-sm transition hover:border-[var(--accent)]">Show job description</button>
+                <button
+                  onClick={onShowJobDescription}
+                  className="rounded-full border border-zinc-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-[var(--accent)] shadow-sm transition hover:border-[var(--accent)] sm:px-3 sm:text-xs"
+                >
+                  Show job description
+                </button>
               </div>
             ) : null}
 
-            <div className="flex min-w-0 flex-1 items-center gap-2">
+            <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-2">
               <div className="flex flex-wrap items-center gap-2">
                 <div className="relative shrink-0" ref={themeMenuRef}>
                   <button
@@ -193,7 +212,7 @@ export function Toolbar(props: ToolbarProps) {
                   </button>
                   {themeOpen ? (
                     <div className={toolbarStyles.menuCardRight}>
-                      <div className="space-y-3 text-[11px] font-semibold text-zinc-700">
+                      <div className="space-y-2 text-[10px] font-semibold text-zinc-700 sm:space-y-3 sm:text-[11px]">
                         <div className="flex items-center"><span className={toolbarStyles.menuSectionLabel}>Theme</span></div>
                         <div className={toolbarStyles.menuSectionLabel}>Accent</div>
                         <div className="grid w-full grid-cols-6 gap-2">
@@ -257,7 +276,27 @@ export function Toolbar(props: ToolbarProps) {
                   </button>
                   {styleOpen ? (
                     <div className={toolbarStyles.menuCardRight}>
-                      <div className="space-y-3 text-[11px] font-semibold text-zinc-700">
+                      <div className="space-y-2 text-[10px] font-semibold text-zinc-700 sm:space-y-3 sm:text-[11px]">
+                        <div className="space-y-2 sm:hidden">
+                          <div className={toolbarStyles.menuSectionLabel}>Layout</div>
+                          <div className={toolbarStyles.tabPill}>
+                            <button
+                              type="button"
+                              onClick={() => setLayoutMode("single")}
+                              className={`${toolbarStyles.tabButtonBase} ${layoutMode === "single" ? toolbarStyles.tabButtonActive : toolbarStyles.tabButtonInactive}`}
+                            >
+                              1 column
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setLayoutMode("two")}
+                              className={`${toolbarStyles.tabButtonBase} ${layoutMode === "two" ? toolbarStyles.tabButtonActive : toolbarStyles.tabButtonInactive}`}
+                            >
+                              2 columns
+                            </button>
+                          </div>
+                        </div>
+
                         <div className={toolbarStyles.tabPill} role="tablist" aria-label="Style tabs">
                           {(
                             [
@@ -418,13 +457,13 @@ export function Toolbar(props: ToolbarProps) {
                   ) : null}
                 </div>
 
-                <div className={toolbarStyles.tabPill}>
+                <div className={`${toolbarStyles.tabPill} hidden sm:flex`}>
                   <button type="button" onClick={() => setLayoutMode("single")} className={`${toolbarStyles.tabButtonBase} ${layoutMode === "single" ? toolbarStyles.tabButtonActive : toolbarStyles.tabButtonInactive}`}>1 column</button>
                   <button type="button" onClick={() => setLayoutMode("two")} className={`${toolbarStyles.tabButtonBase} ${layoutMode === "two" ? toolbarStyles.tabButtonActive : toolbarStyles.tabButtonInactive}`}>2 columns</button>
                 </div>
               </div>
 
-              <div className="flex w-full items-center justify-between gap-2 sm:ml-auto sm:w-auto sm:justify-end">
+              <div className="flex w-full flex-wrap items-center justify-end gap-2 sm:ml-auto sm:w-auto">
                 <ZoomPill />
                 <div className="relative" ref={downloadMenuRef}>
                   <button
@@ -435,7 +474,7 @@ export function Toolbar(props: ToolbarProps) {
                       setDownloadOpen((v) => !v);
                     }}
                     disabled={pdfGenerating}
-                    className="inline-flex shrink-0 items-center gap-2 rounded-full bg-[var(--accent)] px-3 py-1.5 text-[11px] font-semibold text-white shadow-sm transition hover:opacity-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)] disabled:cursor-not-allowed disabled:opacity-70"
+                    className="inline-flex shrink-0 items-center gap-2 rounded-full bg-[var(--accent)] px-2.5 py-1 text-[10px] font-semibold text-white shadow-sm transition hover:opacity-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)] disabled:cursor-not-allowed disabled:opacity-70 sm:px-3 sm:py-1.5 sm:text-[11px]"
                   >
                     {pdfGenerating ? "Preparing PDF..." : "Download PDF"}
                   </button>
@@ -451,15 +490,15 @@ export function Toolbar(props: ToolbarProps) {
                         }}
                       >
                         <div className={toolbarStyles.menuSectionLabel}>PDF file name</div>
-                        <div className="flex h-9 items-stretch overflow-hidden rounded-md border border-zinc-200 bg-white shadow-sm focus-within:border-[var(--accent)] focus-within:ring-2 focus-within:ring-[var(--accent)]">
+                        <div className="flex h-8 items-stretch overflow-hidden rounded-md border border-zinc-200 bg-white shadow-sm focus-within:border-[var(--accent)] focus-within:ring-2 focus-within:ring-[var(--accent)] sm:h-9">
                           <input
                             ref={downloadInputRef}
                             value={downloadBaseName}
                             onChange={(e) => setDownloadBaseName(stripPdfExt(e.target.value))}
-                            className="w-full min-w-0 flex-1 bg-transparent px-2 py-1 text-[11px] font-semibold text-zinc-900 outline-none"
+                            className="w-full min-w-0 flex-1 bg-transparent px-2 py-1 text-[10px] font-semibold text-zinc-900 outline-none sm:text-[11px]"
                             aria-label="PDF file name"
                           />
-                          <div className="flex shrink-0 items-center border-l border-zinc-200 bg-zinc-50 px-2 text-[11px] font-semibold text-zinc-700">
+                          <div className="flex shrink-0 items-center border-l border-zinc-200 bg-zinc-50 px-2 text-[10px] font-semibold text-zinc-700 sm:text-[11px]">
                             .pdf
                           </div>
                         </div>
@@ -474,7 +513,7 @@ export function Toolbar(props: ToolbarProps) {
                           <button
                             type="submit"
                             disabled={!downloadBaseName.trim()}
-                            className="inline-flex items-center gap-2 rounded-md bg-[var(--accent)] px-3 py-2 text-[11px] font-semibold text-white shadow-sm transition hover:opacity-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]"
+                            className="inline-flex items-center gap-2 rounded-md bg-[var(--accent)] px-2.5 py-1.5 text-[10px] font-semibold text-white shadow-sm transition hover:opacity-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)] sm:px-3 sm:py-2 sm:text-[11px]"
                           >
                             Download
                           </button>

@@ -21,7 +21,7 @@ export function ActionRow({
             <button
               type="button"
               disabled={isPending}
-              className="inline-flex items-center justify-center gap-2 rounded-full bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:opacity-95 disabled:opacity-60"
+              className="inline-flex items-center justify-center gap-2 rounded-full bg-[var(--accent)] px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:opacity-95 disabled:opacity-60 sm:px-4 sm:py-2 sm:text-sm"
               onClick={onSavePreview}
             >
               {isPending ? "Saving..." : "Save to resume"}
@@ -35,7 +35,7 @@ export function ActionRow({
             <button
               type="button"
               disabled={isPending}
-              className="inline-flex items-center justify-center gap-2 rounded-full border border-zinc-200 bg-white px-4 py-2 text-sm font-semibold text-zinc-800 shadow-sm transition hover:bg-zinc-50 disabled:opacity-60"
+              className="inline-flex items-center justify-center gap-2 rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-800 shadow-sm transition hover:bg-zinc-50 disabled:opacity-60 sm:px-4 sm:py-2 sm:text-sm"
               onClick={onSaveProfile}
             >
               Save to profile
@@ -50,7 +50,7 @@ export function ActionRow({
         <button
           type="button"
           disabled={isPending}
-          className="text-sm font-semibold text-zinc-600 hover:text-zinc-900 disabled:opacity-60"
+          className="text-xs font-semibold text-zinc-600 hover:text-zinc-900 disabled:opacity-60 sm:text-sm"
           onClick={onClearDraft}
         >
           Clear resume changes

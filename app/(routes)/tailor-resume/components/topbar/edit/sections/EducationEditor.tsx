@@ -95,7 +95,7 @@ export function EducationEditor({
       <div className="flex justify-end">
         <button
           type="button"
-          className="text-sm font-semibold text-[var(--accent)]"
+          className="text-xs font-semibold text-[var(--accent)] sm:text-sm"
           onClick={() => {
             markAdded();
             setItems((prev) => [
@@ -122,7 +122,7 @@ export function EducationEditor({
             <div className="flex items-center justify-end gap-2">
               <button
                 type="button"
-                className="text-sm font-semibold text-red-600"
+                className="text-xs font-semibold text-red-600 sm:text-sm"
                 onClick={() => setItems((prev) => prev.filter((_, i) => i !== idx))}
               >
                 Delete
@@ -130,7 +130,7 @@ export function EducationEditor({
             </div>
 
             <div className="mt-3 grid gap-3">
-              <label className="grid gap-1 text-sm">
+              <label className="grid gap-1 text-xs sm:text-sm">
                 <span className="font-semibold text-zinc-800">Institution</span>
                 <input
                   className={dirtyInputClass(!!diffs[idx]?.institutionDirty)}
@@ -143,8 +143,8 @@ export function EducationEditor({
                 />
               </label>
 
-              <div className="grid grid-cols-2 gap-2">
-                <label className="grid gap-1 text-sm">
+              <div className="grid gap-2 sm:grid-cols-2">
+                <label className="grid gap-1 text-xs sm:text-sm">
                   <span className="font-semibold text-zinc-800">Degree</span>
                   <input
                     className={dirtyInputClass(!!diffs[idx]?.degreeDirty)}
@@ -156,7 +156,7 @@ export function EducationEditor({
                     }
                   />
                 </label>
-                <label className="grid gap-1 text-sm">
+                <label className="grid gap-1 text-xs sm:text-sm">
                   <span className="font-semibold text-zinc-800">Field</span>
                   <input
                     className={dirtyInputClass(!!diffs[idx]?.fieldDirty)}
@@ -169,8 +169,8 @@ export function EducationEditor({
                   />
                 </label>
               </div>
-              <div className="grid grid-cols-2 gap-2">
-                <label className="grid gap-1 text-sm">
+              <div className="grid gap-2 sm:grid-cols-2">
+                <label className="grid gap-1 text-xs sm:text-sm">
                   <span className="font-semibold text-zinc-800">Start year</span>
                   <input
                     type="number"
@@ -184,7 +184,7 @@ export function EducationEditor({
                     }}
                   />
                 </label>
-                <label className="grid gap-1 text-sm">
+                <label className="grid gap-1 text-xs sm:text-sm">
                   <span className="font-semibold text-zinc-800">End year</span>
                   <input
                     type="number"
@@ -199,7 +199,7 @@ export function EducationEditor({
                   />
                 </label>
               </div>
-              <label className="grid gap-1 text-sm">
+              <label className="grid gap-1 text-xs sm:text-sm">
                 <span className="font-semibold text-zinc-800">Details</span>
                 <textarea
                   rows={4}

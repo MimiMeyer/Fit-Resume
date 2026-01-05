@@ -62,7 +62,7 @@ export function SkillsEditor({
       <div className="flex justify-end">
         <button
           type="button"
-          className="text-sm font-semibold text-[var(--accent)]"
+          className="text-xs font-semibold text-[var(--accent)] sm:text-sm"
           onClick={() => {
             markAdded();
             setItems((prev) => [...prev, { id: undefined, name: "", category: "" }]);
@@ -76,9 +76,9 @@ export function SkillsEditor({
         {items.map((s, idx) => (
           <div
             key={idx}
-            className="grid grid-cols-[1fr_1fr_auto] items-end gap-2 rounded-xl border border-zinc-200 bg-white p-3"
+            className="grid items-end gap-2 rounded-xl border border-zinc-200 bg-white p-3 sm:grid-cols-[1fr_1fr_auto]"
           >
-            <label className="grid gap-1 text-sm">
+            <label className="grid gap-1 text-xs sm:text-sm">
               <span className="font-semibold text-zinc-800">Skill</span>
               <input
                 className={dirtyInputClass(!!diffs[idx]?.nameDirty)}
@@ -90,7 +90,7 @@ export function SkillsEditor({
                 }
               />
             </label>
-            <label className="grid gap-1 text-sm">
+            <label className="grid gap-1 text-xs sm:text-sm">
               <span className="font-semibold text-zinc-800">Category</span>
               <input
                 className={dirtyInputClass(!!diffs[idx]?.categoryDirty)}
@@ -104,7 +104,7 @@ export function SkillsEditor({
             </label>
             <button
               type="button"
-              className="mb-1 text-sm font-semibold text-red-600"
+              className="text-xs font-semibold text-red-600 sm:mb-1 sm:text-sm"
               onClick={() => setItems((prev) => prev.filter((_, i) => i !== idx))}
             >
               Delete

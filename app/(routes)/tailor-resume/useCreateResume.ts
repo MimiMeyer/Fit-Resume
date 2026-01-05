@@ -424,7 +424,11 @@ export function useCreateResume(
     const nextLayoutMode = safeParseLayoutMode(sessionStorage.getItem(RESUME_LAYOUT_MODE_CACHE_KEY));
     if (nextLayoutMode) setLayoutMode(nextLayoutMode);
     const nextZoom = safeParseZoom(sessionStorage.getItem(RESUME_ZOOM_CACHE_KEY));
-    if (nextZoom != null) setZoom(nextZoom);
+    if (nextZoom != null) {
+      setZoom(nextZoom);
+    } else if (window.innerWidth < 640) {
+      setZoom(0.35);
+    }
     const nextShowJd = safeParseBoolean(sessionStorage.getItem(RESUME_SHOW_JD_CACHE_KEY));
     if (nextShowJd != null) {
       setShowJobDescription(nextShowJd);
@@ -1013,7 +1017,7 @@ export function useCreateResume(
     sessionStorage.removeItem(RESUME_SPACING_CACHE_KEY);
     setLayoutModePersisted("two");
     sessionStorage.removeItem(RESUME_LAYOUT_MODE_CACHE_KEY);
-    setZoomPersisted(0.75);
+    setZoom(window.innerWidth < 640 ? 0.35 : 0.75);
     sessionStorage.removeItem(RESUME_ZOOM_CACHE_KEY);
     sessionStorage.removeItem(RESUME_SHOW_JD_CACHE_KEY);
   };

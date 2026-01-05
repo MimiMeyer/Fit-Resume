@@ -42,9 +42,12 @@ export function JobDescriptionPanel({
   if (!show) return null;
 
   return (
-    <div className="flex flex-col gap-3 rounded-xl border border-zinc-100 bg-zinc-50 p-4">
+    <div className="flex flex-col gap-3 rounded-xl border border-zinc-100 bg-zinc-50 p-3 sm:p-4">
       <div className="flex items-center justify-between">
-        <label className="text-sm font-semibold text-zinc-900" htmlFor="job-description-input">
+        <label
+          className="text-xs font-semibold text-zinc-900 sm:text-sm"
+          htmlFor="job-description-input"
+        >
           Job description
         </label>
         <button
@@ -57,7 +60,7 @@ export function JobDescriptionPanel({
       </div>
       <textarea
         id="job-description-input"
-        className="min-h-[320px] w-full rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-800 focus:border-[var(--accent)] focus:outline-none"
+        className="min-h-[320px] w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-800 focus:border-[var(--accent)] focus:outline-none sm:px-4 sm:py-3 sm:text-sm"
         value={jobDescription}
         onChange={(e) => setJobDescription(e.target.value)}
         placeholder="Paste the job description here..."
@@ -65,7 +68,10 @@ export function JobDescriptionPanel({
 
       <div className="space-y-2 rounded-lg border border-zinc-200 bg-white p-3">
         <div className="flex items-center justify-between gap-2">
-          <label className="text-sm font-semibold text-zinc-900" htmlFor="claude-api-key-input">
+          <label
+            className="text-xs font-semibold text-zinc-900 sm:text-sm"
+            htmlFor="claude-api-key-input"
+          >
             Claude API key
           </label>
           <div className="flex items-center gap-3">
@@ -91,7 +97,7 @@ export function JobDescriptionPanel({
           ref={apiKeyInputRef}
           id="claude-api-key-input"
           type={showApiKey ? "text" : "password"}
-          className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 focus:border-[var(--accent)] focus:outline-none"
+          className="w-full rounded-lg border border-zinc-200 bg-white px-2.5 py-1.5 text-xs text-zinc-900 focus:border-[var(--accent)] focus:outline-none sm:px-3 sm:py-2 sm:text-sm"
           value={claudeApiKey}
           onChange={(e) => setClaudeApiKey(e.target.value)}
           placeholder="sk-ant-..."
@@ -100,9 +106,11 @@ export function JobDescriptionPanel({
         />
         <ul className="list-disc space-y-1 pl-4 text-xs text-zinc-600">
           <li>We do not store your key.</li>
-          <li>It is sent only when you click Generate.</li>
           <li>This key stays in this tab and is cleared when you refresh.</li>
         </ul>
+        <p className="text-xs text-zinc-600">
+          Use at your own discretion — API usage and billing are your responsibility.
+        </p>
         <p className="text-xs text-zinc-600">
           Create a key at{" "}
           <a
@@ -121,7 +129,7 @@ export function JobDescriptionPanel({
         <button
           onClick={onGenerate}
           disabled={isGenerating}
-          className="inline-flex items-center gap-2 rounded-full bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:opacity-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)] disabled:opacity-60"
+          className="inline-flex items-center gap-2 rounded-full bg-[var(--accent)] px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:opacity-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)] disabled:opacity-60 sm:px-4 sm:py-2 sm:text-sm"
         >
           {isGenerating ? "Generating..." : hasGenerated ? "Regenerate" : "Generate"}
         </button>
