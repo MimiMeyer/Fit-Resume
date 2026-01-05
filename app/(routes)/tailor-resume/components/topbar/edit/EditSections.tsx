@@ -37,6 +37,14 @@ import { ExperienceEditor } from "./sections/ExperienceEditor";
 import { SummaryEditor } from "./sections/SummaryEditor";
 import { ProjectsEditor } from "./sections/ProjectsEditor";
 import { SkillsEditor } from "./sections/SkillsEditor";
+import {
+  certificationsEqual,
+  educationsEqual,
+  experiencesEqual,
+  headerEquals,
+  projectsEqual,
+  skillsEqual,
+} from "./shared/sectionDiffs";
 
 type Props = {
   updateProfile: (updater: (current: Profile) => Profile, opts?: { flush?: boolean }) => void;
@@ -44,10 +52,16 @@ type Props = {
   setDraft: (next: TailorResumeDraft | null) => void;
   header: TailorHeaderDraft;
   experiences: TailorExperienceDraft[];
+  profileHeader: TailorHeaderDraft;
+  profileExperiences: TailorExperienceDraft[];
   projects: TailorProjectDraft[];
+  profileProjects: TailorProjectDraft[];
   skills: TailorSkillDraft[];
+  profileSkills: TailorSkillDraft[];
   educations: TailorEducationDraft[];
+  profileEducations: TailorEducationDraft[];
   certifications: TailorCertificationDraft[];
+  profileCertifications: TailorCertificationDraft[];
 };
 
 type OpenModal =
@@ -128,7 +142,7 @@ type EditorProps<T> = {
   onSaveProfile: (next: T) => void;
 };
 
-type EditorComponent<T> = (props: EditorProps<T>) => ReactNode;
+type EditorComponent<T> = (props: EditorProps<T> & Record<string, unknown>) => ReactNode;
 
 type SectionConfig = {
   key: Exclude<OpenModal, null>;
@@ -145,6 +159,7 @@ type SectionConfig = {
   save: (val: unknown) => Promise<unknown>;
   Editor: EditorComponent<unknown>;
   initial: unknown;
+  editorProps?: Record<string, unknown>;
 };
 
 export function EditSections({
@@ -153,10 +168,16 @@ export function EditSections({
   setDraft,
   header,
   experiences,
+  profileHeader,
+  profileExperiences,
   projects,
+  profileProjects,
   skills,
+  profileSkills,
   educations,
+  profileEducations,
   certifications,
+  profileCertifications,
 }: Props) {
   const [open, setOpen] = useState<OpenModal>(null);
   const [isPending, startTransition] = useTransition();
@@ -185,18 +206,85 @@ export function EditSections({
     clearInlineError();
   };
 
-  const hasHeaderDraft = draft?.header !== undefined;
-  const hasExpDraft = draft?.experiences !== undefined;
-  const hasProjectsDraft = draft?.projects !== undefined;
-  const hasSkillsDraft = draft?.skills !== undefined;
-  const hasEduDraft = draft?.educations !== undefined;
-  const hasCertDraft = draft?.certifications !== undefined;
+  const baselineHeader = useMemo<TailorHeaderDraft>(() => {
+    return {
+      fullName: profileHeader.fullName,
+      title: profileHeader.title,
+      summary: profileHeader.summary,
+      email: profileHeader.email,
+      phone: profileHeader.phone,
+      location: profileHeader.location,
+      linkedinUrl: profileHeader.linkedinUrl,
+      githubUrl: profileHeader.githubUrl,
+      websiteUrl: profileHeader.websiteUrl,
+    };
+  }, [profileHeader]);
+
+  const baselineExperiences = useMemo(
+    () => normalizeExperiences(profileExperiences),
+    [profileExperiences],
+  );
+
+  const baselineProjects = useMemo(() => normalizeProjects(profileProjects), [profileProjects]);
+  const baselineSkills = useMemo(() => normalizeSkills(profileSkills), [profileSkills]);
+  const baselineEducations = useMemo(() => normalizeEducations(profileEducations), [profileEducations]);
+  const baselineCertifications = useMemo(
+    () => normalizeCertifications(profileCertifications),
+    [profileCertifications],
+  );
+
+  const sectionChanged = useMemo(() => {
+    const currentHeader: TailorHeaderDraft = {
+      ...baselineHeader,
+      fullName: header.fullName,
+      title: header.title,
+      summary: header.summary,
+      email: header.email,
+      phone: header.phone,
+      location: header.location,
+      linkedinUrl: header.linkedinUrl,
+      githubUrl: header.githubUrl,
+      websiteUrl: header.websiteUrl,
+    };
+
+    return {
+      header: !headerEquals(currentHeader, baselineHeader),
+      experience: !experiencesEqual(normalizeExperiences(experiences), baselineExperiences),
+      projects: !projectsEqual(normalizeProjects(projects), baselineProjects),
+      skills: !skillsEqual(normalizeSkills(skills), baselineSkills),
+      education: !educationsEqual(normalizeEducations(educations), baselineEducations),
+      certifications: !certificationsEqual(
+        normalizeCertifications(certifications),
+        baselineCertifications,
+      ),
+    } as const;
+  }, [
+    baselineCertifications,
+    baselineEducations,
+    baselineExperiences,
+    baselineHeader,
+    baselineProjects,
+    baselineSkills,
+    certifications,
+    educations,
+    experiences,
+    header,
+    projects,
+    skills,
+  ]);
 
   const resumeSavesCount = useMemo(() => {
-    return [hasHeaderDraft, hasExpDraft, hasProjectsDraft, hasSkillsDraft, hasEduDraft, hasCertDraft]
+    return [
+      sectionChanged.header,
+      sectionChanged.experience,
+      sectionChanged.projects,
+      sectionChanged.skills,
+      sectionChanged.education,
+      sectionChanged.certifications,
+    ]
       .filter(Boolean)
       .length;
-  }, [hasCertDraft, hasEduDraft, hasExpDraft, hasHeaderDraft, hasProjectsDraft, hasSkillsDraft]);
+  }, [sectionChanged]);
 
   const sectionConfigs: SectionConfig[] = [
     {
@@ -204,8 +292,8 @@ export function EditSections({
       draftKey: "header",
       buttonLabel: "Edit Summary",
       modalTitle: "Edit Summary",
-      hasDraft: hasHeaderDraft,
-      canClearDraft: hasHeaderDraft,
+      hasDraft: sectionChanged.header,
+      canClearDraft: draft?.header !== undefined,
       onClearDraft: () => setDraft(clearDraftSection(draft, "header")),
       confirmMessage: "You're about to save this Summary to your profile. Are you sure?",
       errorFallback: "Failed to save Summary.",
@@ -231,14 +319,15 @@ export function EditSections({
       },
       Editor: SummaryEditor as unknown as EditorComponent<unknown>,
       initial: header,
+      editorProps: { baseline: baselineHeader },
     },
     {
       key: "experience",
       draftKey: "experiences",
       buttonLabel: "Edit Experience",
       modalTitle: "Edit Experience",
-      hasDraft: hasExpDraft,
-      canClearDraft: hasExpDraft,
+      hasDraft: sectionChanged.experience,
+      canClearDraft: draft?.experiences !== undefined,
       onClearDraft: () => setDraft(clearDraftSection(draft, "experiences")),
       confirmMessage: "You're about to overwrite your profile Experience section. Are you sure?",
       errorFallback: "Failed to save Experience.",
@@ -263,14 +352,15 @@ export function EditSections({
       },
       Editor: ExperienceEditor as unknown as EditorComponent<unknown>,
       initial: experiences,
+      editorProps: { baseline: baselineExperiences },
     },
     {
       key: "projects",
       draftKey: "projects",
       buttonLabel: "Edit Projects",
       modalTitle: "Edit Projects",
-      hasDraft: hasProjectsDraft,
-      canClearDraft: hasProjectsDraft,
+      hasDraft: sectionChanged.projects,
+      canClearDraft: draft?.projects !== undefined,
       onClearDraft: () => setDraft(clearDraftSection(draft, "projects")),
       confirmMessage: "You're about to overwrite your profile Projects section. Are you sure?",
       errorFallback: "Failed to save Projects.",
@@ -294,14 +384,15 @@ export function EditSections({
       },
       Editor: ProjectsEditor as unknown as EditorComponent<unknown>,
       initial: projects,
+      editorProps: { baseline: baselineProjects },
     },
     {
       key: "skills",
       draftKey: "skills",
       buttonLabel: "Edit Skills",
       modalTitle: "Edit Skills",
-      hasDraft: hasSkillsDraft,
-      canClearDraft: hasSkillsDraft,
+      hasDraft: sectionChanged.skills,
+      canClearDraft: draft?.skills !== undefined,
       onClearDraft: () => setDraft(clearDraftSection(draft, "skills")),
       confirmMessage: "You're about to overwrite your profile Skills section. Are you sure?",
       errorFallback: "Failed to save Skills.",
@@ -325,14 +416,15 @@ export function EditSections({
       },
       Editor: SkillsEditor as unknown as EditorComponent<unknown>,
       initial: skills,
+      editorProps: { baseline: baselineSkills },
     },
     {
       key: "education",
       draftKey: "educations",
       buttonLabel: "Edit Education",
       modalTitle: "Edit Education",
-      hasDraft: hasEduDraft,
-      canClearDraft: hasEduDraft,
+      hasDraft: sectionChanged.education,
+      canClearDraft: draft?.educations !== undefined,
       onClearDraft: () => setDraft(clearDraftSection(draft, "educations")),
       confirmMessage: "You're about to overwrite your profile Education section. Are you sure?",
       errorFallback: "Failed to save Education.",
@@ -358,14 +450,15 @@ export function EditSections({
       },
       Editor: EducationEditor as unknown as EditorComponent<unknown>,
       initial: educations,
+      editorProps: { baseline: baselineEducations },
     },
     {
       key: "certifications",
       draftKey: "certifications",
       buttonLabel: "Edit Certs",
       modalTitle: "Edit Certifications",
-      hasDraft: hasCertDraft,
-      canClearDraft: hasCertDraft,
+      hasDraft: sectionChanged.certifications,
+      canClearDraft: draft?.certifications !== undefined,
       onClearDraft: () => setDraft(clearDraftSection(draft, "certifications")),
       confirmMessage: "You're about to overwrite your profile Certifications section. Are you sure?",
       errorFallback: "Failed to save Certifications.",
@@ -389,12 +482,48 @@ export function EditSections({
       },
       Editor: CertificationsEditor as unknown as EditorComponent<unknown>,
       initial: certifications,
+      editorProps: { baseline: baselineCertifications },
     },
   ];
 
   const savePreviewFor = (section: SectionConfig, next: unknown) => {
     const err = section.validate(next);
     if (err) return showError("", err);
+
+    const isSameAsProfile = (() => {
+      switch (section.key) {
+        case "header":
+          return headerEquals(next as TailorHeaderDraft, baselineHeader);
+        case "experience":
+          return experiencesEqual(
+            normalizeExperiences(next as TailorExperienceDraft[]),
+            baselineExperiences,
+          );
+        case "projects":
+          return projectsEqual(normalizeProjects(next as TailorProjectDraft[]), baselineProjects);
+        case "skills":
+          return skillsEqual(normalizeSkills(next as TailorSkillDraft[]), baselineSkills);
+        case "education":
+          return educationsEqual(
+            normalizeEducations(next as TailorEducationDraft[]),
+            baselineEducations,
+          );
+        case "certifications":
+          return certificationsEqual(
+            normalizeCertifications(next as TailorCertificationDraft[]),
+            baselineCertifications,
+          );
+        default:
+          return false;
+      }
+    })();
+
+    if (isSameAsProfile) {
+      setDraft(clearDraftSection(draft, section.draftKey));
+      closeModal();
+      return;
+    }
+
     setDraft(updateDraftSection(draft, section.draftKey as never, section.toDraft(next) as never));
     closeModal();
   };
@@ -424,8 +553,8 @@ export function EditSections({
     <>
       <div className="flex w-full items-center justify-end gap-2">
         {resumeSavesCount ? (
-          <span className="shrink-0 inline-flex items-center rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-semibold text-amber-800 border border-amber-100">
-            Resume changes saved: {resumeSavesCount} section{resumeSavesCount === 1 ? "" : "s"}
+          <span className="shrink-0 inline-flex items-center rounded-full bg-purple-50 px-2.5 py-1 text-[11px] font-semibold text-purple-800 border border-purple-100">
+            Not saved to profile: {resumeSavesCount} section{resumeSavesCount === 1 ? "" : "s"}
           </span>
         ) : null}
         <EditSectionButtons
@@ -449,6 +578,7 @@ export function EditSections({
             onClearDraft={section.onClearDraft}
             onSavePreview={(next) => savePreviewFor(section, next)}
             onSaveProfile={(next) => saveProfileFor(section, next)}
+            {...(section.editorProps ?? {})}
           />
         </SectionModalShell>
       ))}

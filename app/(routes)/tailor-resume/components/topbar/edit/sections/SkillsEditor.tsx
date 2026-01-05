@@ -1,12 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import type { TailorSkillDraft } from "../../../../model/edit-state";
 import { ActionRow } from "../shared/ActionRow";
 import { useAutoScrollOnAdd } from "../shared/useAutoScrollOnAdd";
+import { dirtyInputClass, normalizeKey } from "../shared/diffUtils";
 
 export function SkillsEditor({
   initial,
+  baseline,
   isPending,
   canClearDraft,
   onClearDraft,
@@ -14,6 +16,7 @@ export function SkillsEditor({
   onSaveProfile,
 }: {
   initial: TailorSkillDraft[];
+  baseline: TailorSkillDraft[];
   isPending: boolean;
   canClearDraft: boolean;
   onClearDraft: () => void;
@@ -22,6 +25,37 @@ export function SkillsEditor({
 }) {
   const [items, setItems] = useState<TailorSkillDraft[]>(initial);
   const { listRef, markAdded } = useAutoScrollOnAdd(items.length);
+
+  const diffs = useMemo(() => {
+    const baseCounts = new Map<string, number>();
+    const baseNameCounts = new Map<string, number>();
+    for (const s of baseline || []) {
+      const name = normalizeKey(s.name);
+      const key = `${normalizeKey(s.category)}|${name}`;
+      baseCounts.set(key, (baseCounts.get(key) ?? 0) + 1);
+      baseNameCounts.set(name, (baseNameCounts.get(name) ?? 0) + 1);
+    }
+
+    return items.map((s) => {
+      const name = normalizeKey(s.name);
+      const key = `${normalizeKey(s.category)}|${name}`;
+      const exactRemaining = baseCounts.get(key) ?? 0;
+      if (exactRemaining > 0) {
+        baseCounts.set(key, exactRemaining - 1);
+        const n = baseNameCounts.get(name) ?? 0;
+        if (n > 0) baseNameCounts.set(name, n - 1);
+        return { nameDirty: false, categoryDirty: false };
+      }
+
+      const nameRemaining = baseNameCounts.get(name) ?? 0;
+      if (name && nameRemaining > 0) {
+        baseNameCounts.set(name, nameRemaining - 1);
+        return { nameDirty: false, categoryDirty: true };
+      }
+
+      return { nameDirty: true, categoryDirty: true };
+    });
+  }, [baseline, items]);
 
   return (
     <div>
@@ -47,7 +81,7 @@ export function SkillsEditor({
             <label className="grid gap-1 text-sm">
               <span className="font-semibold text-zinc-800">Skill</span>
               <input
-                className="rounded-lg border border-zinc-200 bg-white px-3 py-2"
+                className={dirtyInputClass(!!diffs[idx]?.nameDirty)}
                 value={s.name}
                 onChange={(e) =>
                   setItems((prev) =>
@@ -59,7 +93,7 @@ export function SkillsEditor({
             <label className="grid gap-1 text-sm">
               <span className="font-semibold text-zinc-800">Category</span>
               <input
-                className="rounded-lg border border-zinc-200 bg-white px-3 py-2"
+                className={dirtyInputClass(!!diffs[idx]?.categoryDirty)}
                 value={s.category}
                 onChange={(e) =>
                   setItems((prev) =>

@@ -1,11 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import type { TailorHeaderDraft } from "../../../../model/edit-state";
 import { ActionRow } from "../shared/ActionRow";
+import { dirtyInputClass, normalizeText } from "../shared/diffUtils";
 
 export function SummaryEditor({
   initial,
+  baseline,
   isPending,
   canClearDraft,
   onClearDraft,
@@ -13,6 +15,7 @@ export function SummaryEditor({
   onSaveProfile,
 }: {
   initial: TailorHeaderDraft;
+  baseline: TailorHeaderDraft;
   isPending: boolean;
   canClearDraft: boolean;
   onClearDraft: () => void;
@@ -21,13 +24,27 @@ export function SummaryEditor({
 }) {
   const [state, setState] = useState<TailorHeaderDraft>(initial);
 
+  const changed = useMemo(() => {
+    return {
+      fullName: normalizeText(state.fullName) !== normalizeText(baseline.fullName),
+      title: normalizeText(state.title) !== normalizeText(baseline.title),
+      email: normalizeText(state.email) !== normalizeText(baseline.email),
+      phone: normalizeText(state.phone) !== normalizeText(baseline.phone),
+      location: normalizeText(state.location) !== normalizeText(baseline.location),
+      websiteUrl: normalizeText(state.websiteUrl) !== normalizeText(baseline.websiteUrl),
+      linkedinUrl: normalizeText(state.linkedinUrl) !== normalizeText(baseline.linkedinUrl),
+      githubUrl: normalizeText(state.githubUrl) !== normalizeText(baseline.githubUrl),
+      summary: normalizeText(state.summary) !== normalizeText(baseline.summary),
+    };
+  }, [baseline, state]);
+
   return (
     <div>
       <div className="grid gap-3">
         <label className="grid gap-1 text-sm">
           <span className="font-semibold text-zinc-800">Full name</span>
           <input
-            className="rounded-lg border border-zinc-200 bg-white px-3 py-2"
+            className={dirtyInputClass(changed.fullName)}
             value={state.fullName}
             onChange={(e) => setState((s) => ({ ...s, fullName: e.target.value }))}
           />
@@ -35,7 +52,7 @@ export function SummaryEditor({
         <label className="grid gap-1 text-sm">
           <span className="font-semibold text-zinc-800">Title</span>
           <input
-            className="rounded-lg border border-zinc-200 bg-white px-3 py-2"
+            className={dirtyInputClass(changed.title)}
             value={state.title}
             onChange={(e) => setState((s) => ({ ...s, title: e.target.value }))}
             placeholder="Job title / position (e.g., Software Engineer)"
@@ -45,7 +62,7 @@ export function SummaryEditor({
           <label className="grid gap-1 text-sm">
             <span className="font-semibold text-zinc-800">Email</span>
             <input
-              className="rounded-lg border border-zinc-200 bg-white px-3 py-2"
+              className={dirtyInputClass(changed.email)}
               value={state.email}
               onChange={(e) => setState((s) => ({ ...s, email: e.target.value }))}
               placeholder="name@email.com"
@@ -54,7 +71,7 @@ export function SummaryEditor({
           <label className="grid gap-1 text-sm">
             <span className="font-semibold text-zinc-800">Phone</span>
             <input
-              className="rounded-lg border border-zinc-200 bg-white px-3 py-2"
+              className={dirtyInputClass(changed.phone)}
               value={state.phone}
               onChange={(e) => setState((s) => ({ ...s, phone: e.target.value }))}
               placeholder="(555) 555-5555"
@@ -63,7 +80,7 @@ export function SummaryEditor({
           <label className="grid gap-1 text-sm">
             <span className="font-semibold text-zinc-800">Location</span>
             <input
-              className="rounded-lg border border-zinc-200 bg-white px-3 py-2"
+              className={dirtyInputClass(changed.location)}
               value={state.location}
               onChange={(e) => setState((s) => ({ ...s, location: e.target.value }))}
               placeholder="City, State"
@@ -72,7 +89,7 @@ export function SummaryEditor({
           <label className="grid gap-1 text-sm">
             <span className="font-semibold text-zinc-800">Website</span>
             <input
-              className="rounded-lg border border-zinc-200 bg-white px-3 py-2"
+              className={dirtyInputClass(changed.websiteUrl)}
               value={state.websiteUrl}
               onChange={(e) => setState((s) => ({ ...s, websiteUrl: e.target.value }))}
               placeholder="https://..."
@@ -81,7 +98,7 @@ export function SummaryEditor({
           <label className="grid gap-1 text-sm">
             <span className="font-semibold text-zinc-800">LinkedIn</span>
             <input
-              className="rounded-lg border border-zinc-200 bg-white px-3 py-2"
+              className={dirtyInputClass(changed.linkedinUrl)}
               value={state.linkedinUrl}
               onChange={(e) => setState((s) => ({ ...s, linkedinUrl: e.target.value }))}
               placeholder="https://linkedin.com/in/..."
@@ -90,7 +107,7 @@ export function SummaryEditor({
           <label className="grid gap-1 text-sm">
             <span className="font-semibold text-zinc-800">GitHub</span>
             <input
-              className="rounded-lg border border-zinc-200 bg-white px-3 py-2"
+              className={dirtyInputClass(changed.githubUrl)}
               value={state.githubUrl}
               onChange={(e) => setState((s) => ({ ...s, githubUrl: e.target.value }))}
               placeholder="https://github.com/..."
@@ -101,7 +118,7 @@ export function SummaryEditor({
           <span className="font-semibold text-zinc-800">Summary</span>
           <textarea
             rows={6}
-            className="rounded-lg border border-zinc-200 bg-white px-3 py-2"
+            className={dirtyInputClass(changed.summary)}
             value={state.summary}
             onChange={(e) => setState((s) => ({ ...s, summary: e.target.value }))}
           />

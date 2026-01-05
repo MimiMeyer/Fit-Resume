@@ -66,6 +66,10 @@ const RESUME_BORDERS_CACHE_KEY = "fitresume.tailorResumeBorders.v1";
 const RESUME_ACCENT_OPACITY_CACHE_KEY = "fitresume.tailorResumeAccentOpacity.v1";
 const RESUME_SPACING_CACHE_KEY = "fitresume.tailorResumeSpacing.v1";
 
+function normalizeKey(value: string) {
+  return value.trim().toLowerCase();
+}
+
 function safeParseDraft(raw: string | null): TailorResumeDraft | null {
   if (!raw) return null;
   try {
@@ -315,6 +319,27 @@ export function useCreateResume(
   const resumeRef = useRef<HTMLDivElement>(null);
   const resumeWrapperRef = useRef<HTMLDivElement>(null);
 
+  const setDraft = (next: TailorResumeDraft | null) => {
+    setDraftState(next);
+    if (!next) {
+      sessionStorage.removeItem(TAILOR_RESUME_DRAFT_CACHE_KEY);
+      return;
+    }
+    sessionStorage.setItem(TAILOR_RESUME_DRAFT_CACHE_KEY, JSON.stringify(next));
+  };
+
+  const clearAiDraftSections = (base: TailorResumeDraft | null): TailorResumeDraft | null => {
+    if (!base) return null;
+    const next: Partial<TailorResumeDraft> = { ...base };
+    delete next.header;
+    delete next.experiences;
+    delete next.projects;
+    delete next.skills;
+    const keys = Object.keys(next).filter((k) => k !== "version" && k !== "updatedAt");
+    if (!keys.length) return null;
+    return { ...(next as TailorResumeDraft), updatedAt: Date.now() };
+  };
+
   useEffect(() => {
     if (!promptForApiKey) return;
     if (!claudeApiKey.trim()) return;
@@ -512,12 +537,25 @@ export function useCreateResume(
     if (draft?.projects !== undefined) return draft.projects;
 
     if (generated?.projects?.length) {
+      const profileIndex = new Map(
+        (profile.projects || []).map((proj) => [
+          normalizeKey(proj.title),
+          {
+            id: proj.id,
+            title: proj.title,
+            link: proj.link || "",
+            technologies: proj.technologies || [],
+            description: proj.description || "",
+          },
+        ]),
+      );
+
       return generated.projects.map((proj) => ({
-        id: undefined,
-        title: proj.title,
-        description: proj.description || "",
-        link: proj.link || "",
-        technologies: [],
+        id: profileIndex.get(normalizeKey(proj.title))?.id,
+        title: profileIndex.get(normalizeKey(proj.title))?.title ?? proj.title,
+        description: proj.description || profileIndex.get(normalizeKey(proj.title))?.description || "",
+        link: profileIndex.get(normalizeKey(proj.title))?.link ?? "",
+        technologies: profileIndex.get(normalizeKey(proj.title))?.technologies ?? [],
       }));
     }
 
@@ -682,6 +720,9 @@ export function useCreateResume(
       return;
     }
 
+    const draftBaseline = generated ? clearAiDraftSections(draft) : draft;
+    if (generated) setDraft(draftBaseline);
+
     setIsGenerating(true);
     setGenerateError(null);
     try {
@@ -701,14 +742,108 @@ export function useCreateResume(
       }
 
       const data = (await res.json()) as GeneratedResume;
-      setGenerated({
+      const nextGenerated = {
         summary: data.summary,
         experiences: data.experiences || [],
         projects: data.projects || [],
         skillsByCategory: data.skillsByCategory || {},
+      };
+      setGenerated({
+        summary: nextGenerated.summary,
+        experiences: nextGenerated.experiences,
+        projects: nextGenerated.projects,
+        skillsByCategory: nextGenerated.skillsByCategory,
       });
-      setDraftState(null);
-      sessionStorage.removeItem(TAILOR_RESUME_DRAFT_CACHE_KEY);
+
+      const expIndex = new Map<string, { id: number; location: string; period: string }>();
+      for (const exp of profile.experiences || []) {
+        expIndex.set(`${normalizeKey(exp.role)}|${normalizeKey(exp.company)}`, {
+          id: exp.id,
+          location: exp.location ?? "",
+          period: exp.period ?? "",
+        });
+      }
+
+      const projectIndex = new Map<
+        string,
+        { id: number; title: string; technologies: string[]; link: string; description: string }
+      >();
+      for (const proj of profile.projects || []) {
+        projectIndex.set(normalizeKey(proj.title), {
+          id: proj.id,
+          title: proj.title,
+          technologies: proj.technologies || [],
+          link: proj.link ?? "",
+          description: proj.description ?? "",
+        });
+      }
+
+      const skillIndex = new Map<string, number>();
+      for (const skill of profile.skills || []) {
+        skillIndex.set(
+          `${normalizeKey(skill.name)}|${normalizeKey(skill.category.name)}`,
+          skill.id,
+        );
+      }
+
+      const baseDraft: TailorResumeDraft | null = draftBaseline;
+      const merged: TailorResumeDraft = {
+        ...(baseDraft ?? { version: 1 as const, updatedAt: Date.now() }),
+        updatedAt: Date.now(),
+      };
+
+      const nextSummary = nextGenerated.summary.trim();
+      const currentSummary = (profile.summary ?? "").trim();
+      if (nextSummary && nextSummary !== currentSummary && merged.header?.summary === undefined) {
+        merged.header = { ...(merged.header ?? {}), summary: nextSummary };
+      }
+
+      if (merged.experiences === undefined && nextGenerated.experiences.length) {
+        merged.experiences = nextGenerated.experiences.map((exp) => {
+          const match = expIndex.get(`${normalizeKey(exp.role)}|${normalizeKey(exp.company)}`);
+          return {
+            id: match?.id,
+            role: exp.role,
+            company: exp.company,
+            location: exp.location ?? match?.location ?? "",
+            period: exp.period ?? match?.period ?? "",
+            impactBullets: exp.bullets || [],
+          };
+        });
+      }
+
+      if (merged.projects === undefined && nextGenerated.projects.length) {
+        merged.projects = nextGenerated.projects.map((proj) => {
+          const match = projectIndex.get(normalizeKey(proj.title));
+          return {
+            id: match?.id,
+            title: match?.title ?? proj.title,
+            description: proj.description ?? match?.description ?? "",
+            link: match?.link ?? "",
+            technologies: match?.technologies ?? proj.technologies ?? [],
+          };
+        });
+      }
+
+      if (merged.skills === undefined && Object.keys(nextGenerated.skillsByCategory).length) {
+        merged.skills = Object.entries(nextGenerated.skillsByCategory).flatMap(([category, items]) =>
+          (items || []).map((name) => ({
+            id: skillIndex.get(`${normalizeKey(name)}|${normalizeKey(category)}`),
+            name,
+            category,
+          })),
+        );
+      }
+
+      const hasSections =
+        merged.header !== undefined ||
+        merged.experiences !== undefined ||
+        merged.projects !== undefined ||
+        merged.skills !== undefined ||
+        merged.educations !== undefined ||
+        merged.certifications !== undefined;
+
+      setDraft(hasSections ? merged : null);
       sessionStorage.removeItem(LEGACY_RESUME_EDITS_CACHE_KEY);
       setShowJobDescription(false);
       setPromptForApiKey(false);
@@ -789,8 +924,7 @@ export function useCreateResume(
   const resetGenerated = () => {
     setGenerated(null);
     setGenerateError(null);
-    setDraftState(null);
-    sessionStorage.removeItem(TAILOR_RESUME_DRAFT_CACHE_KEY);
+    setDraft(null);
     sessionStorage.removeItem(LEGACY_RESUME_EDITS_CACHE_KEY);
   };
 
@@ -872,14 +1006,7 @@ export function useCreateResume(
     resetToProfile,
     defaultPdfFileName,
     draft,
-    setDraft: (next: TailorResumeDraft | null) => {
-      setDraftState(next);
-      if (!next) {
-        sessionStorage.removeItem(TAILOR_RESUME_DRAFT_CACHE_KEY);
-        return;
-      }
-      sessionStorage.setItem(TAILOR_RESUME_DRAFT_CACHE_KEY, JSON.stringify(next));
-    },
+    setDraft,
     headerForEdit,
     experiencesForEdit,
     projectsForEdit,

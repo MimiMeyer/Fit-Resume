@@ -18,7 +18,7 @@ export function EditSectionButtons({
   onOpen: (key: SectionKey) => void;
 }) {
   const resumeSavedIndicator = (
-    <span className="ml-1 text-amber-700" aria-hidden="true">
+    <span className="ml-1 text-purple-700" aria-hidden="true">
       {"\u2022"}
     </span>
   );

@@ -1,12 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import type { TailorCertificationDraft } from "../../../../model/edit-state";
 import { ActionRow } from "../shared/ActionRow";
 import { useAutoScrollOnAdd } from "../shared/useAutoScrollOnAdd";
+import { dirtyInputClass, normalizeText, takeBestMatch } from "../shared/diffUtils";
 
 export function CertificationsEditor({
   initial,
+  baseline,
   isPending,
   canClearDraft,
   onClearDraft,
@@ -14,6 +16,7 @@ export function CertificationsEditor({
   onSaveProfile,
 }: {
   initial: TailorCertificationDraft[];
+  baseline: TailorCertificationDraft[];
   isPending: boolean;
   canClearDraft: boolean;
   onClearDraft: () => void;
@@ -22,6 +25,49 @@ export function CertificationsEditor({
 }) {
   const [items, setItems] = useState<TailorCertificationDraft[]>(initial);
   const { listRef, markAdded } = useAutoScrollOnAdd(items.length);
+
+  const fieldDiffs = useMemo(() => {
+    const remaining = [...(baseline || [])];
+
+    const scoreMatch = (current: TailorCertificationDraft, candidate: TailorCertificationDraft) => {
+      let score = 0;
+      if (
+        normalizeText(current.credentialUrl).toLowerCase() &&
+        normalizeText(current.credentialUrl).toLowerCase() ===
+          normalizeText(candidate.credentialUrl).toLowerCase()
+      ) {
+        score += 6;
+      }
+      if (
+        normalizeText(current.name).toLowerCase() &&
+        normalizeText(current.name).toLowerCase() === normalizeText(candidate.name).toLowerCase()
+      ) {
+        score += 4;
+      }
+      if (
+        normalizeText(current.issuer).toLowerCase() &&
+        normalizeText(current.issuer).toLowerCase() === normalizeText(candidate.issuer).toLowerCase()
+      ) {
+        score += 2;
+      }
+      if ((current.issuedYear ?? null) === (candidate.issuedYear ?? null) && current.issuedYear != null) score += 1;
+      return score;
+    };
+
+    return items.map((c) => {
+      const base = takeBestMatch(remaining, c, scoreMatch);
+      if (!base) {
+        return { nameDirty: true, issuerDirty: true, issuedYearDirty: true, credentialUrlDirty: true };
+      }
+
+      return {
+        nameDirty: normalizeText(c.name) !== normalizeText(base.name),
+        issuerDirty: normalizeText(c.issuer) !== normalizeText(base.issuer),
+        issuedYearDirty: (c.issuedYear ?? null) !== (base.issuedYear ?? null),
+        credentialUrlDirty: normalizeText(c.credentialUrl) !== normalizeText(base.credentialUrl),
+      };
+    });
+  }, [baseline, items]);
 
   return (
     <div>
@@ -59,7 +105,7 @@ export function CertificationsEditor({
                 <label className="grid gap-1 text-sm">
                   <span className="font-semibold text-zinc-800">Name</span>
                   <input
-                    className="rounded-lg border border-zinc-200 bg-white px-3 py-2"
+                    className={dirtyInputClass(!!fieldDiffs[idx]?.nameDirty)}
                     value={c.name}
                     onChange={(e) =>
                       setItems((prev) =>
@@ -71,7 +117,7 @@ export function CertificationsEditor({
                 <label className="grid gap-1 text-sm">
                   <span className="font-semibold text-zinc-800">Issuer</span>
                   <input
-                    className="rounded-lg border border-zinc-200 bg-white px-3 py-2"
+                    className={dirtyInputClass(!!fieldDiffs[idx]?.issuerDirty)}
                     value={c.issuer}
                     onChange={(e) =>
                       setItems((prev) =>
@@ -86,7 +132,7 @@ export function CertificationsEditor({
                   <span className="font-semibold text-zinc-800">Issued year</span>
                   <input
                     type="number"
-                    className="rounded-lg border border-zinc-200 bg-white px-3 py-2"
+                    className={dirtyInputClass(!!fieldDiffs[idx]?.issuedYearDirty)}
                     value={c.issuedYear ?? ""}
                     onChange={(e) => {
                       const next = e.target.value ? Number(e.target.value) : null;
@@ -100,7 +146,7 @@ export function CertificationsEditor({
               <label className="grid gap-1 text-sm">
                 <span className="font-semibold text-zinc-800">Credential URL</span>
                 <input
-                  className="rounded-lg border border-zinc-200 bg-white px-3 py-2"
+                  className={dirtyInputClass(!!fieldDiffs[idx]?.credentialUrlDirty)}
                   value={c.credentialUrl}
                   onChange={(e) =>
                     setItems((prev) =>

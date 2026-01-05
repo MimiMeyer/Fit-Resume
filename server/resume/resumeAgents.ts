@@ -163,7 +163,7 @@ async function experienceAgent(
     const { text } = await generateText({
       model,
       temperature: 0.1,
-      maxOutputTokens: 200,
+      maxOutputTokens: Math.min(800, 200 + Math.max(0, bullets.length - 2) * 100),
       system: `
 You rewrite resume bullets to better match a job description.
 
@@ -222,7 +222,7 @@ async function projectsAgent(input: ModelInput, jd: string, apiKey?: string): Pr
   const { text } = await generateText({
     model,
     temperature: 0.2,
-    maxOutputTokens: 200,
+    maxOutputTokens: Math.min(800, 200 + Math.max(0, projects.length - 2) * 100),
     system: `
 You rewrite project descriptions to better match a job description.
 

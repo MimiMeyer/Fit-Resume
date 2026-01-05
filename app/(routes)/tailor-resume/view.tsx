@@ -92,10 +92,57 @@ export function CreateResumeView({
           setDraft={setDraft}
           header={headerForEdit}
           experiences={experiencesForEdit}
+          profileHeader={{
+            fullName: profile.fullName,
+            title: profile.title ?? "",
+            summary: profile.summary ?? "",
+            email: profile.email ?? "",
+            phone: profile.phone ?? "",
+            location: profile.location ?? "",
+            linkedinUrl: profile.linkedinUrl ?? "",
+            githubUrl: profile.githubUrl ?? "",
+            websiteUrl: profile.websiteUrl ?? "",
+          }}
+          profileExperiences={(profile.experiences || []).map((e) => ({
+            id: e.id,
+            role: e.role,
+            company: e.company,
+            location: e.location ?? "",
+            period: e.period ?? "",
+            impactBullets: e.impactBullets ?? [],
+          }))}
           projects={projectsForEdit}
+          profileProjects={(profile.projects || []).map((p) => ({
+            id: p.id,
+            title: p.title,
+            description: p.description ?? "",
+            link: p.link ?? "",
+            technologies: p.technologies ?? [],
+          }))}
           skills={skillsForEdit}
+          profileSkills={(profile.skills || []).map((s) => ({
+            id: s.id,
+            name: s.name,
+            category: s.category.name,
+          }))}
           educations={educationsForEdit}
+          profileEducations={(profile.educations || []).map((e) => ({
+            id: e.id,
+            institution: e.institution,
+            degree: e.degree ?? "",
+            field: e.field ?? "",
+            startYear: e.startYear ?? null,
+            endYear: e.endYear ?? null,
+            details: e.details ?? "",
+          }))}
           certifications={certificationsForEdit}
+          profileCertifications={(profile.certs || []).map((c) => ({
+            id: c.id,
+            name: c.name,
+            issuer: c.issuer ?? "",
+            issuedYear: c.issuedYear ?? null,
+            credentialUrl: c.credentialUrl ?? "",
+          }))}
         />
       </div>
 
