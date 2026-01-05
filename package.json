@@ -6,17 +6,10 @@
     "dev": "next dev",
     "build": "next build --webpack",
     "start": "next start",
-    "lint": "eslint",
-    "prisma": "prisma",
-    "db:push": "prisma db push",
-    "db:migrate": "prisma migrate dev",
-    "db:generate": "prisma generate",
-    "db:dev:up": "docker compose up -d db",
-    "db:dev:down": "docker compose down"
+    "lint": "eslint"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^2.0.55",
-    "@prisma/client": "5.19.1",
     "ai": "^5.0.112",
     "html2canvas": "^1.4.1",
     "jspdf": "^3.0.4",
@@ -32,7 +25,6 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.0.6",
-    "prisma": "5.19.1",
     "tailwindcss": "^4",
     "tsx": "^4.21.0",
     "typescript": "^5"

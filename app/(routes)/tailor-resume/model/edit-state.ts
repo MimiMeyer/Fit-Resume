@@ -3,8 +3,13 @@ import type { ResumeSectionId } from "../types";
 export type TailorHeaderDraft = {
   fullName: string;
   title: string;
-  headline: string;
   summary: string;
+  email: string;
+  phone: string;
+  location: string;
+  linkedinUrl: string;
+  githubUrl: string;
+  websiteUrl: string;
 };
 
 export type TailorExperienceDraft = {
@@ -13,7 +18,7 @@ export type TailorExperienceDraft = {
   company: string;
   location: string;
   period: string;
-  impact: string;
+  impactBullets: string[];
 };
 
 export type TailorProjectDraft = {

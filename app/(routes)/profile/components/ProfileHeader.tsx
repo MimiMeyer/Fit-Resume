@@ -17,7 +17,7 @@ export function ProfileHeader({ profile, onEdit }: Props) {
           <h2 className={styles.sectionTitle}>Profile</h2>
           <h1 className={styles.pageTitle}>{profile.fullName}</h1>
           <p className={styles.bodyText}>
-            {profile.title ?? profile.headline ?? "Role not set"}
+            {profile.title ?? "Role not set"}
           </p>
           <div className={styles.pillRow}>
             {profile.location && <span className={styles.pill}>{profile.location}</span>}

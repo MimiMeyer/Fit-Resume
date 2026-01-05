@@ -5,7 +5,8 @@ import { PenIcon } from "@/app/icons/pen";
 import { styles } from "../style-constants";
 import type { Experience } from "@/types/experience";
 import { Modal } from "../Modal";
-import { addExperience, deleteExperience } from "@/app/actions/experience-actions";
+import { BulletTextarea } from "@/app/components/BulletTextarea";
+import { normalizeBullets } from "@/lib/normalizeBullets";
 
 const dangerButton =
   "rounded border border-red-100 px-3 py-1 text-xs font-semibold text-red-700 transition hover:bg-red-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-500";
@@ -14,15 +15,25 @@ type Props = {
   profileId: number;
   experiences: Experience[];
   onEdit: (exp: Experience) => void;
+  onAdd: (input: Omit<Experience, "id">) => void;
+  onDelete: (id: number) => void;
 };
 
-function AddExperienceModal({ profileId }: { profileId: number }) {
+function AddExperienceModal({ profileId, onAdd }: { profileId: number; onAdd: Props["onAdd"] }) {
   const [isPending, startTransition] = useTransition();
   const [open, setOpen] = useState(false);
+  const [impactBullets, setImpactBullets] = useState<string[]>([""]);
 
   return (
     <>
-      <button type="button" className={styles.primaryButton} onClick={() => setOpen(true)}>
+      <button
+        type="button"
+        className={styles.primaryButton}
+        onClick={() => {
+          setImpactBullets([""]);
+          setOpen(true);
+        }}
+      >
         Add Role
       </button>
       <Modal
@@ -34,9 +45,17 @@ function AddExperienceModal({ profileId }: { profileId: number }) {
       >
         <form
           className={styles.formContainer}
-          action={(formData) => {
-            startTransition(async () => {
-              await addExperience(formData);
+          onSubmit={(e) => {
+            e.preventDefault();
+            const formData = new FormData(e.currentTarget);
+            const role = String(formData.get("role") ?? "").trim();
+            const company = String(formData.get("company") ?? "").trim();
+            const location = String(formData.get("location") ?? "").trim() || null;
+            const period = String(formData.get("period") ?? "").trim() || null;
+            const normalizedBullets = normalizeBullets(impactBullets);
+            if (!role || !company) return;
+            startTransition(() => {
+              onAdd({ role, company, location, period, impactBullets: normalizedBullets });
               setOpen(false);
             });
           }}
@@ -59,8 +78,14 @@ function AddExperienceModal({ profileId }: { profileId: number }) {
             <input name="period" className={styles.input} />
           </label>
           <label className={styles.formField}>
-            <span className={styles.labelText}>Impact</span>
-            <textarea name="impact" rows={3} className={styles.input} />
+            <BulletTextarea
+              label="Impact"
+              bullets={impactBullets}
+              onChange={setImpactBullets}
+              className={styles.input}
+              rows={5}
+              placeholder="• Impact bullet"
+            />
           </label>
           <div className={styles.actionsRowPadded}>
             <button type="submit" disabled={isPending} className={styles.primaryButton}>
@@ -76,16 +101,15 @@ function AddExperienceModal({ profileId }: { profileId: number }) {
   );
 }
 
-export function ExperienceSection({ profileId, experiences, onEdit }: Props) {
+export function ExperienceSection({ profileId, experiences, onEdit, onAdd, onDelete }: Props) {
   if (!experiences.length) {
     return (
       <section className={styles.sectionCardMd}>
         <div className={styles.sectionHeaderSpaced}>
           <div className={styles.stackSm}>
             <h2 className={styles.sectionTitle}>Experience</h2>
-            <p className={styles.mutedText}>Add your first role.</p>
           </div>
-          <AddExperienceModal profileId={profileId} />
+          <AddExperienceModal profileId={profileId} onAdd={onAdd} />
         </div>
         <p className={styles.bodyText}>No experience yet.</p>
       </section>
@@ -98,7 +122,7 @@ export function ExperienceSection({ profileId, experiences, onEdit }: Props) {
         <div className={styles.stackSm}>
           <h2 className={styles.sectionTitle}>Experience</h2>
         </div>
-        <AddExperienceModal profileId={profileId} />
+        <AddExperienceModal profileId={profileId} onAdd={onAdd} />
       </div>
       <div className={styles.stackMd}>
         {experiences.map((exp) => (
@@ -110,17 +134,14 @@ export function ExperienceSection({ profileId, experiences, onEdit }: Props) {
                 {exp.location ? ` • ${exp.location}` : ""}
                 {exp.period ? ` • ${exp.period}` : ""}
               </p>
-              {exp.impact && exp.impact.split("\n").filter(Boolean).length > 0 && (
+              {exp.impactBullets.length > 0 && (
                 <ul className={styles.bulletList}>
-                  {exp.impact
-                    .split("\n")
-                    .filter(Boolean)
-                    .map((line: string, idx: number) => (
-                      <li key={idx} className={styles.bulletRow}>
-                        <span className={styles.bulletDot} />
-                        <span>{line}</span>
-                      </li>
-                    ))}
+                  {exp.impactBullets.map((line: string, idx: number) => (
+                    <li key={idx} className={styles.bulletRow}>
+                      <span className={styles.bulletDot} />
+                      <span>{line}</span>
+                    </li>
+                  ))}
                 </ul>
               )}
             </div>
@@ -128,12 +149,9 @@ export function ExperienceSection({ profileId, experiences, onEdit }: Props) {
               <button onClick={() => onEdit(exp)} className={styles.editButton} aria-label="Edit experience">
                 <PenIcon className={styles.iconSm} />
               </button>
-              <form action={deleteExperience}>
-                <input type="hidden" name="id" value={exp.id} />
-                <button type="submit" className={dangerButton}>
-                  Delete
-                </button>
-              </form>
+              <button type="button" className={dangerButton} onClick={() => onDelete(exp.id)}>
+                Delete
+              </button>
             </div>
           </article>
         ))}

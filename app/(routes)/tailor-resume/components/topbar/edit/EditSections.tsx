@@ -1,10 +1,11 @@
 "use client";
 
 import { useMemo, useRef, useState, useTransition, type ReactNode } from "react";
-import { useRouter } from "next/navigation";
 import { Modal } from "@/app/(routes)/profile/Modal";
 import { ConfirmDialog } from "@/app/components/ConfirmDialog";
 import { EditSectionButtons } from "../EditSectionButtons";
+import type { Profile } from "@/types/profile";
+import { updateProfileDetails as updateProfileDetailsLocal } from "@/app/local/profile-store";
 import type {
   TailorCertificationDraft,
   TailorEducationDraft,
@@ -29,37 +30,38 @@ import {
   normalizeProjects,
   normalizeSkills,
 } from "./logic/normalize";
-import { updateProfileDetails } from "@/app/actions/profile-actions";
-import { saveExperiencesSection } from "@/app/actions/experience-actions";
-import { saveProjectsSection } from "@/app/actions/project-actions";
-import { saveEducationSection } from "@/app/actions/education-actions";
-import { saveCertificationsSection } from "@/app/actions/certification-actions";
-import { saveSkillsSection } from "@/app/actions/skill-actions";
+import { normalizeBullets } from "@/lib/normalizeBullets";
 import { CertificationsEditor } from "./sections/CertificationsEditor";
 import { EducationEditor } from "./sections/EducationEditor";
 import { ExperienceEditor } from "./sections/ExperienceEditor";
 import { SummaryEditor } from "./sections/SummaryEditor";
 import { ProjectsEditor } from "./sections/ProjectsEditor";
 import { SkillsEditor } from "./sections/SkillsEditor";
+import {
+  certificationsEqual,
+  educationsEqual,
+  experiencesEqual,
+  headerEquals,
+  projectsEqual,
+  skillsEqual,
+} from "./shared/sectionDiffs";
 
 type Props = {
-  profileId: number;
-  profileDetails: {
-    email: string | null;
-    phone: string | null;
-    location: string | null;
-    linkedinUrl: string | null;
-    githubUrl: string | null;
-    websiteUrl: string | null;
-  };
+  updateProfile: (updater: (current: Profile) => Profile, opts?: { flush?: boolean }) => void;
   draft: TailorResumeDraft | null;
   setDraft: (next: TailorResumeDraft | null) => void;
   header: TailorHeaderDraft;
   experiences: TailorExperienceDraft[];
+  profileHeader: TailorHeaderDraft;
+  profileExperiences: TailorExperienceDraft[];
   projects: TailorProjectDraft[];
+  profileProjects: TailorProjectDraft[];
   skills: TailorSkillDraft[];
+  profileSkills: TailorSkillDraft[];
   educations: TailorEducationDraft[];
+  profileEducations: TailorEducationDraft[];
   certifications: TailorCertificationDraft[];
+  profileCertifications: TailorCertificationDraft[];
 };
 
 type OpenModal =
@@ -73,6 +75,10 @@ type OpenModal =
 
 type ConfirmState = null | { message: string };
 type InlineErrorState = null | { message: string };
+
+function newId() {
+  return Date.now() + Math.floor(Math.random() * 1000);
+}
 
 function SectionModalShell({
   open,
@@ -136,7 +142,7 @@ type EditorProps<T> = {
   onSaveProfile: (next: T) => void;
 };
 
-type EditorComponent<T> = (props: EditorProps<T>) => ReactNode;
+type EditorComponent<T> = (props: EditorProps<T> & Record<string, unknown>) => ReactNode;
 
 type SectionConfig = {
   key: Exclude<OpenModal, null>;
@@ -153,21 +159,26 @@ type SectionConfig = {
   save: (val: unknown) => Promise<unknown>;
   Editor: EditorComponent<unknown>;
   initial: unknown;
+  editorProps?: Record<string, unknown>;
 };
 
 export function EditSections({
-  profileId,
-  profileDetails,
+  updateProfile,
   draft,
   setDraft,
   header,
   experiences,
+  profileHeader,
+  profileExperiences,
   projects,
+  profileProjects,
   skills,
+  profileSkills,
   educations,
+  profileEducations,
   certifications,
+  profileCertifications,
 }: Props) {
-  const router = useRouter();
   const [open, setOpen] = useState<OpenModal>(null);
   const [isPending, startTransition] = useTransition();
   const confirmActionRef = useRef<(() => void) | null>(null);
@@ -195,18 +206,85 @@ export function EditSections({
     clearInlineError();
   };
 
-  const hasHeaderDraft = draft?.header !== undefined;
-  const hasExpDraft = draft?.experiences !== undefined;
-  const hasProjectsDraft = draft?.projects !== undefined;
-  const hasSkillsDraft = draft?.skills !== undefined;
-  const hasEduDraft = draft?.educations !== undefined;
-  const hasCertDraft = draft?.certifications !== undefined;
+  const baselineHeader = useMemo<TailorHeaderDraft>(() => {
+    return {
+      fullName: profileHeader.fullName,
+      title: profileHeader.title,
+      summary: profileHeader.summary,
+      email: profileHeader.email,
+      phone: profileHeader.phone,
+      location: profileHeader.location,
+      linkedinUrl: profileHeader.linkedinUrl,
+      githubUrl: profileHeader.githubUrl,
+      websiteUrl: profileHeader.websiteUrl,
+    };
+  }, [profileHeader]);
+
+  const baselineExperiences = useMemo(
+    () => normalizeExperiences(profileExperiences),
+    [profileExperiences],
+  );
+
+  const baselineProjects = useMemo(() => normalizeProjects(profileProjects), [profileProjects]);
+  const baselineSkills = useMemo(() => normalizeSkills(profileSkills), [profileSkills]);
+  const baselineEducations = useMemo(() => normalizeEducations(profileEducations), [profileEducations]);
+  const baselineCertifications = useMemo(
+    () => normalizeCertifications(profileCertifications),
+    [profileCertifications],
+  );
+
+  const sectionChanged = useMemo(() => {
+    const currentHeader: TailorHeaderDraft = {
+      ...baselineHeader,
+      fullName: header.fullName,
+      title: header.title,
+      summary: header.summary,
+      email: header.email,
+      phone: header.phone,
+      location: header.location,
+      linkedinUrl: header.linkedinUrl,
+      githubUrl: header.githubUrl,
+      websiteUrl: header.websiteUrl,
+    };
+
+    return {
+      header: !headerEquals(currentHeader, baselineHeader),
+      experience: !experiencesEqual(normalizeExperiences(experiences), baselineExperiences),
+      projects: !projectsEqual(normalizeProjects(projects), baselineProjects),
+      skills: !skillsEqual(normalizeSkills(skills), baselineSkills),
+      education: !educationsEqual(normalizeEducations(educations), baselineEducations),
+      certifications: !certificationsEqual(
+        normalizeCertifications(certifications),
+        baselineCertifications,
+      ),
+    } as const;
+  }, [
+    baselineCertifications,
+    baselineEducations,
+    baselineExperiences,
+    baselineHeader,
+    baselineProjects,
+    baselineSkills,
+    certifications,
+    educations,
+    experiences,
+    header,
+    projects,
+    skills,
+  ]);
 
   const resumeSavesCount = useMemo(() => {
-    return [hasHeaderDraft, hasExpDraft, hasProjectsDraft, hasSkillsDraft, hasEduDraft, hasCertDraft]
+    return [
+      sectionChanged.header,
+      sectionChanged.experience,
+      sectionChanged.projects,
+      sectionChanged.skills,
+      sectionChanged.education,
+      sectionChanged.certifications,
+    ]
       .filter(Boolean)
       .length;
-  }, [hasCertDraft, hasEduDraft, hasExpDraft, hasHeaderDraft, hasProjectsDraft, hasSkillsDraft]);
+  }, [sectionChanged]);
 
   const sectionConfigs: SectionConfig[] = [
     {
@@ -214,8 +292,8 @@ export function EditSections({
       draftKey: "header",
       buttonLabel: "Edit Summary",
       modalTitle: "Edit Summary",
-      hasDraft: hasHeaderDraft,
-      canClearDraft: hasHeaderDraft,
+      hasDraft: sectionChanged.header,
+      canClearDraft: draft?.header !== undefined,
       onClearDraft: () => setDraft(clearDraftSection(draft, "header")),
       confirmMessage: "You're about to save this Summary to your profile. Are you sure?",
       errorFallback: "Failed to save Summary.",
@@ -223,117 +301,229 @@ export function EditSections({
       toDraft: (val) => val as Partial<TailorHeaderDraft>,
       save: async (val) => {
         const next = val as TailorHeaderDraft;
-        const fd = new FormData();
-        fd.set("fullName", next.fullName);
-        fd.set("title", next.title);
-        fd.set("headline", next.headline);
-        fd.set("summary", next.summary);
-        fd.set("email", profileDetails.email ?? "");
-        fd.set("phone", profileDetails.phone ?? "");
-        fd.set("location", profileDetails.location ?? "");
-        fd.set("githubUrl", profileDetails.githubUrl ?? "");
-        fd.set("linkedinUrl", profileDetails.linkedinUrl ?? "");
-        fd.set("websiteUrl", profileDetails.websiteUrl ?? "");
-        await updateProfileDetails(fd);
+        updateProfile(
+          (current) =>
+            updateProfileDetailsLocal(current, {
+              fullName: next.fullName,
+              title: next.title || null,
+              summary: next.summary || null,
+              email: next.email.trim() || null,
+              phone: next.phone.trim() || null,
+              location: next.location.trim() || null,
+              githubUrl: next.githubUrl.trim() || null,
+              linkedinUrl: next.linkedinUrl.trim() || null,
+              websiteUrl: next.websiteUrl.trim() || null,
+            }),
+          { flush: true },
+        );
       },
       Editor: SummaryEditor as unknown as EditorComponent<unknown>,
       initial: header,
+      editorProps: { baseline: baselineHeader },
     },
     {
       key: "experience",
       draftKey: "experiences",
       buttonLabel: "Edit Experience",
       modalTitle: "Edit Experience",
-      hasDraft: hasExpDraft,
-      canClearDraft: hasExpDraft,
+      hasDraft: sectionChanged.experience,
+      canClearDraft: draft?.experiences !== undefined,
       onClearDraft: () => setDraft(clearDraftSection(draft, "experiences")),
       confirmMessage: "You're about to overwrite your profile Experience section. Are you sure?",
       errorFallback: "Failed to save Experience.",
       validate: (val) => validateExperiences(val as TailorExperienceDraft[]),
       toDraft: (val) => normalizeExperiences(val as TailorExperienceDraft[]),
-      save: (val) =>
-        saveExperiencesSection({
-          profileId,
-          experiences: normalizeExperiences(val as TailorExperienceDraft[]),
-        }),
+      save: async (val) => {
+        const next = normalizeExperiences(val as TailorExperienceDraft[]);
+        updateProfile(
+          (current) => ({
+            ...current,
+            experiences: next.map((e) => ({
+              id: e.id ?? newId(),
+              role: e.role,
+              company: e.company,
+              location: e.location || null,
+              period: e.period || null,
+              impactBullets: normalizeBullets(e.impactBullets || []),
+            })),
+          }),
+          { flush: true },
+        );
+      },
       Editor: ExperienceEditor as unknown as EditorComponent<unknown>,
       initial: experiences,
+      editorProps: { baseline: baselineExperiences },
     },
     {
       key: "projects",
       draftKey: "projects",
       buttonLabel: "Edit Projects",
       modalTitle: "Edit Projects",
-      hasDraft: hasProjectsDraft,
-      canClearDraft: hasProjectsDraft,
+      hasDraft: sectionChanged.projects,
+      canClearDraft: draft?.projects !== undefined,
       onClearDraft: () => setDraft(clearDraftSection(draft, "projects")),
       confirmMessage: "You're about to overwrite your profile Projects section. Are you sure?",
       errorFallback: "Failed to save Projects.",
       validate: (val) => validateProjects(val as TailorProjectDraft[]),
       toDraft: (val) => normalizeProjects(val as TailorProjectDraft[]),
-      save: (val) =>
-        saveProjectsSection({ profileId, projects: normalizeProjects(val as TailorProjectDraft[]) }),
+      save: async (val) => {
+        const next = normalizeProjects(val as TailorProjectDraft[]);
+        updateProfile(
+          (current) => ({
+            ...current,
+            projects: next.map((p) => ({
+              id: p.id ?? newId(),
+              title: p.title,
+              description: p.description || null,
+              link: p.link || null,
+              technologies: p.technologies ?? [],
+            })),
+          }),
+          { flush: true },
+        );
+      },
       Editor: ProjectsEditor as unknown as EditorComponent<unknown>,
       initial: projects,
+      editorProps: { baseline: baselineProjects },
     },
     {
       key: "skills",
       draftKey: "skills",
       buttonLabel: "Edit Skills",
       modalTitle: "Edit Skills",
-      hasDraft: hasSkillsDraft,
-      canClearDraft: hasSkillsDraft,
+      hasDraft: sectionChanged.skills,
+      canClearDraft: draft?.skills !== undefined,
       onClearDraft: () => setDraft(clearDraftSection(draft, "skills")),
       confirmMessage: "You're about to overwrite your profile Skills section. Are you sure?",
       errorFallback: "Failed to save Skills.",
       validate: (val) => validateSkills(val as TailorSkillDraft[]),
       toDraft: (val) => normalizeSkills(val as TailorSkillDraft[]),
-      save: (val) => saveSkillsSection({ profileId, skills: normalizeSkills(val as TailorSkillDraft[]) }),
+      save: async (val) => {
+        const next = normalizeSkills(val as TailorSkillDraft[]);
+        updateProfile(
+          (current) => ({
+            ...current,
+            skills: next
+              .map((s) => ({
+                id: s.id ?? newId(),
+                name: s.name,
+                category: { name: s.category.trim().toUpperCase() || "UNCATEGORIZED" },
+              }))
+              .sort((a, b) => a.name.localeCompare(b.name)),
+          }),
+          { flush: true },
+        );
+      },
       Editor: SkillsEditor as unknown as EditorComponent<unknown>,
       initial: skills,
+      editorProps: { baseline: baselineSkills },
     },
     {
       key: "education",
       draftKey: "educations",
       buttonLabel: "Edit Education",
       modalTitle: "Edit Education",
-      hasDraft: hasEduDraft,
-      canClearDraft: hasEduDraft,
+      hasDraft: sectionChanged.education,
+      canClearDraft: draft?.educations !== undefined,
       onClearDraft: () => setDraft(clearDraftSection(draft, "educations")),
       confirmMessage: "You're about to overwrite your profile Education section. Are you sure?",
       errorFallback: "Failed to save Education.",
       validate: (val) => validateEducations(val as TailorEducationDraft[]),
       toDraft: (val) => normalizeEducations(val as TailorEducationDraft[]),
-      save: (val) =>
-        saveEducationSection({ profileId, educations: normalizeEducations(val as TailorEducationDraft[]) }),
+      save: async (val) => {
+        const next = normalizeEducations(val as TailorEducationDraft[]);
+        updateProfile(
+          (current) => ({
+            ...current,
+            educations: next.map((e) => ({
+              id: e.id ?? newId(),
+              institution: e.institution,
+              degree: e.degree || null,
+              field: e.field || null,
+              startYear: e.startYear ?? null,
+              endYear: e.endYear ?? null,
+              details: e.details || null,
+            })),
+          }),
+          { flush: true },
+        );
+      },
       Editor: EducationEditor as unknown as EditorComponent<unknown>,
       initial: educations,
+      editorProps: { baseline: baselineEducations },
     },
     {
       key: "certifications",
       draftKey: "certifications",
       buttonLabel: "Edit Certs",
       modalTitle: "Edit Certifications",
-      hasDraft: hasCertDraft,
-      canClearDraft: hasCertDraft,
+      hasDraft: sectionChanged.certifications,
+      canClearDraft: draft?.certifications !== undefined,
       onClearDraft: () => setDraft(clearDraftSection(draft, "certifications")),
       confirmMessage: "You're about to overwrite your profile Certifications section. Are you sure?",
       errorFallback: "Failed to save Certifications.",
       validate: (val) => validateCertifications(val as TailorCertificationDraft[]),
       toDraft: (val) => normalizeCertifications(val as TailorCertificationDraft[]),
-      save: (val) =>
-        saveCertificationsSection({
-          profileId,
-          certifications: normalizeCertifications(val as TailorCertificationDraft[]),
-        }),
+      save: async (val) => {
+        const next = normalizeCertifications(val as TailorCertificationDraft[]);
+        updateProfile(
+          (current) => ({
+            ...current,
+            certs: next.map((c) => ({
+              id: c.id ?? newId(),
+              name: c.name,
+              issuer: c.issuer || null,
+              issuedYear: c.issuedYear ?? null,
+              credentialUrl: c.credentialUrl || null,
+            })),
+          }),
+          { flush: true },
+        );
+      },
       Editor: CertificationsEditor as unknown as EditorComponent<unknown>,
       initial: certifications,
+      editorProps: { baseline: baselineCertifications },
     },
   ];
 
   const savePreviewFor = (section: SectionConfig, next: unknown) => {
     const err = section.validate(next);
     if (err) return showError("", err);
+
+    const isSameAsProfile = (() => {
+      switch (section.key) {
+        case "header":
+          return headerEquals(next as TailorHeaderDraft, baselineHeader);
+        case "experience":
+          return experiencesEqual(
+            normalizeExperiences(next as TailorExperienceDraft[]),
+            baselineExperiences,
+          );
+        case "projects":
+          return projectsEqual(normalizeProjects(next as TailorProjectDraft[]), baselineProjects);
+        case "skills":
+          return skillsEqual(normalizeSkills(next as TailorSkillDraft[]), baselineSkills);
+        case "education":
+          return educationsEqual(
+            normalizeEducations(next as TailorEducationDraft[]),
+            baselineEducations,
+          );
+        case "certifications":
+          return certificationsEqual(
+            normalizeCertifications(next as TailorCertificationDraft[]),
+            baselineCertifications,
+          );
+        default:
+          return false;
+      }
+    })();
+
+    if (isSameAsProfile) {
+      setDraft(clearDraftSection(draft, section.draftKey));
+      closeModal();
+      return;
+    }
+
     setDraft(updateDraftSection(draft, section.draftKey as never, section.toDraft(next) as never));
     closeModal();
   };
@@ -347,7 +537,6 @@ export function EditSections({
           .save(next)
           .then(() => {
             setDraft(clearDraftSection(draft, section.draftKey));
-            router.refresh();
             closeConfirm();
             closeModal();
           })
@@ -364,8 +553,8 @@ export function EditSections({
     <>
       <div className="flex w-full items-center justify-end gap-2">
         {resumeSavesCount ? (
-          <span className="shrink-0 inline-flex items-center rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-semibold text-amber-800 border border-amber-100">
-            Resume changes saved: {resumeSavesCount} section{resumeSavesCount === 1 ? "" : "s"}
+          <span className="shrink-0 inline-flex items-center rounded-full bg-purple-50 px-2.5 py-1 text-[11px] font-semibold text-purple-800 border border-purple-100">
+            Not saved to profile: {resumeSavesCount} section{resumeSavesCount === 1 ? "" : "s"}
           </span>
         ) : null}
         <EditSectionButtons
@@ -389,6 +578,7 @@ export function EditSections({
             onClearDraft={section.onClearDraft}
             onSavePreview={(next) => savePreviewFor(section, next)}
             onSaveProfile={(next) => saveProfileFor(section, next)}
+            {...(section.editorProps ?? {})}
           />
         </SectionModalShell>
       ))}

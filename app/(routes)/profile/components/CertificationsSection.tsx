@@ -5,7 +5,6 @@ import { PenIcon } from "@/app/icons/pen";
 import { styles } from "../style-constants";
 import type { Certification } from "@/types/certification";
 import { Modal } from "../Modal";
-import { addCertification, deleteCertification } from "@/app/actions/certification-actions";
 
 const dangerButton =
   "rounded border border-red-100 px-3 py-1 text-xs font-semibold text-red-700 transition hover:bg-red-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-500";
@@ -14,9 +13,11 @@ type Props = {
   profileId: number;
   certs: Certification[];
   onEdit: (cert: Certification) => void;
+  onAdd: (input: Omit<Certification, "id">) => void;
+  onDelete: (id: number) => void;
 };
 
-function AddCertificationModal({ profileId }: { profileId: number }) {
+function AddCertificationModal({ profileId, onAdd }: { profileId: number; onAdd: Props["onAdd"] }) {
   const [isPending, startTransition] = useTransition();
   const [open, setOpen] = useState(false);
 
@@ -28,9 +29,22 @@ function AddCertificationModal({ profileId }: { profileId: number }) {
       <Modal triggerLabel="" open={open} onClose={() => setOpen(false)} title="Add certification">
         <form
           className={styles.formContainer}
-          action={(formData) => {
-            startTransition(async () => {
-              await addCertification(formData);
+          onSubmit={(e) => {
+            e.preventDefault();
+            const formData = new FormData(e.currentTarget);
+            const name = String(formData.get("name") ?? "").trim();
+            const issuer = String(formData.get("issuer") ?? "").trim() || null;
+            const issuedYearRaw = String(formData.get("issuedYear") ?? "").trim();
+            const issuedYear = issuedYearRaw ? Number(issuedYearRaw) : null;
+            const credentialUrl = String(formData.get("credentialUrl") ?? "").trim() || null;
+            if (!name) return;
+            startTransition(() => {
+              onAdd({
+                name,
+                issuer,
+                issuedYear: Number.isFinite(issuedYear as number) ? issuedYear : null,
+                credentialUrl,
+              });
               setOpen(false);
             });
           }}
@@ -66,14 +80,14 @@ function AddCertificationModal({ profileId }: { profileId: number }) {
   );
 }
 
-export function CertificationsSection({ profileId, certs, onEdit }: Props) {
+export function CertificationsSection({ profileId, certs, onEdit, onAdd, onDelete }: Props) {
   return (
     <section className={styles.sectionCard}>
       <div className={styles.sectionHeader}>
         <div className={styles.stackSm}>
           <h2 className={styles.sectionTitle}>Certifications</h2>
         </div>
-        <AddCertificationModal profileId={profileId} />
+        <AddCertificationModal profileId={profileId} onAdd={onAdd} />
       </div>
       {certs.length ? (
         <div className={styles.sectionBody}>
@@ -94,12 +108,9 @@ export function CertificationsSection({ profileId, certs, onEdit }: Props) {
                 >
                   <PenIcon className={styles.iconSm} />
                 </button>
-                <form action={deleteCertification}>
-                  <input type="hidden" name="id" value={cert.id} />
-                  <button type="submit" className={dangerButton}>
-                    Delete
-                  </button>
-                </form>
+                <button type="button" className={dangerButton} onClick={() => onDelete(cert.id)}>
+                  Delete
+                </button>
               </div>
             </div>
           ))}

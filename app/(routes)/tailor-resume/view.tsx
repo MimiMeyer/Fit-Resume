@@ -4,7 +4,6 @@ import { JobDescriptionPanel } from "./components/job-description/JobDescription
 import { Preview } from "./components/preview/Preview";
 import { Toolbar } from "./components/topbar/Toolbar";
 import { EditSections } from "./components/topbar/edit/EditSections";
-import type { GeneratedResume } from "@/types/resume-agent";
 import type { Profile } from "@/types/profile";
 import { styles } from "./style-constants";
 import { useCreateResume } from "./useCreateResume";
@@ -13,14 +12,17 @@ const ZOOM_STEP = 0.05;
 
 export function CreateResumeView({
   profile,
-  onGenerate,
+  updateProfile,
 }: {
   profile: Profile;
-  onGenerate: (jobDescription: string) => Promise<GeneratedResume>;
+  updateProfile: (updater: (current: Profile) => Profile, opts?: { flush?: boolean }) => void;
 }) {
   const {
     jobDescription,
     setJobDescription,
+    claudeApiKey,
+    setClaudeApiKey,
+    promptForApiKey,
     generated,
     generateError,
     isGenerating,
@@ -64,7 +66,7 @@ export function CreateResumeView({
     skillsForEdit,
     educationsForEdit,
     certificationsForEdit,
-  } = useCreateResume(profile, { onGenerate });
+  } = useCreateResume(profile);
 
   const hasDraft = !!draft;
 
@@ -85,23 +87,62 @@ export function CreateResumeView({
           ) : null}
         </div>
         <EditSections
-          profileId={profile.id}
-          profileDetails={{
-            email: profile.email ?? null,
-            phone: profile.phone ?? null,
-            location: profile.location ?? null,
-            githubUrl: profile.githubUrl ?? null,
-            linkedinUrl: profile.linkedinUrl ?? null,
-            websiteUrl: profile.websiteUrl ?? null,
-          }}
+          updateProfile={updateProfile}
           draft={draft}
           setDraft={setDraft}
           header={headerForEdit}
           experiences={experiencesForEdit}
+          profileHeader={{
+            fullName: profile.fullName,
+            title: profile.title ?? "",
+            summary: profile.summary ?? "",
+            email: profile.email ?? "",
+            phone: profile.phone ?? "",
+            location: profile.location ?? "",
+            linkedinUrl: profile.linkedinUrl ?? "",
+            githubUrl: profile.githubUrl ?? "",
+            websiteUrl: profile.websiteUrl ?? "",
+          }}
+          profileExperiences={(profile.experiences || []).map((e) => ({
+            id: e.id,
+            role: e.role,
+            company: e.company,
+            location: e.location ?? "",
+            period: e.period ?? "",
+            impactBullets: e.impactBullets ?? [],
+          }))}
           projects={projectsForEdit}
+          profileProjects={(profile.projects || []).map((p) => ({
+            id: p.id,
+            title: p.title,
+            description: p.description ?? "",
+            link: p.link ?? "",
+            technologies: p.technologies ?? [],
+          }))}
           skills={skillsForEdit}
+          profileSkills={(profile.skills || []).map((s) => ({
+            id: s.id,
+            name: s.name,
+            category: s.category.name,
+          }))}
           educations={educationsForEdit}
+          profileEducations={(profile.educations || []).map((e) => ({
+            id: e.id,
+            institution: e.institution,
+            degree: e.degree ?? "",
+            field: e.field ?? "",
+            startYear: e.startYear ?? null,
+            endYear: e.endYear ?? null,
+            details: e.details ?? "",
+          }))}
           certifications={certificationsForEdit}
+          profileCertifications={(profile.certs || []).map((c) => ({
+            id: c.id,
+            name: c.name,
+            issuer: c.issuer ?? "",
+            issuedYear: c.issuedYear ?? null,
+            credentialUrl: c.credentialUrl ?? "",
+          }))}
         />
       </div>
 
@@ -116,6 +157,9 @@ export function CreateResumeView({
               show
               jobDescription={jobDescription}
               setJobDescription={setJobDescription}
+              claudeApiKey={claudeApiKey}
+              setClaudeApiKey={setClaudeApiKey}
+              promptForApiKey={promptForApiKey}
               onGenerate={handleGenerate}
               onToggle={() => setShowJobDescription((s) => !s)}
               isGenerating={isGenerating}

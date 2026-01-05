@@ -1,12 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import type { TailorExperienceDraft } from "../../../../model/edit-state";
 import { ActionRow } from "../shared/ActionRow";
 import { useAutoScrollOnAdd } from "../shared/useAutoScrollOnAdd";
+import { BulletTextarea } from "@/app/components/BulletTextarea";
+import { dirtyInputClass, normalizeKey, normalizeText, takeBestMatch } from "../shared/diffUtils";
+
+function normalizeBullets(items: string[]) {
+  return items.map((b) => normalizeText(b)).filter(Boolean);
+}
 
 export function ExperienceEditor({
   initial,
+  baseline,
   isPending,
   canClearDraft,
   onClearDraft,
@@ -14,6 +21,7 @@ export function ExperienceEditor({
   onSaveProfile,
 }: {
   initial: TailorExperienceDraft[];
+  baseline: TailorExperienceDraft[];
   isPending: boolean;
   canClearDraft: boolean;
   onClearDraft: () => void;
@@ -22,6 +30,55 @@ export function ExperienceEditor({
 }) {
   const [items, setItems] = useState<TailorExperienceDraft[]>(initial);
   const { listRef, markAdded } = useAutoScrollOnAdd(items.length);
+
+  const diffs = useMemo(() => {
+    const remaining = [...(baseline || [])];
+
+    const scoreMatch = (current: TailorExperienceDraft, candidate: TailorExperienceDraft) => {
+      let score = 0;
+      if (normalizeKey(current.company) && normalizeKey(current.company) === normalizeKey(candidate.company)) score += 6;
+      if (normalizeKey(current.role) && normalizeKey(current.role) === normalizeKey(candidate.role)) score += 5;
+      if (normalizeKey(current.period) && normalizeKey(current.period) === normalizeKey(candidate.period)) score += 2;
+      if (normalizeKey(current.location) && normalizeKey(current.location) === normalizeKey(candidate.location)) score += 1;
+
+      const currentBullets = new Set(normalizeBullets(current.impactBullets || []));
+      const candidateBullets = normalizeBullets(candidate.impactBullets || []);
+      let overlap = 0;
+      for (const bullet of candidateBullets) {
+        if (currentBullets.has(bullet)) overlap++;
+      }
+      score += Math.min(2, overlap);
+      return score;
+    };
+
+    return items.map((exp) => {
+      const base = takeBestMatch(remaining, exp, scoreMatch);
+      if (!base) {
+        return {
+          roleDirty: true,
+          companyDirty: true,
+          locationDirty: true,
+          periodDirty: true,
+          impactDirty: true,
+        };
+      }
+
+      const roleDirty = normalizeText(exp.role) !== normalizeText(base.role);
+      const companyDirty = normalizeText(exp.company) !== normalizeText(base.company);
+      const locationDirty = normalizeText(exp.location) !== normalizeText(base.location);
+      const periodDirty = normalizeText(exp.period) !== normalizeText(base.period);
+      const impactDirty =
+        normalizeBullets(exp.impactBullets).join("\n") !== normalizeBullets(base.impactBullets).join("\n");
+
+      return {
+        roleDirty,
+        companyDirty,
+        locationDirty,
+        periodDirty,
+        impactDirty,
+      };
+    });
+  }, [baseline, items]);
 
   return (
     <div>
@@ -33,7 +90,7 @@ export function ExperienceEditor({
             markAdded();
             setItems((prev) => [
               ...prev,
-              { id: undefined, role: "", company: "", location: "", period: "", impact: "" },
+              { id: undefined, role: "", company: "", location: "", period: "", impactBullets: [] },
             ]);
           }}
         >
@@ -42,9 +99,13 @@ export function ExperienceEditor({
       </div>
 
       <div ref={listRef} className="mt-3 grid gap-4">
-        {items.map((exp, idx) => (
-          <div key={idx} className="rounded-xl border border-zinc-200 bg-white p-3">
-            <div className="flex items-center justify-end gap-2">
+        {items.map((exp, idx) => {
+          const rowDiff = diffs[idx];
+          const impactDirty = rowDiff?.impactDirty ?? false;
+
+          return (
+            <div key={idx} className="rounded-xl border border-zinc-200 bg-white p-3">
+              <div className="flex items-center justify-end gap-2">
               <button
                 type="button"
                 className="text-sm font-semibold text-red-600"
@@ -52,14 +113,14 @@ export function ExperienceEditor({
               >
                 Delete
               </button>
-            </div>
+              </div>
 
             <div className="mt-3 grid gap-3">
               <div className="grid grid-cols-2 gap-2">
                 <label className="grid gap-1 text-sm">
                   <span className="font-semibold text-zinc-800">Role</span>
                   <input
-                    className="rounded-lg border border-zinc-200 bg-white px-3 py-2"
+                    className={dirtyInputClass(!!rowDiff?.roleDirty)}
                     value={exp.role}
                     onChange={(e) =>
                       setItems((prev) =>
@@ -71,7 +132,7 @@ export function ExperienceEditor({
                 <label className="grid gap-1 text-sm">
                   <span className="font-semibold text-zinc-800">Company</span>
                   <input
-                    className="rounded-lg border border-zinc-200 bg-white px-3 py-2"
+                    className={dirtyInputClass(!!rowDiff?.companyDirty)}
                     value={exp.company}
                     onChange={(e) =>
                       setItems((prev) =>
@@ -86,7 +147,7 @@ export function ExperienceEditor({
                 <label className="grid gap-1 text-sm">
                   <span className="font-semibold text-zinc-800">Location</span>
                   <input
-                    className="rounded-lg border border-zinc-200 bg-white px-3 py-2"
+                    className={dirtyInputClass(!!rowDiff?.locationDirty)}
                     value={exp.location}
                     onChange={(e) =>
                       setItems((prev) =>
@@ -98,7 +159,7 @@ export function ExperienceEditor({
                 <label className="grid gap-1 text-sm">
                   <span className="font-semibold text-zinc-800">Period</span>
                   <input
-                    className="rounded-lg border border-zinc-200 bg-white px-3 py-2"
+                    className={dirtyInputClass(!!rowDiff?.periodDirty)}
                     value={exp.period}
                     onChange={(e) =>
                       setItems((prev) =>
@@ -109,22 +170,22 @@ export function ExperienceEditor({
                 </label>
               </div>
 
-              <label className="grid gap-1 text-sm">
-                <span className="font-semibold text-zinc-800">Impact (one bullet per line)</span>
-                <textarea
-                  rows={5}
-                  className="rounded-lg border border-zinc-200 bg-white px-3 py-2"
-                  value={exp.impact}
-                  onChange={(e) =>
-                    setItems((prev) =>
-                      prev.map((p, i) => (i === idx ? { ...p, impact: e.target.value } : p)),
-                    )
-                  }
-                />
-              </label>
+              <BulletTextarea
+                label="Impact"
+                bullets={exp.impactBullets}
+                onChange={(nextBullets) =>
+                  setItems((prev) =>
+                    prev.map((p, i) => (i === idx ? { ...p, impactBullets: nextBullets } : p)),
+                  )
+                }
+                rows={5}
+                className={dirtyInputClass(impactDirty)}
+                placeholder="• Impact bullet"
+              />
             </div>
           </div>
-        ))}
+          );
+        })}
       </div>
 
       <ActionRow

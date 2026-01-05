@@ -1,11 +1,15 @@
 "use client";
 
 import type { Dispatch, SetStateAction } from "react";
+import { useEffect, useRef, useState } from "react";
 
 type JobDescriptionPanelProps = {
   show: boolean;
   jobDescription: string;
   setJobDescription: Dispatch<SetStateAction<string>>;
+  claudeApiKey: string;
+  setClaudeApiKey: Dispatch<SetStateAction<string>>;
+  promptForApiKey?: boolean;
   onGenerate: () => void;
   onToggle: () => void;
   isGenerating?: boolean;
@@ -17,12 +21,24 @@ export function JobDescriptionPanel({
   show,
   jobDescription,
   setJobDescription,
+  claudeApiKey,
+  setClaudeApiKey,
+  promptForApiKey,
   onGenerate,
   onToggle,
   isGenerating,
   hasGenerated,
   error,
 }: JobDescriptionPanelProps) {
+  const apiKeyInputRef = useRef<HTMLInputElement | null>(null);
+  const [showApiKey, setShowApiKey] = useState(false);
+
+  useEffect(() => {
+    if (!promptForApiKey) return;
+    if (claudeApiKey.trim()) return;
+    apiKeyInputRef.current?.focus();
+  }, [claudeApiKey, promptForApiKey]);
+
   if (!show) return null;
 
   return (
@@ -46,6 +62,61 @@ export function JobDescriptionPanel({
         onChange={(e) => setJobDescription(e.target.value)}
         placeholder="Paste the job description here..."
       />
+
+      <div className="space-y-2 rounded-lg border border-zinc-200 bg-white p-3">
+        <div className="flex items-center justify-between gap-2">
+          <label className="text-sm font-semibold text-zinc-900" htmlFor="claude-api-key-input">
+            Claude API key
+          </label>
+          <div className="flex items-center gap-3">
+            {claudeApiKey.trim() ? (
+              <button
+                type="button"
+                className="text-xs font-semibold text-zinc-700 hover:text-zinc-900"
+                onClick={() => setClaudeApiKey("")}
+              >
+                Clear
+              </button>
+            ) : null}
+            <button
+              type="button"
+              className="text-xs font-semibold text-[var(--accent)]"
+              onClick={() => setShowApiKey((v) => !v)}
+            >
+              {showApiKey ? "Hide" : "Show"}
+            </button>
+          </div>
+        </div>
+        <input
+          ref={apiKeyInputRef}
+          id="claude-api-key-input"
+          type={showApiKey ? "text" : "password"}
+          className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 focus:border-[var(--accent)] focus:outline-none"
+          value={claudeApiKey}
+          onChange={(e) => setClaudeApiKey(e.target.value)}
+          placeholder="sk-ant-..."
+          autoComplete="off"
+          inputMode="text"
+        />
+        <ul className="list-disc space-y-1 pl-4 text-xs text-zinc-600">
+          <li>We do not store your key.</li>
+          <li>It is sent only when you click Generate.</li>
+          <li>This key stays in this tab and is cleared when you refresh.</li>
+        </ul>
+        <p className="text-xs text-zinc-600">
+          Create a key at{" "}
+          <a
+            href="https://platform.claude.com/settings/keys"
+            target="_blank"
+            rel="noreferrer noopener"
+            className="font-semibold text-[var(--accent)] underline underline-offset-2"
+          >
+            platform.claude.com/settings/keys
+          </a>
+          .
+        </p>
+      </div>
+
       <div className="flex items-center justify-between gap-2">
         <button
           onClick={onGenerate}

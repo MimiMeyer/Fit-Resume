@@ -2,9 +2,10 @@
 
 import { useMemo, useRef, useState, useTransition } from "react";
 import { styles } from "../style-constants";
-import { exportProfileBackup, importProfileBackup } from "@/app/actions/profile-backup-actions";
+import type { Profile } from "@/types/profile";
 import type { ProfileBackup } from "@/types/profile-backup";
 import { ConfirmDialog } from "@/app/components/ConfirmDialog";
+import { parseProfileBackup, profileFromBackup, toProfileBackup } from "@/lib/profile-backup";
 
 function downloadJson(filename: string, data: unknown) {
   const json = JSON.stringify(data, null, 2);
@@ -21,7 +22,13 @@ function downloadJson(filename: string, data: unknown) {
   URL.revokeObjectURL(url);
 }
 
-export function ProfileBackupSection() {
+export function ProfileBackupSection({
+  profile,
+  onReplaceProfile,
+}: {
+  profile: Profile;
+  onReplaceProfile: (profile: Profile) => void;
+}) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [isPending, startTransition] = useTransition();
   const [status, setStatus] = useState<{ message: string; tone: "success" | "error" | "" }>({
@@ -41,9 +48,9 @@ export function ProfileBackupSection() {
 
   async function onDownload() {
     setStatus({ message: "", tone: "" });
-    startTransition(async () => {
+    startTransition(() => {
       try {
-        const backup = await exportProfileBackup();
+        const backup = toProfileBackup(profile);
         downloadJson(filename, backup);
         setStatus({ message: "Backup downloaded.", tone: "success" });
       } catch (e) {
@@ -78,12 +85,15 @@ export function ProfileBackupSection() {
   }
 
   return (
-    <section className={styles.aboutCard}>
+    <section className={styles.backupCard}>
       <div className={styles.sectionHeaderSpaced}>
         <div className={styles.stackSm}>
-          <div className={styles.sectionTitle}>Save Your Progress</div>
+          <div className={styles.backupTitle}>Back Up Your Profile</div>
           <div className={styles.mutedText}>
-            Download a JSON backup to save your Profile. Upload it later to restore.
+            Your Profile is saved on this device in your browser.
+          </div>
+          <div className={styles.mutedText}>
+            Download a JSON backup to keep a copy or move it to another device. Import it later to restore.
           </div>
         </div>
         <div className={styles.actionsRow}>
@@ -93,7 +103,7 @@ export function ProfileBackupSection() {
             disabled={isPending}
             onClick={() => fileInputRef.current?.click()}
           >
-            Upload JSON Backup
+            Import Backup
           </button>
           <button
             type="button"
@@ -101,7 +111,7 @@ export function ProfileBackupSection() {
             disabled={isPending}
             onClick={onDownload}
           >
-            Download JSON Backup
+            Download Backup
           </button>
           <input
             ref={fileInputRef}
@@ -130,13 +140,15 @@ export function ProfileBackupSection() {
           const backup = pendingImport?.backup;
           if (!backup) return;
           setStatus({ message: "", tone: "" });
-          startTransition(async () => {
+          startTransition(() => {
             try {
-              await importProfileBackup(backup);
+              const parsed = parseProfileBackup(backup);
+              const next = profileFromBackup(parsed, profile);
+              onReplaceProfile(next);
               setStatus({ message: "Backup imported.", tone: "success" });
             } catch (e) {
               setStatus({
-                message: e instanceof Error ? e.message : "Couldn’t import that backup.",
+                message: e instanceof Error ? e.message : "Couldn't import that backup.",
                 tone: "error",
               });
             } finally {

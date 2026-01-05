@@ -4,5 +4,5 @@ export type Experience = {
   company: string;
   location?: string | null;
   period?: string | null;
-  impact?: string | null;
+  impactBullets: string[];
 };

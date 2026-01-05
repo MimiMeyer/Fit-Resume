@@ -8,7 +8,7 @@ export type AgentExperienceInput = {
   company: string;
   location?: string | null;
   period?: string | null;
-  impact?: string | null;
+  impactBullets: string[];
 };
 
 export type AgentProjectInput = {
@@ -21,7 +21,6 @@ export type AgentProjectInput = {
 export type AgentProfileInput = {
   fullName: string;
   title?: string | null;
-  headline?: string | null;
   summary?: string | null;
   location?: string | null;
   email?: string | null;

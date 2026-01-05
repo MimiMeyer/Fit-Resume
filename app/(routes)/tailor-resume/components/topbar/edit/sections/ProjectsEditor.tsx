@@ -1,12 +1,23 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import type { TailorProjectDraft } from "../../../../model/edit-state";
 import { ActionRow } from "../shared/ActionRow";
 import { useAutoScrollOnAdd } from "../shared/useAutoScrollOnAdd";
+import { dirtyInputClass, normalizeKey, normalizeText, takeBestMatch } from "../shared/diffUtils";
+
+function normalizeTechText(value: string) {
+  return value
+    .split(",")
+    .map((t) => normalizeKey(t))
+    .filter(Boolean)
+    .sort()
+    .join(",");
+}
 
 export function ProjectsEditor({
   initial,
+  baseline,
   isPending,
   canClearDraft,
   onClearDraft,
@@ -14,6 +25,7 @@ export function ProjectsEditor({
   onSaveProfile,
 }: {
   initial: TailorProjectDraft[];
+  baseline: TailorProjectDraft[];
   isPending: boolean;
   canClearDraft: boolean;
   onClearDraft: () => void;
@@ -31,6 +43,48 @@ export function ProjectsEditor({
     })),
   );
   const { listRef, markAdded } = useAutoScrollOnAdd(items.length);
+
+  const diffs = useMemo(() => {
+    const remaining = [...(baseline || [])];
+
+    const scoreMatch = (current: ProjectForm, candidate: TailorProjectDraft) => {
+      let score = 0;
+      if (normalizeKey(current.title) && normalizeKey(current.title) === normalizeKey(candidate.title)) score += 5;
+      if (normalizeKey(current.link) && normalizeKey(current.link) === normalizeKey(candidate.link || "")) score += 4;
+      if (normalizeText(current.description) && normalizeText(current.description) === normalizeText(candidate.description || "")) score += 2;
+
+      const currentTech = new Set(normalizeTechText(current.technologiesText).split(",").filter(Boolean));
+      const candidateTech = normalizeTechText((candidate.technologies || []).join(", ")).split(",").filter(Boolean);
+      let overlap = 0;
+      for (const t of candidateTech) {
+        if (currentTech.has(t)) overlap++;
+      }
+      score += Math.min(3, overlap);
+      return score;
+    };
+
+    return items.map((proj) => {
+      const base = takeBestMatch(remaining, proj, scoreMatch);
+      if (!base) {
+        return {
+          titleDirty: true,
+          descriptionDirty: true,
+          linkDirty: true,
+          technologiesDirty: true,
+        };
+      }
+
+      const tech = normalizeTechText(proj.technologiesText);
+      const baseTech = normalizeTechText((base.technologies || []).join(", "));
+
+      return {
+        titleDirty: normalizeText(proj.title) !== normalizeText(base.title),
+        descriptionDirty: normalizeText(proj.description) !== normalizeText(base.description || ""),
+        linkDirty: normalizeText(proj.link) !== normalizeText(base.link || ""),
+        technologiesDirty: tech !== baseTech,
+      };
+    });
+  }, [baseline, items]);
 
   const toDraft = (): TailorProjectDraft[] =>
     items.map((p) => ({
@@ -74,9 +128,9 @@ export function ProjectsEditor({
 
             <div className="mt-3 grid gap-3">
               <label className="grid gap-1 text-sm">
-                <span className="font-semibold text-zinc-800">Title</span>
-                <input
-                  className="rounded-lg border border-zinc-200 bg-white px-3 py-2"
+                  <span className="font-semibold text-zinc-800">Title</span>
+                  <input
+                  className={dirtyInputClass(!!diffs[idx]?.titleDirty)}
                   value={proj.title}
                   onChange={(e) =>
                     setItems((prev) =>
@@ -90,7 +144,7 @@ export function ProjectsEditor({
                 <span className="font-semibold text-zinc-800">Description</span>
                 <textarea
                   rows={3}
-                  className="rounded-lg border border-zinc-200 bg-white px-3 py-2"
+                  className={dirtyInputClass(!!diffs[idx]?.descriptionDirty)}
                   value={proj.description}
                   onChange={(e) =>
                     setItems((prev) =>
@@ -104,7 +158,7 @@ export function ProjectsEditor({
                 <label className="grid gap-1 text-sm">
                   <span className="font-semibold text-zinc-800">Link</span>
                   <input
-                    className="rounded-lg border border-zinc-200 bg-white px-3 py-2"
+                    className={dirtyInputClass(!!diffs[idx]?.linkDirty)}
                     value={proj.link}
                     onChange={(e) =>
                       setItems((prev) =>
@@ -116,7 +170,7 @@ export function ProjectsEditor({
                 <label className="grid gap-1 text-sm">
                   <span className="font-semibold text-zinc-800">Technologies</span>
                   <input
-                    className="rounded-lg border border-zinc-200 bg-white px-3 py-2"
+                    className={dirtyInputClass(!!diffs[idx]?.technologiesDirty)}
                     placeholder="React, Node.js, etc."
                     value={proj.technologiesText}
                     onChange={(e) =>

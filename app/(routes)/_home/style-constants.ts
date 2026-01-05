@@ -7,6 +7,13 @@ export const styles = {
   heroEyebrow: "text-sm font-semibold uppercase tracking-[0.18em] text-zinc-600",
   heroTitle: "text-3xl font-semibold leading-tight text-zinc-950 sm:text-5xl",
   heroSubtitle: "max-w-3xl text-base leading-relaxed text-zinc-700 sm:text-lg",
+  noticeCard:
+    "rounded-2xl border border-white/60 bg-white/70 p-6 shadow-sm backdrop-blur",
+  noticeHeaderRow: "flex items-center justify-between gap-3",
+  noticeTitle: "text-sm font-semibold uppercase tracking-[0.14em] text-zinc-700",
+  noticeLink:
+    "text-xs font-semibold text-[var(--accent)] rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)] hover:underline",
+  noticeText: "mt-2 text-sm leading-relaxed text-zinc-700",
   heroBody: "max-w-3xl text-lg text-zinc-700",
   cardsGrid: "grid gap-6 md:grid-cols-2",
   card:

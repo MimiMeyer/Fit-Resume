@@ -51,6 +51,9 @@ export const styles = {
     "space-y-3 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-zinc-100",
   stackMdPadded: "space-y-4 pt-1",
   aboutCard: "space-y-4 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-zinc-100",
+  backupCard:
+    "space-y-4 rounded-2xl border border-indigo-200 bg-indigo-50/60 p-6 shadow-sm ring-1 ring-indigo-100",
+  backupTitle: "text-base font-semibold text-zinc-900",
   formContainer: "space-y-4 text-sm text-zinc-800",
   pageRoot: "space-y-8",
   pageTitle: "text-2xl font-semibold text-zinc-900",

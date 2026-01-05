@@ -1,25 +1,43 @@
 ﻿"use client";
 
+import { useState } from "react";
 import { useAbout } from "./useAbout";
 import type { Profile } from "@/types/profile";
 import { styles } from "./style-constants";
 import { ProfileHeader } from "./components/ProfileHeader";
 import { Modal } from "./Modal";
-import { updateProfileDetails } from "@/app/actions/profile-actions";
-import { updateExperience } from "@/app/actions/experience-actions";
-import { updateProject } from "@/app/actions/project-actions";
-import { updateEducation } from "@/app/actions/education-actions";
-import { updateCertification } from "@/app/actions/certification-actions";
-import { updateSkill } from "@/app/actions/skill-actions";
 import { ExperienceSection } from "./components/ExperienceSection";
 import { EducationSection } from "./components/EducationSection";
 import { CertificationsSection } from "./components/CertificationsSection";
 import { ProjectsSection } from "./components/ProjectsSection";
 import { SkillsSection } from "./components/SkillsSection";
 import { ProfileBackupSection } from "./components/ProfileBackupSection";
+import { BulletTextarea } from "@/app/components/BulletTextarea";
+import { normalizeBullets } from "@/lib/normalizeBullets";
+import {
+  addCertification,
+  addEducation,
+  addExperience,
+  addProject,
+  addSkill,
+  deleteCertification,
+  deleteEducation,
+  deleteExperience,
+  deleteProject,
+  deleteSkill,
+  updateCertification,
+  updateEducation,
+  updateExperience,
+  updateProfileDetails,
+  updateProject,
+  updateSkill,
+} from "@/app/local/profile-store";
 
 type Props = {
   profile: Profile;
+  isPending: boolean;
+  startTransition: (cb: () => void) => void;
+  updateProfile: (updater: (current: Profile) => Profile, opts?: { flush?: boolean }) => void;
 };
 
 type EditProfileModalProps = {
@@ -29,6 +47,7 @@ type EditProfileModalProps = {
   onClose: () => void;
   onAfterSave: () => void;
   startTransition: (cb: () => void) => void;
+  onSave: (updates: Partial<Profile>) => void;
 };
 
 function EditProfileModal({
@@ -38,15 +57,31 @@ function EditProfileModal({
   onClose,
   onAfterSave,
   startTransition,
+  onSave,
 }: EditProfileModalProps) {
   return (
     <Modal triggerLabel="" title="Edit Profile" open={open} onClose={onClose}>
       <form
         className={styles.formContainer}
-        action={(formData) => {
-          startTransition(() => {
-            void updateProfileDetails(formData).then(onAfterSave);
+        onSubmit={(e) => {
+          e.preventDefault();
+          const formData = new FormData(e.currentTarget);
+          const fullName = String(formData.get("fullName") ?? "").trim();
+          if (!fullName) return;
+
+          onSave({
+            fullName,
+            summary: String(formData.get("summary") ?? "").trim() || null,
+            title: String(formData.get("title") ?? "").trim() || null,
+            email: String(formData.get("email") ?? "").trim() || null,
+            phone: String(formData.get("phone") ?? "").trim() || null,
+            location: String(formData.get("location") ?? "").trim() || null,
+            githubUrl: String(formData.get("githubUrl") ?? "").trim() || null,
+            linkedinUrl: String(formData.get("linkedinUrl") ?? "").trim() || null,
+            websiteUrl: String(formData.get("websiteUrl") ?? "").trim() || null,
           });
+
+          startTransition(onAfterSave);
         }}
       >
         <label className={styles.formField}>
@@ -60,7 +95,12 @@ function EditProfileModal({
         </label>
         <label className={styles.formField}>
           <span className={styles.labelText}>Title</span>
-          <input name="title" defaultValue={profile.title ?? ""} className={styles.input} />
+          <input
+            name="title"
+            defaultValue={profile.title ?? ""}
+            className={styles.input}
+            placeholder="Job title / position (e.g., Software Engineer)"
+          />
         </label>
         <label className={styles.formField}>
           <span className={styles.labelText}>Email</span>
@@ -84,14 +124,6 @@ function EditProfileModal({
           <input
             name="location"
             defaultValue={profile.location ?? ""}
-            className={styles.input}
-          />
-        </label>
-        <label className={styles.formField}>
-          <span className={styles.labelText}>Headline</span>
-          <input
-            name="headline"
-            defaultValue={profile.headline ?? ""}
             className={styles.input}
           />
         </label>
@@ -132,10 +164,8 @@ function EditProfileModal({
   );
 }
 
-export function AboutLayout({ profile }: Props) {
+export function AboutLayout({ profile, isPending, startTransition, updateProfile }: Props) {
   const {
-    isPending,
-    startTransition,
     editOpen,
     setEditOpen,
     editingExp,
@@ -164,7 +194,6 @@ export function AboutLayout({ profile }: Props) {
     skills,
     groupedSkills,
     sortedCategories,
-    loadCategories,
     handleDeleteCategory,
     startEditCategory,
     saveCategoryEdit,
@@ -173,11 +202,16 @@ export function AboutLayout({ profile }: Props) {
     handleSkillDragStart,
     handleSkillDragEnd,
     handleSkillDrop,
-  } = useAbout(profile);
+  } = useAbout(profile, { isPending, startTransition }, (updater) => updateProfile(updater));
+
+  const [editingExpBullets, setEditingExpBullets] = useState<string[]>([]);
 
   return (
     <div className={styles.pageRoot}>
-      <ProfileBackupSection />
+      <ProfileBackupSection
+        profile={profile}
+        onReplaceProfile={(next) => updateProfile(() => next, { flush: true })}
+      />
       <ProfileHeader profile={profile} onEdit={() => setEditOpen(true)} />
       <EditProfileModal
         profile={profile}
@@ -186,30 +220,44 @@ export function AboutLayout({ profile }: Props) {
         onClose={() => setEditOpen(false)}
         onAfterSave={() => setEditOpen(false)}
         startTransition={startTransition}
+        onSave={(updates) =>
+          updateProfile((current) => updateProfileDetails(current, updates), { flush: true })
+        }
       />
 
       <ExperienceSection
         profileId={profile.id}
         experiences={profile.experiences}
-        onEdit={setEditingExp}
+        onEdit={(exp) => {
+          setEditingExpBullets(exp.impactBullets ?? []);
+          setEditingExp(exp);
+        }}
+        onAdd={(input) => updateProfile((current) => addExperience(current, input), { flush: true })}
+        onDelete={(id) => updateProfile((current) => deleteExperience(current, id), { flush: true })}
       />
 
       <EducationSection
         profileId={profile.id}
         educations={profile.educations}
         onEdit={setEditingEdu}
+        onAdd={(input) => updateProfile((current) => addEducation(current, input), { flush: true })}
+        onDelete={(id) => updateProfile((current) => deleteEducation(current, id), { flush: true })}
       />
 
       <CertificationsSection
         profileId={profile.id}
         certs={profile.certs}
         onEdit={setEditingCert}
+        onAdd={(input) => updateProfile((current) => addCertification(current, input), { flush: true })}
+        onDelete={(id) => updateProfile((current) => deleteCertification(current, id), { flush: true })}
       />
 
       <ProjectsSection
         profileId={profile.id}
         projects={profile.projects}
         onEdit={setEditingProject}
+        onAdd={(input) => updateProfile((current) => addProject(current, input), { flush: true })}
+        onDelete={(id) => updateProfile((current) => deleteProject(current, id), { flush: true })}
       />
 
       <SkillsSection
@@ -233,16 +281,48 @@ export function AboutLayout({ profile }: Props) {
         handleSkillDragEnd={handleSkillDragEnd}
         handleSkillDrop={handleSkillDrop}
         onEditSkill={setEditingSkill}
+        onAddSkill={(name, categoryName) =>
+          updateProfile((current) => addSkill(current, { name, categoryName }), { flush: true })
+        }
+        onDeleteSkill={(id) =>
+          updateProfile((current) => deleteSkill(current, id), { flush: true })
+        }
+        onUpdateSkill={(id, name, categoryName) =>
+          updateProfile((current) => updateSkill(current, id, { name, categoryName }), {
+            flush: true,
+          })
+        }
       />
 
       {/* Edit Modals */}
-      <Modal triggerLabel="" title="Edit Experience" open={!!editingExp} onClose={() => setEditingExp(null)}>
+      <Modal
+        triggerLabel=""
+        title="Edit Experience"
+        open={!!editingExp}
+        onClose={() => {
+          setEditingExp(null);
+          setEditingExpBullets([]);
+        }}
+      >
         {editingExp && (
           <form
             className={styles.formContainer}
-            action={(fd) => {
-              startTransition(async () => {
-                await updateExperience(fd);
+            onSubmit={(e) => {
+              e.preventDefault();
+              const fd = new FormData(e.currentTarget);
+              const id = Number(fd.get("id"));
+              const role = String(fd.get("role") ?? "").trim();
+              const company = String(fd.get("company") ?? "").trim();
+              const location = String(fd.get("location") ?? "").trim() || null;
+              const period = String(fd.get("period") ?? "").trim() || null;
+              const impactBullets = normalizeBullets(editingExpBullets);
+              if (!id || !role || !company) return;
+              startTransition(() => {
+                updateProfile(
+                  (current) =>
+                    updateExperience(current, id, { role, company, location, period, impactBullets }),
+                  { flush: true },
+                );
                 setEditingExp(null);
               });
             }}
@@ -252,7 +332,14 @@ export function AboutLayout({ profile }: Props) {
             <label className={styles.formField}><span className={styles.labelText}>Company</span><input name="company" defaultValue={editingExp.company} className={styles.input} required /></label>
             <label className={styles.formField}><span className={styles.labelText}>Location</span><input name="location" defaultValue={editingExp.location ?? ""} className={styles.input} /></label>
             <label className={styles.formField}><span className={styles.labelText}>Period</span><input name="period" defaultValue={editingExp.period ?? ""} className={styles.input} /></label>
-            <label className={styles.formField}><span className={styles.labelText}>Impact</span><textarea name="impact" rows={3} defaultValue={editingExp.impact ?? ""} className={styles.input} /></label>
+            <BulletTextarea
+              label="Impact"
+              bullets={editingExpBullets}
+              onChange={setEditingExpBullets}
+              className={styles.input}
+              rows={5}
+              placeholder="• Impact bullet"
+            />
             <div className={styles.actionsRowPadded}><button type="submit" disabled={isPending} className={styles.primaryButton}>{isPending ? "Saving..." : "Save"}</button><button type="button" data-close-modal="true" className={styles.cancelButton}>Cancel</button></div>
           </form>
         )}
@@ -262,9 +349,20 @@ export function AboutLayout({ profile }: Props) {
         {editingProject && (
           <form
             className={styles.formContainer}
-            action={(fd) => {
-              startTransition(async () => {
-                await updateProject(fd);
+            onSubmit={(e) => {
+              e.preventDefault();
+              const fd = new FormData(e.currentTarget);
+              const id = Number(fd.get("id"));
+              const title = String(fd.get("title") ?? "").trim();
+              const description = String(fd.get("description") ?? "").trim() || null;
+              const technologies = String(fd.get("technologies") ?? "")
+                .split(",")
+                .map((t) => t.trim())
+                .filter(Boolean);
+              const link = String(fd.get("link") ?? "").trim() || null;
+              if (!id || !title) return;
+              startTransition(() => {
+                updateProfile((current) => updateProject(current, id, { title, description, technologies, link }), { flush: true });
                 setEditingProject(null);
               });
             }}
@@ -283,9 +381,28 @@ export function AboutLayout({ profile }: Props) {
         {editingEdu && (
           <form
             className={styles.formContainer}
-            action={(fd) => {
-              startTransition(async () => {
-                await updateEducation(fd);
+            onSubmit={(e) => {
+              e.preventDefault();
+              const fd = new FormData(e.currentTarget);
+              const id = Number(fd.get("id"));
+              const institution = String(fd.get("institution") ?? "").trim();
+              const degree = String(fd.get("degree") ?? "").trim() || null;
+              const field = String(fd.get("field") ?? "").trim() || null;
+              const startYearRaw = String(fd.get("startYear") ?? "").trim();
+              const endYearRaw = String(fd.get("endYear") ?? "").trim();
+              const startYear = startYearRaw ? Number(startYearRaw) : null;
+              const endYear = endYearRaw ? Number(endYearRaw) : null;
+              const details = String(fd.get("details") ?? "").trim() || null;
+              if (!id || !institution) return;
+              startTransition(() => {
+                updateProfile((current) => updateEducation(current, id, {
+                  institution,
+                  degree,
+                  field,
+                  startYear: Number.isFinite(startYear as number) ? startYear : null,
+                  endYear: Number.isFinite(endYear as number) ? endYear : null,
+                  details,
+                }), { flush: true });
                 setEditingEdu(null);
               });
             }}
@@ -305,9 +422,23 @@ export function AboutLayout({ profile }: Props) {
         {editingCert && (
           <form
             className={styles.formContainer}
-            action={(fd) => {
-              startTransition(async () => {
-                await updateCertification(fd);
+            onSubmit={(e) => {
+              e.preventDefault();
+              const fd = new FormData(e.currentTarget);
+              const id = Number(fd.get("id"));
+              const name = String(fd.get("name") ?? "").trim();
+              const issuer = String(fd.get("issuer") ?? "").trim() || null;
+              const issuedYearRaw = String(fd.get("issuedYear") ?? "").trim();
+              const issuedYear = issuedYearRaw ? Number(issuedYearRaw) : null;
+              const credentialUrl = String(fd.get("credentialUrl") ?? "").trim() || null;
+              if (!id || !name) return;
+              startTransition(() => {
+                updateProfile((current) => updateCertification(current, id, {
+                  name,
+                  issuer,
+                  issuedYear: Number.isFinite(issuedYear as number) ? issuedYear : null,
+                  credentialUrl,
+                }), { flush: true });
                 setEditingCert(null);
               });
             }}
@@ -326,11 +457,19 @@ export function AboutLayout({ profile }: Props) {
         {editingSkill && (
           <form
             className={styles.formContainer}
-            action={(fd) => {
-              startTransition(async () => {
-                await updateSkill(fd);
+            onSubmit={(e) => {
+              e.preventDefault();
+              const fd = new FormData(e.currentTarget);
+              const skillId = Number(fd.get("skillId"));
+              const name = String(fd.get("name") ?? "").trim();
+              const categoryName = String(fd.get("category") ?? "").trim();
+              if (!skillId || !name || !categoryName) return;
+              startTransition(() => {
+                updateProfile(
+                  (current) => updateSkill(current, skillId, { name, categoryName }),
+                  { flush: true },
+                );
                 setEditingSkill(null);
-                await loadCategories();
               });
             }}
           >

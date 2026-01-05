@@ -27,6 +27,8 @@ import type {
 } from "./types";
 import type { GeneratedResume } from "@/types/resume-agent";
 import type { Profile } from "@/types/profile";
+import { normalizeBullets } from "@/lib/normalizeBullets";
+import { escapeAttr, escapeHtml, sanitizeHref } from "@/lib/htmlSanitize";
 import type {
   TailorCertificationDraft,
   TailorEducationDraft,
@@ -51,7 +53,7 @@ const SECTION_ORDER: ResumeSectionId[] = [
 ];
 
 const emptyProfileFallback = {
-  fullName: "Your Name",
+  fullName: "",
   title: "",
   summary: "",
 };
@@ -63,6 +65,10 @@ const RESUME_FONT_FAMILIES_CACHE_KEY = "fitresume.tailorResumeFontFamilies.v1";
 const RESUME_BORDERS_CACHE_KEY = "fitresume.tailorResumeBorders.v1";
 const RESUME_ACCENT_OPACITY_CACHE_KEY = "fitresume.tailorResumeAccentOpacity.v1";
 const RESUME_SPACING_CACHE_KEY = "fitresume.tailorResumeSpacing.v1";
+
+function normalizeKey(value: string) {
+  return value.trim().toLowerCase();
+}
 
 function safeParseDraft(raw: string | null): TailorResumeDraft | null {
   if (!raw) return null;
@@ -177,10 +183,6 @@ function safeParseBorders(raw: string | null): ResumeBorders | null {
   }
 }
 
-function joinLines(lines: string[]) {
-  return lines.map((l) => l.trim()).filter(Boolean).join("\n");
-}
-
 function normalizeTailorExperienceDraft(input: TailorExperienceDraft): TailorExperienceDraft {
   return {
     id: input.id,
@@ -188,7 +190,7 @@ function normalizeTailorExperienceDraft(input: TailorExperienceDraft): TailorExp
     company: input.company.trim(),
     location: input.location.trim(),
     period: input.period.trim(),
-    impact: input.impact.trim(),
+    impactBullets: (input.impactBullets ?? []).map((l) => l.trim()).filter(Boolean),
   };
 }
 
@@ -237,12 +239,14 @@ function linkifyContact(part: string) {
   const trimmed = part.trim();
   if (!trimmed) return "";
   const isEmail = trimmed.includes("@");
-  if (isEmail) return trimmed;
+  if (isEmail) return escapeHtml(trimmed);
   const hasProtocol = /^https?:\/\//i.test(trimmed);
   const isUrlLike = trimmed.includes(".") || trimmed.includes("/");
-  const href = hasProtocol ? trimmed : isUrlLike ? `https://${trimmed.replace(/^\/+/, "")}` : "";
-  if (!href) return trimmed;
-  return `<a href="${href}" class="resume-link">${trimmed}</a>`;
+  const hrefRaw = hasProtocol ? trimmed : isUrlLike ? `https://${trimmed.replace(/^\/+/, "")}` : "";
+  if (!hrefRaw) return escapeHtml(trimmed);
+  const safeHref = sanitizeHref(hrefRaw);
+  if (!safeHref) return escapeHtml(trimmed);
+  return `<a href="${escapeAttr(safeHref)}" class="resume-link" target="_blank" rel="noreferrer">${escapeHtml(trimmed)}</a>`;
 }
 
 function applyAlpha(hex: string, alpha: number) {
@@ -287,9 +291,10 @@ function mixColor(hex: string, amt: number) {
 
 export function useCreateResume(
   profile: Profile,
-  opts: { onGenerate: (jobDescription: string) => Promise<GeneratedResume> },
 ) {
   const [jobDescription, setJobDescription] = useState("");
+  const [claudeApiKey, setClaudeApiKey] = useState("");
+  const [promptForApiKey, setPromptForApiKey] = useState(false);
   const [generated, setGenerated] = useState<GeneratedResume | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generateError, setGenerateError] = useState<string | null>(null);
@@ -313,6 +318,34 @@ export function useCreateResume(
 
   const resumeRef = useRef<HTMLDivElement>(null);
   const resumeWrapperRef = useRef<HTMLDivElement>(null);
+
+  const setDraft = (next: TailorResumeDraft | null) => {
+    setDraftState(next);
+    if (!next) {
+      sessionStorage.removeItem(TAILOR_RESUME_DRAFT_CACHE_KEY);
+      return;
+    }
+    sessionStorage.setItem(TAILOR_RESUME_DRAFT_CACHE_KEY, JSON.stringify(next));
+  };
+
+  const clearAiDraftSections = (base: TailorResumeDraft | null): TailorResumeDraft | null => {
+    if (!base) return null;
+    const next: Partial<TailorResumeDraft> = { ...base };
+    delete next.header;
+    delete next.experiences;
+    delete next.projects;
+    delete next.skills;
+    const keys = Object.keys(next).filter((k) => k !== "version" && k !== "updatedAt");
+    if (!keys.length) return null;
+    return { ...(next as TailorResumeDraft), updatedAt: Date.now() };
+  };
+
+  useEffect(() => {
+    if (!promptForApiKey) return;
+    if (!claudeApiKey.trim()) return;
+    setPromptForApiKey(false);
+    setGenerateError(null);
+  }, [claudeApiKey, promptForApiKey]);
 
   useEffect(() => {
     const next = safeParseDraft(sessionStorage.getItem(TAILOR_RESUME_DRAFT_CACHE_KEY));
@@ -370,20 +403,6 @@ export function useCreateResume(
 
   const clampZoom = (value: number) => Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, value));
 
-  const contactParts = useMemo(
-    () =>
-      [profile.location, profile.phone, profile.email, profile.githubUrl, profile.linkedinUrl].filter(
-        Boolean,
-      ) as string[],
-    [
-      profile.email,
-      profile.githubUrl,
-      profile.linkedinUrl,
-      profile.location,
-      profile.phone,
-    ],
-  );
-
   const headerForEdit: TailorHeaderDraft = useMemo(() => {
     const fromDraft = draft?.header ?? {};
 
@@ -391,17 +410,61 @@ export function useCreateResume(
       (fromDraft.fullName !== undefined ? fromDraft.fullName : profile.fullName) ||
       emptyProfileFallback.fullName;
     const title = fromDraft.title !== undefined ? fromDraft.title : profile.title ?? "";
-    const headline = fromDraft.headline !== undefined ? fromDraft.headline : profile.headline ?? "";
     const summary =
       fromDraft.summary !== undefined ? fromDraft.summary : generated?.summary ?? profile.summary ?? "";
+    const email = fromDraft.email !== undefined ? fromDraft.email : profile.email ?? "";
+    const phone = fromDraft.phone !== undefined ? fromDraft.phone : profile.phone ?? "";
+    const location = fromDraft.location !== undefined ? fromDraft.location : profile.location ?? "";
+    const linkedinUrl =
+      fromDraft.linkedinUrl !== undefined ? fromDraft.linkedinUrl : profile.linkedinUrl ?? "";
+    const githubUrl = fromDraft.githubUrl !== undefined ? fromDraft.githubUrl : profile.githubUrl ?? "";
+    const websiteUrl =
+      fromDraft.websiteUrl !== undefined ? fromDraft.websiteUrl : profile.websiteUrl ?? "";
 
     return {
       fullName: fullName.trim(),
       title: title.trim(),
-      headline: headline.trim(),
       summary: summary,
+      email: email.trim(),
+      phone: phone.trim(),
+      location: location.trim(),
+      linkedinUrl: linkedinUrl.trim(),
+      githubUrl: githubUrl.trim(),
+      websiteUrl: websiteUrl.trim(),
     };
-  }, [draft?.header, generated?.summary, profile.fullName, profile.headline, profile.summary, profile.title]);
+  }, [
+    draft?.header,
+    generated?.summary,
+    profile.email,
+    profile.fullName,
+    profile.githubUrl,
+    profile.linkedinUrl,
+    profile.location,
+    profile.phone,
+    profile.summary,
+    profile.title,
+    profile.websiteUrl,
+  ]);
+
+  const contactParts = useMemo(
+    () =>
+      [
+        headerForEdit.location,
+        headerForEdit.phone,
+        headerForEdit.email,
+        headerForEdit.websiteUrl,
+        headerForEdit.githubUrl,
+        headerForEdit.linkedinUrl,
+      ].filter(Boolean) as string[],
+    [
+      headerForEdit.email,
+      headerForEdit.githubUrl,
+      headerForEdit.linkedinUrl,
+      headerForEdit.location,
+      headerForEdit.phone,
+      headerForEdit.websiteUrl,
+    ],
+  );
 
   const summaryForView = headerForEdit.summary;
 
@@ -415,7 +478,7 @@ export function useCreateResume(
         company: exp.company,
         location: exp.location || "",
         period: exp.period || "",
-        impact: joinLines(exp.bullets || []),
+        impactBullets: normalizeBullets(exp.bullets || []),
       }));
     }
 
@@ -425,7 +488,7 @@ export function useCreateResume(
       company: exp.company,
       location: exp.location || "",
       period: exp.period || "",
-      impact: exp.impact || "",
+      impactBullets: exp.impactBullets || [],
     }));
   }, [draft?.experiences, generated?.experiences, profile.experiences]);
 
@@ -439,7 +502,7 @@ export function useCreateResume(
           company: exp.company,
           location: exp.location,
           period: exp.period,
-          bullets: exp.impact ? exp.impact.split("\n").map((l) => l.trim()).filter(Boolean).slice(0, 4) : [],
+          bullets: normalizeBullets(exp.impactBullets || []),
         })),
     [experiencesForEdit],
   );
@@ -474,12 +537,25 @@ export function useCreateResume(
     if (draft?.projects !== undefined) return draft.projects;
 
     if (generated?.projects?.length) {
+      const profileIndex = new Map(
+        (profile.projects || []).map((proj) => [
+          normalizeKey(proj.title),
+          {
+            id: proj.id,
+            title: proj.title,
+            link: proj.link || "",
+            technologies: proj.technologies || [],
+            description: proj.description || "",
+          },
+        ]),
+      );
+
       return generated.projects.map((proj) => ({
-        id: undefined,
-        title: proj.title,
-        description: proj.description || "",
-        link: proj.link || "",
-        technologies: [],
+        id: profileIndex.get(normalizeKey(proj.title))?.id,
+        title: profileIndex.get(normalizeKey(proj.title))?.title ?? proj.title,
+        description: proj.description || profileIndex.get(normalizeKey(proj.title))?.description || "",
+        link: profileIndex.get(normalizeKey(proj.title))?.link ?? "",
+        technologies: profileIndex.get(normalizeKey(proj.title))?.technologies ?? [],
       }));
     }
 
@@ -497,7 +573,6 @@ export function useCreateResume(
       (projectsForEdit || [])
         .map((proj) => normalizeTailorProjectDraft(proj))
         .filter((proj) => proj.title)
-        .slice(0, 2)
         .map((proj) => ({
           name: proj.title,
           detail: proj.description || "",
@@ -594,8 +669,7 @@ export function useCreateResume(
       layoutMode,
       profile: {
         fullName: headerForEdit.fullName || emptyProfileFallback.fullName,
-        title: headerForEdit.title || headerForEdit.headline || emptyProfileFallback.title,
-        headline: headerForEdit.headline,
+        title: headerForEdit.title || emptyProfileFallback.title,
         summary: summaryForView || emptyProfileFallback.summary,
       },
       contactParts: contactParts.map((part) => linkifyContact(part)),
@@ -627,7 +701,6 @@ export function useCreateResume(
     palette,
     certificationsForEdit,
     headerForEdit.fullName,
-    headerForEdit.headline,
     headerForEdit.title,
     projectsForView,
     skillGroups,
@@ -637,23 +710,145 @@ export function useCreateResume(
   ]);
 
   const handleGenerate = async () => {
-    if (!jobDescription.trim()) return;
+    const trimmedJd = jobDescription.trim();
+    if (!trimmedJd) return;
+
+    if (!claudeApiKey.trim()) {
+      setPromptForApiKey(true);
+      setGenerateError("Add your API key to generate suggestions.");
+      setShowJobDescription(true);
+      return;
+    }
+
+    const draftBaseline = generated ? clearAiDraftSections(draft) : draft;
+    if (generated) setDraft(draftBaseline);
+
     setIsGenerating(true);
     setGenerateError(null);
     try {
-      const data = await opts.onGenerate(jobDescription);
-      setGenerated({
+      const res = await fetch("/api/tailor-resume/generate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-claude-api-key": claudeApiKey.trim(),
+        },
+        body: JSON.stringify({ profile, jobDescription: trimmedJd }),
+        cache: "no-store",
+      });
+
+      if (!res.ok) {
+        const payload = (await res.json().catch(() => null)) as null | { error?: string };
+        throw new Error(payload?.error || "Unable to generate suggestions.");
+      }
+
+      const data = (await res.json()) as GeneratedResume;
+      const nextGenerated = {
         summary: data.summary,
         experiences: data.experiences || [],
         projects: data.projects || [],
         skillsByCategory: data.skillsByCategory || {},
+      };
+      setGenerated({
+        summary: nextGenerated.summary,
+        experiences: nextGenerated.experiences,
+        projects: nextGenerated.projects,
+        skillsByCategory: nextGenerated.skillsByCategory,
       });
-      setDraftState(null);
-      sessionStorage.removeItem(TAILOR_RESUME_DRAFT_CACHE_KEY);
+
+      const expIndex = new Map<string, { id: number; location: string; period: string }>();
+      for (const exp of profile.experiences || []) {
+        expIndex.set(`${normalizeKey(exp.role)}|${normalizeKey(exp.company)}`, {
+          id: exp.id,
+          location: exp.location ?? "",
+          period: exp.period ?? "",
+        });
+      }
+
+      const projectIndex = new Map<
+        string,
+        { id: number; title: string; technologies: string[]; link: string; description: string }
+      >();
+      for (const proj of profile.projects || []) {
+        projectIndex.set(normalizeKey(proj.title), {
+          id: proj.id,
+          title: proj.title,
+          technologies: proj.technologies || [],
+          link: proj.link ?? "",
+          description: proj.description ?? "",
+        });
+      }
+
+      const skillIndex = new Map<string, number>();
+      for (const skill of profile.skills || []) {
+        skillIndex.set(
+          `${normalizeKey(skill.name)}|${normalizeKey(skill.category.name)}`,
+          skill.id,
+        );
+      }
+
+      const baseDraft: TailorResumeDraft | null = draftBaseline;
+      const merged: TailorResumeDraft = {
+        ...(baseDraft ?? { version: 1 as const, updatedAt: Date.now() }),
+        updatedAt: Date.now(),
+      };
+
+      const nextSummary = nextGenerated.summary.trim();
+      const currentSummary = (profile.summary ?? "").trim();
+      if (nextSummary && nextSummary !== currentSummary && merged.header?.summary === undefined) {
+        merged.header = { ...(merged.header ?? {}), summary: nextSummary };
+      }
+
+      if (merged.experiences === undefined && nextGenerated.experiences.length) {
+        merged.experiences = nextGenerated.experiences.map((exp) => {
+          const match = expIndex.get(`${normalizeKey(exp.role)}|${normalizeKey(exp.company)}`);
+          return {
+            id: match?.id,
+            role: exp.role,
+            company: exp.company,
+            location: exp.location ?? match?.location ?? "",
+            period: exp.period ?? match?.period ?? "",
+            impactBullets: exp.bullets || [],
+          };
+        });
+      }
+
+      if (merged.projects === undefined && nextGenerated.projects.length) {
+        merged.projects = nextGenerated.projects.map((proj) => {
+          const match = projectIndex.get(normalizeKey(proj.title));
+          return {
+            id: match?.id,
+            title: match?.title ?? proj.title,
+            description: proj.description ?? match?.description ?? "",
+            link: match?.link ?? "",
+            technologies: match?.technologies ?? proj.technologies ?? [],
+          };
+        });
+      }
+
+      if (merged.skills === undefined && Object.keys(nextGenerated.skillsByCategory).length) {
+        merged.skills = Object.entries(nextGenerated.skillsByCategory).flatMap(([category, items]) =>
+          (items || []).map((name) => ({
+            id: skillIndex.get(`${normalizeKey(name)}|${normalizeKey(category)}`),
+            name,
+            category,
+          })),
+        );
+      }
+
+      const hasSections =
+        merged.header !== undefined ||
+        merged.experiences !== undefined ||
+        merged.projects !== undefined ||
+        merged.skills !== undefined ||
+        merged.educations !== undefined ||
+        merged.certifications !== undefined;
+
+      setDraft(hasSections ? merged : null);
       sessionStorage.removeItem(LEGACY_RESUME_EDITS_CACHE_KEY);
       setShowJobDescription(false);
+      setPromptForApiKey(false);
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Unable to generate resume.";
+      const message = err instanceof Error ? err.message : "Unable to generate suggestions.";
       setGenerateError(message);
     } finally {
       setIsGenerating(false);
@@ -729,8 +924,7 @@ export function useCreateResume(
   const resetGenerated = () => {
     setGenerated(null);
     setGenerateError(null);
-    setDraftState(null);
-    sessionStorage.removeItem(TAILOR_RESUME_DRAFT_CACHE_KEY);
+    setDraft(null);
     sessionStorage.removeItem(LEGACY_RESUME_EDITS_CACHE_KEY);
   };
 
@@ -777,6 +971,9 @@ export function useCreateResume(
   return {
     jobDescription,
     setJobDescription,
+    claudeApiKey,
+    setClaudeApiKey,
+    promptForApiKey,
     generated,
     generateError,
     isGenerating,
@@ -809,14 +1006,7 @@ export function useCreateResume(
     resetToProfile,
     defaultPdfFileName,
     draft,
-    setDraft: (next: TailorResumeDraft | null) => {
-      setDraftState(next);
-      if (!next) {
-        sessionStorage.removeItem(TAILOR_RESUME_DRAFT_CACHE_KEY);
-        return;
-      }
-      sessionStorage.setItem(TAILOR_RESUME_DRAFT_CACHE_KEY, JSON.stringify(next));
-    },
+    setDraft,
     headerForEdit,
     experiencesForEdit,
     projectsForEdit,

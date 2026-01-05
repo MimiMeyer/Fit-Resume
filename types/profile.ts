@@ -7,7 +7,6 @@ import type { Skill } from "./skill";
 export type Profile = {
   id: number;
   fullName: string;
-  headline?: string | null;
   summary?: string | null;
   title?: string | null;
   email?: string | null;

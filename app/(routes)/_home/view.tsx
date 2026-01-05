@@ -65,17 +65,17 @@ const sections = [
     title: "Profile",
     href: "/profile",
     icon: <ProfileIcon />,
-    flow: ["Fill out your profile", "Use it everywhere"],
+    flow: ["Add your info in Profile"],
     detail:
-      "Add your basics plus experience, projects, education, certifications, and skills. You can also download a JSON backup to save it.",
+      "Add your contact info, experience, projects, skills, education, and certifications.",
   },
   {
     title: "Tailor Resume",
     href: "/tailor-resume",
     icon: <SparkIcon />,
-    flow: ["Paste a job description", "Generate a draft", "Preview + download PDF"],
+    flow: ["Paste a job description", "Get job-specific suggestions", "Download your resume"],
     detail:
-      "Generate a targeted summary and stronger bullets. Preview the result, adjust layout, then download a PDF. Your saved Profile stays unchanged.",
+      "Paste a job description to get tailored summary and bullet suggestions. Preview, adjust layout, and download your resume.",
   },
 ] as const;
 
@@ -95,8 +95,7 @@ export function HomeLayout() {
 
         <h1 className={styles.heroTitle}>Tailor your resume to any job you paste.</h1>
         <p className={styles.heroSubtitle}>
-          Build your Profile once, then generate a targeted draft for each job description — without overwriting your saved
-          info.
+          Make each resume match the job, with a stronger summary and bullet points.
         </p>
       </section>
 
@@ -133,6 +132,14 @@ export function HomeLayout() {
             <p className={styles.cardDetail}>{section.detail}</p>
           </div>
         ))}
+      </section>
+      <section className={styles.noticeCard} aria-label="Privacy notice">
+        <div className={styles.noticeHeaderRow}>
+          <div className={styles.noticeTitle}>Privacy</div>
+        </div>
+        <p className={styles.noticeText}>
+          FitResume saves your Profile in your browser on this device. It isn’t uploaded or stored on a server by this app.
+        </p>
       </section>
     </div>
   );
