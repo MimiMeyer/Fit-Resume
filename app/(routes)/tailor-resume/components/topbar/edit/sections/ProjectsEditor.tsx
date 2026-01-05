@@ -100,7 +100,7 @@ export function ProjectsEditor({
       <div className="flex justify-end">
         <button
           type="button"
-          className="text-sm font-semibold text-[var(--accent)]"
+          className="text-xs font-semibold text-[var(--accent)] sm:text-sm"
           onClick={() => {
             markAdded();
             setItems((prev) => [
@@ -119,7 +119,7 @@ export function ProjectsEditor({
             <div className="flex items-center justify-end gap-2">
               <button
                 type="button"
-                className="text-sm font-semibold text-red-600"
+                className="text-xs font-semibold text-red-600 sm:text-sm"
                 onClick={() => setItems((prev) => prev.filter((_, i) => i !== idx))}
               >
                 Delete
@@ -127,7 +127,7 @@ export function ProjectsEditor({
             </div>
 
             <div className="mt-3 grid gap-3">
-              <label className="grid gap-1 text-sm">
+              <label className="grid gap-1 text-xs sm:text-sm">
                   <span className="font-semibold text-zinc-800">Title</span>
                   <input
                   className={dirtyInputClass(!!diffs[idx]?.titleDirty)}
@@ -140,7 +140,7 @@ export function ProjectsEditor({
                 />
               </label>
 
-              <label className="grid gap-1 text-sm">
+              <label className="grid gap-1 text-xs sm:text-sm">
                 <span className="font-semibold text-zinc-800">Description</span>
                 <textarea
                   rows={3}
@@ -154,8 +154,8 @@ export function ProjectsEditor({
                 />
               </label>
 
-              <div className="grid grid-cols-2 gap-2">
-                <label className="grid gap-1 text-sm">
+              <div className="grid gap-2 sm:grid-cols-2">
+                <label className="grid gap-1 text-xs sm:text-sm">
                   <span className="font-semibold text-zinc-800">Link</span>
                   <input
                     className={dirtyInputClass(!!diffs[idx]?.linkDirty)}
@@ -167,7 +167,7 @@ export function ProjectsEditor({
                     }
                   />
                 </label>
-                <label className="grid gap-1 text-sm">
+                <label className="grid gap-1 text-xs sm:text-sm">
                   <span className="font-semibold text-zinc-800">Technologies</span>
                   <input
                     className={dirtyInputClass(!!diffs[idx]?.technologiesDirty)}

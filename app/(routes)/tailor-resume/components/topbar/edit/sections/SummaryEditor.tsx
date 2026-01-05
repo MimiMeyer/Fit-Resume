@@ -41,7 +41,7 @@ export function SummaryEditor({
   return (
     <div>
       <div className="grid gap-3">
-        <label className="grid gap-1 text-sm">
+        <label className="grid gap-1 text-xs sm:text-sm">
           <span className="font-semibold text-zinc-800">Full name</span>
           <input
             className={dirtyInputClass(changed.fullName)}
@@ -49,7 +49,7 @@ export function SummaryEditor({
             onChange={(e) => setState((s) => ({ ...s, fullName: e.target.value }))}
           />
         </label>
-        <label className="grid gap-1 text-sm">
+        <label className="grid gap-1 text-xs sm:text-sm">
           <span className="font-semibold text-zinc-800">Title</span>
           <input
             className={dirtyInputClass(changed.title)}
@@ -59,7 +59,7 @@ export function SummaryEditor({
           />
         </label>
         <div className="grid gap-3 sm:grid-cols-2">
-          <label className="grid gap-1 text-sm">
+          <label className="grid gap-1 text-xs sm:text-sm">
             <span className="font-semibold text-zinc-800">Email</span>
             <input
               className={dirtyInputClass(changed.email)}
@@ -68,7 +68,7 @@ export function SummaryEditor({
               placeholder="name@email.com"
             />
           </label>
-          <label className="grid gap-1 text-sm">
+          <label className="grid gap-1 text-xs sm:text-sm">
             <span className="font-semibold text-zinc-800">Phone</span>
             <input
               className={dirtyInputClass(changed.phone)}
@@ -77,7 +77,7 @@ export function SummaryEditor({
               placeholder="(555) 555-5555"
             />
           </label>
-          <label className="grid gap-1 text-sm">
+          <label className="grid gap-1 text-xs sm:text-sm">
             <span className="font-semibold text-zinc-800">Location</span>
             <input
               className={dirtyInputClass(changed.location)}
@@ -86,7 +86,7 @@ export function SummaryEditor({
               placeholder="City, State"
             />
           </label>
-          <label className="grid gap-1 text-sm">
+          <label className="grid gap-1 text-xs sm:text-sm">
             <span className="font-semibold text-zinc-800">Website</span>
             <input
               className={dirtyInputClass(changed.websiteUrl)}
@@ -95,7 +95,7 @@ export function SummaryEditor({
               placeholder="https://..."
             />
           </label>
-          <label className="grid gap-1 text-sm">
+          <label className="grid gap-1 text-xs sm:text-sm">
             <span className="font-semibold text-zinc-800">LinkedIn</span>
             <input
               className={dirtyInputClass(changed.linkedinUrl)}
@@ -104,7 +104,7 @@ export function SummaryEditor({
               placeholder="https://linkedin.com/in/..."
             />
           </label>
-          <label className="grid gap-1 text-sm">
+          <label className="grid gap-1 text-xs sm:text-sm">
             <span className="font-semibold text-zinc-800">GitHub</span>
             <input
               className={dirtyInputClass(changed.githubUrl)}
@@ -114,7 +114,7 @@ export function SummaryEditor({
             />
           </label>
         </div>
-        <label className="grid gap-1 text-sm">
+        <label className="grid gap-1 text-xs sm:text-sm">
           <span className="font-semibold text-zinc-800">Summary</span>
           <textarea
             rows={6}

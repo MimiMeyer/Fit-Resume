@@ -63,8 +63,12 @@ const LEGACY_RESUME_EDITS_CACHE_KEY = "fitresume.tailorResumeEdits.v1";
 const RESUME_FONT_CACHE_KEY = "fitresume.tailorResumeFontSizes.v1";
 const RESUME_FONT_FAMILIES_CACHE_KEY = "fitresume.tailorResumeFontFamilies.v1";
 const RESUME_BORDERS_CACHE_KEY = "fitresume.tailorResumeBorders.v1";
+const RESUME_ACCENT_COLOR_CACHE_KEY = "fitresume.tailorResumeAccentColor.v1";
 const RESUME_ACCENT_OPACITY_CACHE_KEY = "fitresume.tailorResumeAccentOpacity.v1";
 const RESUME_SPACING_CACHE_KEY = "fitresume.tailorResumeSpacing.v1";
+const RESUME_LAYOUT_MODE_CACHE_KEY = "fitresume.tailorResumeLayoutMode.v1";
+const RESUME_ZOOM_CACHE_KEY = "fitresume.tailorResumeZoom.v1";
+const RESUME_SHOW_JD_CACHE_KEY = "fitresume.tailorResumeShowJobDescription.v1";
 
 function normalizeKey(value: string) {
   return value.trim().toLowerCase();
@@ -87,6 +91,33 @@ function safeParseAccentOpacity(raw: string | null): number | null {
   if (!Number.isFinite(parsed)) return null;
   if (parsed < 0 || parsed > 1) return null;
   return parsed;
+}
+
+function safeParseAccentColor(raw: string | null): string | null {
+  if (!raw) return null;
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  if (!/^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(trimmed)) return null;
+  return trimmed;
+}
+
+function safeParseLayoutMode(raw: string | null): ResumeLayoutMode | null {
+  if (raw === "single" || raw === "two") return raw;
+  return null;
+}
+
+function safeParseZoom(raw: string | null): number | null {
+  if (!raw) return null;
+  const parsed = Number(raw);
+  if (!Number.isFinite(parsed)) return null;
+  if (parsed < ZOOM_MIN || parsed > ZOOM_MAX) return null;
+  return parsed;
+}
+
+function safeParseBoolean(raw: string | null): boolean | null {
+  if (raw === "true") return true;
+  if (raw === "false") return false;
+  return null;
 }
 
 function safeParseFontSizes(raw: string | null): ResumeFontSizes | null {
@@ -319,6 +350,29 @@ export function useCreateResume(
   const resumeRef = useRef<HTMLDivElement>(null);
   const resumeWrapperRef = useRef<HTMLDivElement>(null);
 
+  const setAccentColorPersisted = (color: string) => {
+    setAccentColor(color);
+    sessionStorage.setItem(RESUME_ACCENT_COLOR_CACHE_KEY, color);
+  };
+
+  const setLayoutModePersisted = (mode: ResumeLayoutMode) => {
+    setLayoutMode(mode);
+    sessionStorage.setItem(RESUME_LAYOUT_MODE_CACHE_KEY, mode);
+  };
+
+  const setZoomPersisted = (next: number) => {
+    setZoom(next);
+    sessionStorage.setItem(RESUME_ZOOM_CACHE_KEY, String(next));
+  };
+
+  const setShowJobDescriptionPersisted = (next: boolean | ((prev: boolean) => boolean)) => {
+    setShowJobDescription((prev) => {
+      const resolved = typeof next === "function" ? next(prev) : next;
+      sessionStorage.setItem(RESUME_SHOW_JD_CACHE_KEY, String(resolved));
+      return resolved;
+    });
+  };
+
   const setDraft = (next: TailorResumeDraft | null) => {
     setDraftState(next);
     if (!next) {
@@ -363,6 +417,24 @@ export function useCreateResume(
       sessionStorage.getItem(RESUME_ACCENT_OPACITY_CACHE_KEY),
     );
     if (nextAccentOpacity != null) setAccentOpacity(nextAccentOpacity);
+    const nextAccentColor = safeParseAccentColor(
+      sessionStorage.getItem(RESUME_ACCENT_COLOR_CACHE_KEY),
+    );
+    if (nextAccentColor) setAccentColor(nextAccentColor);
+    const nextLayoutMode = safeParseLayoutMode(sessionStorage.getItem(RESUME_LAYOUT_MODE_CACHE_KEY));
+    if (nextLayoutMode) setLayoutMode(nextLayoutMode);
+    const nextZoom = safeParseZoom(sessionStorage.getItem(RESUME_ZOOM_CACHE_KEY));
+    if (nextZoom != null) {
+      setZoom(nextZoom);
+    } else if (window.innerWidth < 640) {
+      setZoom(0.35);
+    }
+    const nextShowJd = safeParseBoolean(sessionStorage.getItem(RESUME_SHOW_JD_CACHE_KEY));
+    if (nextShowJd != null) {
+      setShowJobDescription(nextShowJd);
+    } else if (window.innerWidth < 1024) {
+      setShowJobDescription(false);
+    }
     const nextSpacing = safeParseSpacing(sessionStorage.getItem(RESUME_SPACING_CACHE_KEY));
     if (nextSpacing) setSpacing(nextSpacing);
   }, []);
@@ -930,17 +1002,24 @@ export function useCreateResume(
 
   const resetToProfile = () => {
     resetGenerated();
-    setShowJobDescription(true);
+    setShowJobDescriptionPersisted(true);
     setFontSizes(DEFAULT_FONT_SIZES);
     sessionStorage.removeItem(RESUME_FONT_CACHE_KEY);
     setFontFamilies(DEFAULT_FONT_FAMILIES);
     sessionStorage.removeItem(RESUME_FONT_FAMILIES_CACHE_KEY);
     setBorders(DEFAULT_BORDERS);
     sessionStorage.removeItem(RESUME_BORDERS_CACHE_KEY);
+    setAccentColorPersisted("#0c6d82");
+    sessionStorage.removeItem(RESUME_ACCENT_COLOR_CACHE_KEY);
     setAccentOpacity(1);
     sessionStorage.removeItem(RESUME_ACCENT_OPACITY_CACHE_KEY);
     setSpacing(DEFAULT_SPACING);
     sessionStorage.removeItem(RESUME_SPACING_CACHE_KEY);
+    setLayoutModePersisted("two");
+    sessionStorage.removeItem(RESUME_LAYOUT_MODE_CACHE_KEY);
+    setZoom(window.innerWidth < 640 ? 0.35 : 0.75);
+    sessionStorage.removeItem(RESUME_ZOOM_CACHE_KEY);
+    sessionStorage.removeItem(RESUME_SHOW_JD_CACHE_KEY);
   };
 
   const defaultPdfFileName = useMemo(() => {
@@ -978,21 +1057,21 @@ export function useCreateResume(
     generateError,
     isGenerating,
     showJobDescription,
-    setShowJobDescription,
+    setShowJobDescription: setShowJobDescriptionPersisted,
     zoomPercent,
     clampZoom,
-    setZoom,
+    setZoom: setZoomPersisted,
     pdfGenerating,
     pdfError,
     accentColor,
-    setAccentColor,
+    setAccentColor: setAccentColorPersisted,
     accentOpacity,
     setAccentOpacity: (next: number) => {
       setAccentOpacity(next);
       sessionStorage.setItem(RESUME_ACCENT_OPACITY_CACHE_KEY, String(next));
     },
     layoutMode,
-    setLayoutMode,
+    setLayoutMode: setLayoutModePersisted,
     resumeStyles,
     pagesHtml: basePagesHtml,
     zoomStyle,

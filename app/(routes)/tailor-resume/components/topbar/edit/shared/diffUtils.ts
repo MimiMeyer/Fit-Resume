@@ -15,7 +15,7 @@ export function equalStringSets(a: string[], b: string[]) {
 
 export function dirtyInputClass(isDirty: boolean) {
   return [
-    "rounded-lg border bg-white px-3 py-2",
+    "w-full min-w-0 rounded-lg border bg-white px-2.5 py-1.5 text-xs sm:px-3 sm:py-2 sm:text-sm",
     isDirty
       ? "border-purple-400 bg-purple-50 ring-2 ring-purple-300 focus:outline-none shadow-sm"
       : "border-zinc-200",
