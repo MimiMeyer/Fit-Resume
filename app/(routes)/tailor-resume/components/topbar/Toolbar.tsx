@@ -164,7 +164,7 @@ export function Toolbar(props: ToolbarProps) {
   );
 
   return (
-    <div className="relative z-30 flex flex-wrap items-center justify-between gap-3 overflow-visible">
+    <div className="relative z-30 flex flex-col gap-3 overflow-visible sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
       <>
           <div className="flex w-full items-center gap-2">
             {onShowJobDescription ? (
@@ -424,7 +424,7 @@ export function Toolbar(props: ToolbarProps) {
                 </div>
               </div>
 
-              <div className="ml-auto flex shrink-0 items-center gap-2">
+              <div className="flex w-full items-center justify-between gap-2 sm:ml-auto sm:w-auto sm:justify-end">
                 <ZoomPill />
                 <div className="relative" ref={downloadMenuRef}>
                   <button
