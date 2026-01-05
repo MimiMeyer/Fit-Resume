@@ -13,7 +13,7 @@
     "ai": "^5.0.112",
     "html2canvas": "^1.4.1",
     "jspdf": "^3.0.4",
-    "next": "16.0.6",
+    "next": "16.1.1",
     "pdfjs-dist": "^5.4.449",
     "react": "19.2.0",
     "react-dom": "19.2.0"
@@ -24,7 +24,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
-    "eslint-config-next": "16.0.6",
+    "eslint-config-next": "16.1.1",
     "tailwindcss": "^4",
     "tsx": "^4.21.0",
     "typescript": "^5"
