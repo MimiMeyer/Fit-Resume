@@ -10,6 +10,8 @@
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^2.0.55",
+    "@react-pdf/renderer": "^4.3.2",
+    "@react-pdf/types": "^2.9.2",
     "ai": "^5.0.112",
     "html2canvas": "^1.4.1",
     "jspdf": "^3.0.4",

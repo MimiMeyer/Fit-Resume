@@ -8,8 +8,6 @@ import type { Profile } from "@/types/profile";
 import { styles } from "./style-constants";
 import { useCreateResume } from "./useCreateResume";
 
-const ZOOM_STEP = 0.05;
-
 export function CreateResumeView({
   profile,
   updateProfile,
@@ -28,9 +26,6 @@ export function CreateResumeView({
     isGenerating,
     showJobDescription,
     setShowJobDescription,
-    zoomPercent,
-    clampZoom,
-    setZoom,
     pdfGenerating,
     pdfError,
     accentColor,
@@ -49,9 +44,11 @@ export function CreateResumeView({
     setLayoutMode,
     resumeStyles,
     pagesHtml,
-    zoomStyle,
     pageStyle,
     paginatedSectionsCount,
+    pdfLiveUrl,
+    pdfLiveGenerating,
+    pdfLiveError,
     resumeRef,
     resumeWrapperRef,
     handleGenerate,
@@ -185,9 +182,6 @@ export function CreateResumeView({
             setBorders={setBorders}
             spacing={spacing}
             setSpacing={setSpacing}
-            zoomPercent={zoomPercent}
-            zoomStep={ZOOM_STEP * 100}
-            onZoomChange={(val) => setZoom(clampZoom(val / 100))}
             onDownloadPdf={handleDownloadPdf}
             defaultPdfFileName={defaultPdfFileName}
             pdfGenerating={pdfGenerating}
@@ -197,17 +191,58 @@ export function CreateResumeView({
             }
           />
 
-          <Preview
-            resumeStyles={resumeStyles}
-            pagesHtml={pagesHtml}
-            zoomStyle={zoomStyle}
-            pageStyle={pageStyle}
-            paginatedSectionsCount={paginatedSectionsCount}
-            zoomPercent={zoomPercent}
-            resumeRef={resumeRef}
-            resumeWrapperRef={resumeWrapperRef}
-            maxHeight={showJobDescription ? "75vh" : "85vh"}
-          />
+          <div
+            className="relative overflow-hidden rounded-lg bg-zinc-100 p-4 min-w-0 w-full"
+            style={{ maxHeight: showJobDescription ? "75vh" : "85vh" }}
+          >
+            <div className="flex w-full justify-center">
+              <div className="relative z-10 flex w-full max-w-full flex-col items-center">
+                {pdfLiveUrl ? (
+                  <iframe
+                    title="Resume PDF preview"
+                    src={pdfLiveUrl}
+                    className="h-[72vh] w-full max-w-[860px] rounded-md bg-white shadow-sm"
+                    style={{ border: "none" }}
+                  />
+                ) : (
+                  <div className="flex h-[72vh] w-full max-w-[860px] items-center justify-center rounded-md bg-white text-sm text-zinc-600 shadow-sm">
+                    Generating PDF preview...
+                  </div>
+                )}
+
+                {pdfLiveGenerating ? (
+                  <div className="mt-2 text-[11px] font-medium text-zinc-500">Updating preview...</div>
+                ) : null}
+                {pdfLiveError ? (
+                  <div className="mt-2 text-[11px] font-medium text-rose-700">{pdfLiveError}</div>
+                ) : null}
+              </div>
+            </div>
+          </div>
+
+          {/* Offscreen HTML render used only for measurement/pagination. */}
+          <div
+            aria-hidden="true"
+            style={{
+              position: "fixed",
+              left: -100000,
+              top: 0,
+              width: 900,
+              pointerEvents: "none",
+              opacity: 0,
+            }}
+          >
+            <Preview
+              resumeStyles={resumeStyles}
+              pagesHtml={pagesHtml}
+              pageStyle={pageStyle}
+              paginatedSectionsCount={paginatedSectionsCount}
+              resumeRef={resumeRef}
+              resumeWrapperRef={resumeWrapperRef}
+              maxHeight={"none"}
+              showFooter={false}
+            />
+          </div>
         </div>
       </div>
     </section>

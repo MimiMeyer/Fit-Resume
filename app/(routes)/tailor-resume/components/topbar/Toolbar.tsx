@@ -24,9 +24,6 @@ type ToolbarProps = {
   setBorders: (next: ResumeBorders) => void;
   spacing: ResumeSpacing;
   setSpacing: (next: ResumeSpacing) => void;
-  zoomPercent: number;
-  zoomStep: number;
-  onZoomChange: (next: number) => void;
   defaultPdfFileName: string;
   onDownloadPdf: (fileName?: string) => void;
   pdfGenerating: boolean;
@@ -44,11 +41,9 @@ const accentOptions = [
   { name: "None", value: "#ffffff" },
 ];
 const fontFamilyOptions = [
-  { name: "Calibri", value: 'Calibri, "Segoe UI", Arial, sans-serif' },
-  { name: "Segoe UI", value: '"Segoe UI", Calibri, Arial, sans-serif' },
-  { name: "Arial", value: "Arial, Helvetica, sans-serif" },
-  { name: "Georgia", value: "Georgia, serif" },
-  { name: "Times New Roman", value: '"Times New Roman", Times, serif' },
+  { name: "Helvetica / Arial (Sans)", value: "Arial, Helvetica, sans-serif" },
+  { name: "Times New Roman (Serif)", value: '"Times New Roman", Times, serif' },
+  { name: "Courier New (Monospace)", value: '"Courier New", Courier, monospace' },
 ];
 
 type StyleTab = "fonts" | "size" | "spacing" | "borders";
@@ -70,9 +65,6 @@ export function Toolbar(props: ToolbarProps) {
     setBorders,
     spacing,
     setSpacing,
-    zoomPercent,
-    zoomStep,
-    onZoomChange,
     defaultPdfFileName,
     onDownloadPdf,
     pdfGenerating,
@@ -151,31 +143,6 @@ export function Toolbar(props: ToolbarProps) {
     setBorders({ ...borders, targets: { page: next, summary: next, section: next, content: next } });
   const areAllBorderTargetsSelected = (targets: ResumeBorders["targets"]) =>
     targets.page && targets.summary && targets.section && targets.content;
-
-  const ZoomPill = () => (
-    <div className="flex items-center gap-2 rounded-full border border-zinc-200 bg-zinc-50 px-2 py-1 text-[10px] font-semibold text-zinc-700 sm:px-3 sm:py-1.5 sm:text-[11px]">
-      <button
-        aria-label="Zoom out"
-        onClick={() => onZoomChange(zoomPercent - zoomStep)}
-        className="rounded-full px-1.5 py-0.5 transition hover:bg-white sm:px-2 sm:py-1"
-      >
-        -
-      </button>
-      <div className="flex items-center gap-2">
-        <span className="text-zinc-600">Zoom</span>
-        <span className="rounded-full bg-white px-1.5 py-0.5 text-zinc-900 shadow-sm sm:px-2">
-          {zoomPercent}%
-        </span>
-      </div>
-      <button
-        aria-label="Zoom in"
-        onClick={() => onZoomChange(zoomPercent + zoomStep)}
-        className="rounded-full px-1.5 py-0.5 transition hover:bg-white sm:px-2 sm:py-1"
-      >
-        +
-      </button>
-    </div>
-  );
 
   return (
     <div className="relative z-30 flex flex-col gap-2 overflow-visible sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
@@ -464,7 +431,6 @@ export function Toolbar(props: ToolbarProps) {
               </div>
 
               <div className="flex w-full flex-wrap items-center justify-end gap-2 sm:ml-auto sm:w-auto">
-                <ZoomPill />
                 <div className="relative" ref={downloadMenuRef}>
                   <button
                     type="button"
