@@ -1007,6 +1007,7 @@ export function useCreateResume(
   const [pdfLiveUrl, setPdfLiveUrl] = useState<string | null>(null);
   const [pdfLiveGenerating, setPdfLiveGenerating] = useState(false);
   const [pdfLiveError, setPdfLiveError] = useState<string | null>(null);
+  const [pdfLiveUrlKey, setPdfLiveUrlKey] = useState<string | null>(null);
 
   const buildPdfPayload = (finalFileName: string): TailorResumePdfRequest => ({
     fileName: finalFileName,
@@ -1074,6 +1075,11 @@ export function useCreateResume(
   useEffect(() => {
     let alive = true;
     const controller = new AbortController();
+    setPdfLiveUrl((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return null;
+    });
+    setPdfLiveUrlKey(null);
     const timeout = window.setTimeout(async () => {
       setPdfLiveGenerating(true);
       setPdfLiveError(null);
@@ -1085,6 +1091,7 @@ export function useCreateResume(
           if (prev) URL.revokeObjectURL(prev);
           return url;
         });
+        setPdfLiveUrlKey(pdfLiveKey);
       } catch (err) {
         if (!alive) return;
         if (err instanceof DOMException && err.name === "AbortError") return;
@@ -1112,7 +1119,7 @@ export function useCreateResume(
       const finalFileName = resolved ?? defaultPdfFileName;
 
       // Prefer the live preview bytes if available (exactly what the user sees).
-      if (pdfLiveUrl) {
+      if (pdfLiveUrl && !pdfLiveGenerating && pdfLiveKey && pdfLiveKey === pdfLiveUrlKey) {
         const a = document.createElement("a");
         a.href = pdfLiveUrl;
         a.download = finalFileName;
