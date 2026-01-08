@@ -5,13 +5,12 @@ import { CSSProperties, MutableRefObject, useEffect, useRef, useState } from "re
 type PreviewProps = {
   resumeStyles: string;
   pagesHtml: string;
-  zoomStyle: CSSProperties;
   pageStyle: CSSProperties;
   paginatedSectionsCount: number;
-  zoomPercent: number;
   resumeRef: MutableRefObject<HTMLDivElement | null>;
   resumeWrapperRef: MutableRefObject<HTMLDivElement | null>;
   maxHeight: string;
+  showFooter?: boolean;
   isEditable?: boolean;
   onCommitEdits?: (html: string) => void;
 };
@@ -19,13 +18,12 @@ type PreviewProps = {
 export function Preview({
   resumeStyles,
   pagesHtml,
-  zoomStyle,
   pageStyle,
   paginatedSectionsCount,
-  zoomPercent,
   resumeRef,
   resumeWrapperRef,
   maxHeight,
+  showFooter = true,
   isEditable = false,
   onCommitEdits,
 }: PreviewProps) {
@@ -377,7 +375,7 @@ export function Preview({
       <div className="flex w-full justify-center">
         <div className="relative z-10 flex w-full max-w-full flex-col items-center" style={{ gap: "22px" }}>
           <style>{resumeStyles}</style>
-          <div style={zoomStyle} className="resume-wrapper" ref={resumeWrapperRef}>
+          <div className="resume-wrapper" ref={resumeWrapperRef}>
             <div className="resume-root" style={pageStyle}>
               <div
                 className="resume-doc"
@@ -390,10 +388,12 @@ export function Preview({
               />
             </div>
           </div>
-          <p className="text-[11px] text-zinc-600">
-            {(isEditable ? livePageCount : paginatedSectionsCount)} page
-            {(isEditable ? livePageCount : paginatedSectionsCount) > 1 ? "s" : ""} | {zoomPercent}% zoom
-          </p>
+          {showFooter ? (
+            <p className="text-[11px] text-zinc-600">
+              {(isEditable ? livePageCount : paginatedSectionsCount)} page
+              {(isEditable ? livePageCount : paginatedSectionsCount) > 1 ? "s" : ""}
+            </p>
+          ) : null}
         </div>
       </div>
     </div>

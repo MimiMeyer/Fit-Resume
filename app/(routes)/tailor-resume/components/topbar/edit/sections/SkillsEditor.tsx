@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { TailorSkillDraft } from "../../../../model/edit-state";
 import { ActionRow } from "../shared/ActionRow";
 import { useAutoScrollOnAdd } from "../shared/useAutoScrollOnAdd";
@@ -24,6 +24,9 @@ export function SkillsEditor({
   onSaveProfile: (next: TailorSkillDraft[]) => void;
 }) {
   const [items, setItems] = useState<TailorSkillDraft[]>(initial);
+  useEffect(() => {
+    setItems(initial);
+  }, [initial]);
   const { listRef, markAdded } = useAutoScrollOnAdd(items.length);
 
   const diffs = useMemo(() => {

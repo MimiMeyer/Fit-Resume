@@ -1,9 +1,10 @@
 export const DEFAULT_FONT_SIZES = { headingPx: 22, subtitlePx: 13, bodyPx: 11 };
 
 export const DEFAULT_FONT_FAMILIES = {
-  title: 'Calibri, "Segoe UI", Arial, sans-serif',
-  heading: '"Segoe UI", Calibri, Arial, sans-serif',
-  body: 'Calibri, "Segoe UI", Arial, sans-serif',
+  // PDF-safe font stacks (match React-PDF built-in fonts as closely as possible).
+  title: "Arial, Helvetica, sans-serif",
+  heading: "Arial, Helvetica, sans-serif",
+  body: "Arial, Helvetica, sans-serif",
 };
 
 export const DEFAULT_SPACING = { sectionGapPx: 8, bulletGapPx: 5, pagePaddingPx: 12 };

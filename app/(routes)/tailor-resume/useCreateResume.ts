@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { buildResumeStyles } from "./components/preview/render/css";
 import { buildPagesHtml, buildSectionHtml } from "./components/preview/render/html";
-import { buildDefaultResumePdfFileName, downloadResumePdf } from "./components/preview/render/pdf";
+import { buildDefaultResumePdfFileName, sanitizePdfFileName } from "./components/preview/render/pdf";
 import { measureSections, paginateByMeasurement } from "./components/preview/render/pagination";
 import {
   DEFAULT_BORDERS,
@@ -38,11 +38,10 @@ import type {
   TailorResumeDraft,
   TailorSkillDraft,
 } from "./model/edit-state";
+import type { TailorResumePdfRequest } from "@/app/api/tailor-resume/pdf/types";
 
 const PAGE_WIDTH_PX = 794; // A4 width at 96 DPI
 const PAGE_HEIGHT_PX = 1123; // A4 height at 96 DPI
-const ZOOM_MIN = 0.1;
-const ZOOM_MAX = 3.0;
 
 const SECTION_ORDER: ResumeSectionId[] = [
   "experience",
@@ -67,7 +66,6 @@ const RESUME_ACCENT_COLOR_CACHE_KEY = "fitresume.tailorResumeAccentColor.v1";
 const RESUME_ACCENT_OPACITY_CACHE_KEY = "fitresume.tailorResumeAccentOpacity.v1";
 const RESUME_SPACING_CACHE_KEY = "fitresume.tailorResumeSpacing.v1";
 const RESUME_LAYOUT_MODE_CACHE_KEY = "fitresume.tailorResumeLayoutMode.v1";
-const RESUME_ZOOM_CACHE_KEY = "fitresume.tailorResumeZoom.v1";
 const RESUME_SHOW_JD_CACHE_KEY = "fitresume.tailorResumeShowJobDescription.v1";
 
 function normalizeKey(value: string) {
@@ -104,14 +102,6 @@ function safeParseAccentColor(raw: string | null): string | null {
 function safeParseLayoutMode(raw: string | null): ResumeLayoutMode | null {
   if (raw === "single" || raw === "two") return raw;
   return null;
-}
-
-function safeParseZoom(raw: string | null): number | null {
-  if (!raw) return null;
-  const parsed = Number(raw);
-  if (!Number.isFinite(parsed)) return null;
-  if (parsed < ZOOM_MIN || parsed > ZOOM_MAX) return null;
-  return parsed;
 }
 
 function safeParseBoolean(raw: string | null): boolean | null {
@@ -164,10 +154,22 @@ function safeParseFontFamilies(raw: string | null): ResumeFontFamilies | null {
     const heading = typeof parsed.heading === "string" ? parsed.heading.trim() : "";
     const body = typeof parsed.body === "string" ? parsed.body.trim() : "";
     if (!title || !heading || !body) return null;
-    return { title, heading, body };
+    return {
+      title: normalizePdfFontFamily(title),
+      heading: normalizePdfFontFamily(heading),
+      body: normalizePdfFontFamily(body),
+    };
   } catch {
     return null;
   }
+}
+
+function normalizePdfFontFamily(value: string) {
+  const v = value.toLowerCase();
+  if (v.includes("courier") || v.includes("mono")) return '"Courier New", Courier, monospace';
+  if (v.includes("times") || v.includes("georgia") || v.includes("serif"))
+    return '"Times New Roman", Times, serif';
+  return "Arial, Helvetica, sans-serif";
 }
 
 function safeParseBorders(raw: string | null): ResumeBorders | null {
@@ -337,9 +339,6 @@ export function useCreateResume(
 
   const [showJobDescription, setShowJobDescription] = useState(true);
 
-  const [zoom, setZoom] = useState(0.75);
-  const zoomPercent = Math.round(zoom * 100);
-
   const [pdfGenerating, setPdfGenerating] = useState(false);
   const [pdfError, setPdfError] = useState<string | null>(null);
 
@@ -358,11 +357,6 @@ export function useCreateResume(
   const setLayoutModePersisted = (mode: ResumeLayoutMode) => {
     setLayoutMode(mode);
     sessionStorage.setItem(RESUME_LAYOUT_MODE_CACHE_KEY, mode);
-  };
-
-  const setZoomPersisted = (next: number) => {
-    setZoom(next);
-    sessionStorage.setItem(RESUME_ZOOM_CACHE_KEY, String(next));
   };
 
   const setShowJobDescriptionPersisted = (next: boolean | ((prev: boolean) => boolean)) => {
@@ -423,12 +417,6 @@ export function useCreateResume(
     if (nextAccentColor) setAccentColor(nextAccentColor);
     const nextLayoutMode = safeParseLayoutMode(sessionStorage.getItem(RESUME_LAYOUT_MODE_CACHE_KEY));
     if (nextLayoutMode) setLayoutMode(nextLayoutMode);
-    const nextZoom = safeParseZoom(sessionStorage.getItem(RESUME_ZOOM_CACHE_KEY));
-    if (nextZoom != null) {
-      setZoom(nextZoom);
-    } else if (window.innerWidth < 640) {
-      setZoom(0.35);
-    }
     const nextShowJd = safeParseBoolean(sessionStorage.getItem(RESUME_SHOW_JD_CACHE_KEY));
     if (nextShowJd != null) {
       setShowJobDescription(nextShowJd);
@@ -472,8 +460,6 @@ export function useCreateResume(
 
     return applyOpacityToPalette({ accent, accentLight, accentSoft, accentBorder, accentText }, accentOpacity);
   }, [accentColor, accentOpacity]);
-
-  const clampZoom = (value: number) => Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, value));
 
   const headerForEdit: TailorHeaderDraft = useMemo(() => {
     const fromDraft = draft?.header ?? {};
@@ -697,6 +683,21 @@ export function useCreateResume(
     }));
   }, [draft?.certifications, profile.certs]);
 
+  const certsForView = useMemo(
+    () =>
+      (certificationsForEdit || [])
+        .map((c) => normalizeTailorCertificationDraft(c))
+        .filter((c) => c.name)
+        .map((c, idx) => ({
+          id: c.id ?? -(idx + 1),
+          name: c.name,
+          issuer: c.issuer ? c.issuer : null,
+          issuedYear: c.issuedYear ?? null,
+          credentialUrl: c.credentialUrl ? c.credentialUrl : null,
+        })),
+    [certificationsForEdit],
+  );
+
   const [paginatedSections, setPaginatedSections] = useState<ResumeSectionId[][]>([
     SECTION_ORDER,
   ]);
@@ -712,17 +713,6 @@ export function useCreateResume(
   ]);
 
   const { resumeStyles, pagesHtml: basePagesHtml } = useMemo(() => {
-    const certsForView = (certificationsForEdit || [])
-      .map((c) => normalizeTailorCertificationDraft(c))
-      .filter((c) => c.name)
-      .map((c, idx) => ({
-        id: c.id ?? -(idx + 1),
-        name: c.name,
-        issuer: c.issuer ? c.issuer : null,
-        issuedYear: c.issuedYear ?? null,
-        credentialUrl: c.credentialUrl ? c.credentialUrl : null,
-      }));
-
     const sectionHtml = buildSectionHtml({
       experiencesForView,
       skillGroups,
@@ -771,7 +761,7 @@ export function useCreateResume(
     layoutMode,
     paginatedSections,
     palette,
-    certificationsForEdit,
+    certsForView,
     headerForEdit.fullName,
     headerForEdit.title,
     projectsForView,
@@ -983,16 +973,6 @@ export function useCreateResume(
     ],
   );
 
-  const zoomStyle = useMemo(
-    () =>
-      ({
-        transform: `scale(${zoom})`,
-        transformOrigin: "top center",
-        width: `${PAGE_WIDTH_PX}px`,
-      }) as CSSProperties,
-    [zoom],
-  );
-
   const resetGenerated = () => {
     setGenerated(null);
     setGenerateError(null);
@@ -1017,8 +997,6 @@ export function useCreateResume(
     sessionStorage.removeItem(RESUME_SPACING_CACHE_KEY);
     setLayoutModePersisted("two");
     sessionStorage.removeItem(RESUME_LAYOUT_MODE_CACHE_KEY);
-    setZoom(window.innerWidth < 640 ? 0.35 : 0.75);
-    sessionStorage.removeItem(RESUME_ZOOM_CACHE_KEY);
     sessionStorage.removeItem(RESUME_SHOW_JD_CACHE_KEY);
   };
 
@@ -1026,19 +1004,140 @@ export function useCreateResume(
     return buildDefaultResumePdfFileName(headerForEdit.fullName);
   }, [headerForEdit.fullName]);
 
+  const [pdfLiveUrl, setPdfLiveUrl] = useState<string | null>(null);
+  const [pdfLiveGenerating, setPdfLiveGenerating] = useState(false);
+  const [pdfLiveError, setPdfLiveError] = useState<string | null>(null);
+  const [pdfLiveUrlKey, setPdfLiveUrlKey] = useState<string | null>(null);
+
+  const buildPdfPayload = (finalFileName: string): TailorResumePdfRequest => ({
+    fileName: finalFileName,
+    paginatedSections,
+    layoutMode,
+    palette,
+    accentOpacity,
+    fontSizes,
+    fontFamilies,
+    spacing,
+    borders,
+    accentIsNone: accentColor.toLowerCase() === "#ffffff",
+    header: headerForEdit,
+    experiences: experiencesForView,
+    education: educationForView,
+    skillGroups,
+    projects: projectsForView,
+    certifications: certsForView.map((c) => ({
+      name: c.name,
+      issuer: c.issuer,
+      credentialUrl: c.credentialUrl,
+    })),
+  });
+
+  const createPdfBlob = async (finalFileName: string, signal?: AbortSignal) => {
+    const payload = buildPdfPayload(finalFileName);
+    const res = await fetch("/api/tailor-resume/pdf", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+      cache: "no-store",
+      signal,
+    });
+
+    if (!res.ok) {
+      const err = (await res.json().catch(() => null)) as null | { error?: string };
+      throw new Error(err?.error || "Unable to generate PDF.");
+    }
+
+    return res.blob();
+  };
+
+  const pdfLiveKey = useMemo(() => {
+    // Exclude file name from the live preview (it doesn't affect PDF bytes, only download headers).
+    const payload = buildPdfPayload("Resume.pdf");
+    return JSON.stringify({ ...payload, fileName: null });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    paginatedSections,
+    layoutMode,
+    palette,
+    fontSizes,
+    fontFamilies,
+    spacing,
+    borders,
+    accentColor,
+    headerForEdit,
+    experiencesForView,
+    educationForView,
+    skillGroups,
+    projectsForView,
+    certsForView,
+  ]);
+
+  useEffect(() => {
+    let alive = true;
+    const controller = new AbortController();
+    setPdfLiveUrl((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return null;
+    });
+    setPdfLiveUrlKey(null);
+    const timeout = window.setTimeout(async () => {
+      setPdfLiveGenerating(true);
+      setPdfLiveError(null);
+      try {
+        const blob = await createPdfBlob("Resume.pdf", controller.signal);
+        if (!alive) return;
+        const url = URL.createObjectURL(blob);
+        setPdfLiveUrl((prev) => {
+          if (prev) URL.revokeObjectURL(prev);
+          return url;
+        });
+        setPdfLiveUrlKey(pdfLiveKey);
+      } catch (err) {
+        if (!alive) return;
+        if (err instanceof DOMException && err.name === "AbortError") return;
+        const message = err instanceof Error ? err.message : "Unable to generate PDF preview.";
+        setPdfLiveError(message);
+      } finally {
+        if (alive) setPdfLiveGenerating(false);
+      }
+    }, 600);
+
+    return () => {
+      alive = false;
+      window.clearTimeout(timeout);
+      controller.abort();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pdfLiveKey]);
+
   const handleDownloadPdf = async (fileName?: string) => {
     setPdfError(null);
     setPdfGenerating(true);
 
     try {
-      await downloadResumePdf({
-        resumeDocEl: resumeRef.current,
-        resumeWrapperEl: resumeWrapperRef.current,
-        fullName: headerForEdit.fullName,
-        fileName,
-        pageWidthPx: PAGE_WIDTH_PX,
-        pageHeightPx: PAGE_HEIGHT_PX,
-      });
+      const resolved = fileName ? sanitizePdfFileName(fileName) : null;
+      const finalFileName = resolved ?? defaultPdfFileName;
+
+      // Prefer the live preview bytes if available (exactly what the user sees).
+      if (pdfLiveUrl && !pdfLiveGenerating && pdfLiveKey && pdfLiveKey === pdfLiveUrlKey) {
+        const a = document.createElement("a");
+        a.href = pdfLiveUrl;
+        a.download = finalFileName;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        return;
+      }
+
+      const blob = await createPdfBlob(finalFileName);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = finalFileName;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Unable to generate PDF.";
       setPdfError(message);
@@ -1058,9 +1157,6 @@ export function useCreateResume(
     isGenerating,
     showJobDescription,
     setShowJobDescription: setShowJobDescriptionPersisted,
-    zoomPercent,
-    clampZoom,
-    setZoom: setZoomPersisted,
     pdfGenerating,
     pdfError,
     accentColor,
@@ -1074,9 +1170,11 @@ export function useCreateResume(
     setLayoutMode: setLayoutModePersisted,
     resumeStyles,
     pagesHtml: basePagesHtml,
-    zoomStyle,
     pageStyle,
     paginatedSectionsCount: paginatedSections.length,
+    pdfLiveUrl,
+    pdfLiveGenerating,
+    pdfLiveError,
     resumeRef,
     resumeWrapperRef,
     handleGenerate,
