@@ -27,6 +27,7 @@ export type TailorResumePdfHeader = {
 export type TailorResumePdfCertification = {
   name: string;
   issuer?: string | null;
+  issuedYear?: number | null;
   credentialUrl?: string | null;
 };
 

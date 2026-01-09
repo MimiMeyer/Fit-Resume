@@ -323,7 +323,7 @@ export function useCreateResume(
 
   const [accentColor, setAccentColor] = useState("#0c6d82");
   const [accentOpacity, setAccentOpacity] = useState(1);
-  const [layoutMode, setLayoutMode] = useState<ResumeLayoutMode>("two");
+  const [layoutMode, setLayoutMode] = useState<ResumeLayoutMode>("single");
   const paginatedSections = useMemo<ResumeSectionId[][]>(() => [SECTION_ORDER], []);
 
   const setAccentColorPersisted = (color: string) => {
@@ -540,8 +540,17 @@ export function useCreateResume(
         .filter((edu) => edu.institution)
         .map((edu) => ({
           degree: edu.degree || "",
+          field: edu.field || "",
           school: edu.institution,
-          period: edu.startYear && edu.endYear ? `${edu.startYear} - ${edu.endYear}` : "",
+          period:
+            edu.startYear && edu.endYear
+              ? `${edu.startYear} - ${edu.endYear}`
+              : edu.startYear
+                ? String(edu.startYear)
+                : edu.endYear
+                  ? String(edu.endYear)
+                  : "",
+          details: edu.details || "",
         })),
     [educationsForEdit],
   );
@@ -823,7 +832,7 @@ export function useCreateResume(
     sessionStorage.removeItem(RESUME_ACCENT_OPACITY_CACHE_KEY);
     setSpacing(DEFAULT_SPACING);
     sessionStorage.removeItem(RESUME_SPACING_CACHE_KEY);
-    setLayoutModePersisted("two");
+    setLayoutModePersisted("single");
     sessionStorage.removeItem(RESUME_LAYOUT_MODE_CACHE_KEY);
     sessionStorage.removeItem(RESUME_SHOW_JD_CACHE_KEY);
   };
@@ -856,6 +865,7 @@ export function useCreateResume(
     certifications: certsForView.map((c) => ({
       name: c.name,
       issuer: c.issuer,
+      issuedYear: c.issuedYear ?? null,
       credentialUrl: c.credentialUrl,
     })),
   });

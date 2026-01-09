@@ -157,6 +157,13 @@ export function ResumePdfDocument(props: TailorResumePdfRequest) {
       fontSize: pxToPt(fontSizes.bodyPx),
       fontFamily: pdfFonts.body,
     },
+    rowDetail: {
+      color: bodyTextColor,
+      marginTop: pxToPt(3),
+      fontSize: pxToPt(fontSizes.bodyPx),
+      fontFamily: pdfFonts.body,
+      lineHeight: 1.25,
+    },
     bullet: { flexDirection: "row", marginBottom: pxToPt(spacing.bulletGapPx) },
     bulletDot: { width: pxToPt(10), marginRight: pxToPt(6) },
     bulletText: { flex: 1 },
@@ -179,7 +186,7 @@ export function ResumePdfDocument(props: TailorResumePdfRequest) {
         <Page key={pageIndex} size="A4" style={styles.page}>
           {pageIndex === 0 ? (
             <>
-              <Text style={styles.headerName}>{header.fullName || "Resume"}</Text>
+              {header.fullName ? <Text style={styles.headerName}>{header.fullName}</Text> : null}
 
               {header.summary || header.title ? (
                 <View style={styles.summaryBox}>
@@ -196,7 +203,10 @@ export function ResumePdfDocument(props: TailorResumePdfRequest) {
             </>
           ) : null}
 
-          {layoutMode === "two" ? (
+          {layoutMode === "two" &&
+          ((pageIndex === 0 && contactItems.length > 0) ||
+            (sectionIds.includes("skills") && (props.skillGroups?.length ?? 0) > 0) ||
+            (sectionIds.includes("certifications") && (props.certifications?.length ?? 0) > 0)) ? (
             <View style={styles.columns}>
               <View style={styles.colSide}>
                 {pageIndex === 0 ? (
@@ -243,6 +253,7 @@ export function ResumePdfDocument(props: TailorResumePdfRequest) {
                     boxStyle={styles.section}
                     cardStyle={styles.card}
                     metaStyle={styles.rowMeta}
+                    detailStyle={styles.rowDetail}
                     rowTitleStyle={styles.rowTitle}
                     education={props.education}
                   />
@@ -289,6 +300,7 @@ export function ResumePdfDocument(props: TailorResumePdfRequest) {
                   boxStyle={styles.section}
                   cardStyle={styles.card}
                   metaStyle={styles.rowMeta}
+                  detailStyle={styles.rowDetail}
                   rowTitleStyle={styles.rowTitle}
                   education={props.education}
                 />
@@ -533,12 +545,14 @@ function SideCertificationsSection({
       <View style={{ marginTop: 6 }}>
         {certs.map((c) => {
           const issuer = c.issuer ? ` — ${c.issuer}` : "";
+          const year = c.issuedYear ? ` • ${c.issuedYear}` : "";
           const href = c.credentialUrl ? normalizeUrl(c.credentialUrl) : null;
           if (href) {
             return (
               <Link key={c.name} src={href} style={[linkStyle, marginBottomStyle]}>
                 {c.name}
                 {issuer}
+                {year}
               </Link>
             );
           }
@@ -546,6 +560,7 @@ function SideCertificationsSection({
             <Text key={c.name} style={[itemStyle, marginBottomStyle]}>
               {c.name}
               {issuer}
+              {year}
             </Text>
           );
         })}
@@ -616,6 +631,7 @@ function EducationSection({
   boxStyle,
   cardStyle,
   metaStyle,
+  detailStyle,
   rowTitleStyle,
   education,
 }: {
@@ -623,6 +639,7 @@ function EducationSection({
   boxStyle: Style;
   cardStyle: Style;
   metaStyle: Style;
+  detailStyle: Style;
   rowTitleStyle: Style;
   education: TailorResumePdfRequest["education"];
 }) {
@@ -634,11 +651,15 @@ function EducationSection({
         <View style={{ marginTop: 2 }}>
           {education.map((edu, idx) => (
             <View key={`${edu.school}|${idx}`} style={{ marginBottom: 8 }}>
-              <Text style={rowTitleStyle}>{edu.degree}</Text>
+              <Text style={rowTitleStyle}>
+                {edu.degree}
+                {edu.field ? `, ${edu.field}` : ""}
+              </Text>
               <Text style={metaStyle}>
                 {edu.school}
                 {edu.period ? ` — ${edu.period}` : ""}
               </Text>
+              {edu.details ? <Text style={detailStyle}>{edu.details}</Text> : null}
             </View>
           ))}
         </View>
@@ -740,12 +761,14 @@ function CertificationsSection({
         <View style={{ marginTop: 2 }}>
           {certs.map((c) => {
             const issuer = c.issuer ? ` — ${c.issuer}` : "";
+            const year = c.issuedYear ? ` • ${c.issuedYear}` : "";
             const href = c.credentialUrl ? normalizeUrl(c.credentialUrl) : null;
             if (href) {
               return (
                 <Link key={c.name} src={href} style={[linkStyle, marginBottomStyle]}>
                   {c.name}
                   {issuer}
+                  {year}
                 </Link>
               );
             }
@@ -753,6 +776,7 @@ function CertificationsSection({
               <Text key={c.name} style={marginBottomStyle}>
                 {c.name}
                 {issuer}
+                {year}
               </Text>
             );
           })}

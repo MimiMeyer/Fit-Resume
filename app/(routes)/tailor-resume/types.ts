@@ -58,8 +58,10 @@ export type ResumeExperienceForView = {
 
 export type ResumeEducationForView = {
   degree: string;
+  field: string;
   school: string;
   period: string;
+  details: string;
 };
 
 export type ResumeProjectForView = {
