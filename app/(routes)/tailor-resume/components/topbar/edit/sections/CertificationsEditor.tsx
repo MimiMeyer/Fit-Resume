@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import type { TailorCertificationDraft } from "../../../../model/edit-state";
 import { ActionRow } from "../shared/ActionRow";
 import { useAutoScrollOnAdd } from "../shared/useAutoScrollOnAdd";
+import { SectionAdd } from "../shared/SectionAdd";
 import { dirtyInputClass, normalizeText, takeBestMatch } from "../shared/diffUtils";
 
 export function CertificationsEditor({
@@ -69,22 +70,18 @@ export function CertificationsEditor({
     });
   }, [baseline, items]);
 
+  const addCertification = () => {
+    markAdded();
+    setItems((prev) => [
+      ...prev,
+      { id: undefined, name: "", issuer: "", issuedYear: null, credentialUrl: "" },
+    ]);
+  };
+
   return (
     <div>
       <div className="flex justify-end">
-        <button
-          type="button"
-          className="text-xs font-semibold text-[var(--accent)] sm:text-sm"
-          onClick={() => {
-            markAdded();
-            setItems((prev) => [
-              ...prev,
-              { id: undefined, name: "", issuer: "", issuedYear: null, credentialUrl: "" },
-            ]);
-          }}
-        >
-          + Add certification
-        </button>
+        <SectionAdd label="+ Add certification" disabled={isPending} onAdd={addCertification} mode="top" />
       </div>
 
       <div ref={listRef} className="mt-3 grid gap-4">
@@ -159,6 +156,8 @@ export function CertificationsEditor({
           </div>
         ))}
       </div>
+
+      <SectionAdd label="+ Add certification" disabled={isPending} onAdd={addCertification} mode="bottom" itemsCount={items.length} />
 
       <ActionRow
         isPending={isPending}

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { TailorSkillDraft } from "../../../../model/edit-state";
 import { ActionRow } from "../shared/ActionRow";
 import { useAutoScrollOnAdd } from "../shared/useAutoScrollOnAdd";
+import { SectionAdd } from "../shared/SectionAdd";
 import { dirtyInputClass, normalizeKey } from "../shared/diffUtils";
 
 export function SkillsEditor({
@@ -60,19 +61,15 @@ export function SkillsEditor({
     });
   }, [baseline, items]);
 
+  const addSkill = () => {
+    markAdded();
+    setItems((prev) => [...prev, { id: undefined, name: "", category: "" }]);
+  };
+
   return (
     <div>
       <div className="flex justify-end">
-        <button
-          type="button"
-          className="text-xs font-semibold text-[var(--accent)] sm:text-sm"
-          onClick={() => {
-            markAdded();
-            setItems((prev) => [...prev, { id: undefined, name: "", category: "" }]);
-          }}
-        >
-          + Add skill
-        </button>
+        <SectionAdd label="+ Add skill" disabled={isPending} onAdd={addSkill} mode="top" />
       </div>
 
       <div ref={listRef} className="mt-3 grid gap-3">
@@ -115,6 +112,8 @@ export function SkillsEditor({
           </div>
         ))}
       </div>
+
+      <SectionAdd label="+ Add skill" disabled={isPending} onAdd={addSkill} mode="bottom" itemsCount={items.length} />
 
       <ActionRow
         isPending={isPending}

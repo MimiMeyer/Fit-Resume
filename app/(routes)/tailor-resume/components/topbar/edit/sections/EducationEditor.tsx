@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import type { TailorEducationDraft } from "../../../../model/edit-state";
 import { ActionRow } from "../shared/ActionRow";
 import { useAutoScrollOnAdd } from "../shared/useAutoScrollOnAdd";
+import { SectionAdd } from "../shared/SectionAdd";
 import { dirtyInputClass, normalizeText, takeBestMatch } from "../shared/diffUtils";
 
 function eduKey(edu: TailorEducationDraft) {
@@ -90,30 +91,26 @@ export function EducationEditor({
     });
   }, [baseline, items]);
 
+  const addEducation = () => {
+    markAdded();
+    setItems((prev) => [
+      ...prev,
+      {
+        id: undefined,
+        institution: "",
+        degree: "",
+        field: "",
+        startYear: null,
+        endYear: null,
+        details: "",
+      },
+    ]);
+  };
+
   return (
     <div>
       <div className="flex justify-end">
-        <button
-          type="button"
-          className="text-xs font-semibold text-[var(--accent)] sm:text-sm"
-          onClick={() => {
-            markAdded();
-            setItems((prev) => [
-              ...prev,
-              {
-                id: undefined,
-                institution: "",
-                degree: "",
-                field: "",
-                startYear: null,
-                endYear: null,
-                details: "",
-              },
-            ]);
-          }}
-        >
-          + Add education
-        </button>
+        <SectionAdd label="+ Add education" disabled={isPending} onAdd={addEducation} mode="top" />
       </div>
 
       <div ref={listRef} className="mt-3 grid gap-4">
@@ -216,6 +213,8 @@ export function EducationEditor({
           </div>
         ))}
       </div>
+
+      <SectionAdd label="+ Add education" disabled={isPending} onAdd={addEducation} mode="bottom" itemsCount={items.length} />
 
       <ActionRow
         isPending={isPending}

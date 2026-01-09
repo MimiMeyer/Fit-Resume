@@ -48,6 +48,7 @@ export function Modal({
       {isOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden bg-black/30 px-3 py-8 backdrop-blur-sm sm:px-4 sm:py-10">
           <div
+            data-modal-scroll
             className="max-h-[90vh] w-full max-w-2xl overflow-y-auto overflow-x-hidden rounded-3xl bg-white shadow-xl ring-1 ring-indigo-100"
             onClick={(e) => {
               if ((e.target as HTMLElement | null)?.dataset.closeModal !== undefined) {

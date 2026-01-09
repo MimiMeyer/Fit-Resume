@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import type { TailorExperienceDraft } from "../../../../model/edit-state";
 import { ActionRow } from "../shared/ActionRow";
 import { useAutoScrollOnAdd } from "../shared/useAutoScrollOnAdd";
+import { SectionAdd } from "../shared/SectionAdd";
 import { BulletTextarea } from "@/app/components/BulletTextarea";
 import { dirtyInputClass, normalizeKey, normalizeText, takeBestMatch } from "../shared/diffUtils";
 
@@ -80,22 +81,18 @@ export function ExperienceEditor({
     });
   }, [baseline, items]);
 
+  const addExperience = () => {
+    markAdded();
+    setItems((prev) => [
+      ...prev,
+      { id: undefined, role: "", company: "", location: "", period: "", impactBullets: [] },
+    ]);
+  };
+
   return (
     <div>
       <div className="flex justify-end">
-        <button
-          type="button"
-          className="text-xs font-semibold text-[var(--accent)] sm:text-sm"
-          onClick={() => {
-            markAdded();
-            setItems((prev) => [
-              ...prev,
-              { id: undefined, role: "", company: "", location: "", period: "", impactBullets: [] },
-            ]);
-          }}
-        >
-          + Add experience
-        </button>
+        <SectionAdd label="+ Add experience" disabled={isPending} onAdd={addExperience} mode="top" />
       </div>
 
       <div ref={listRef} className="mt-3 grid gap-4">
@@ -187,6 +184,8 @@ export function ExperienceEditor({
           );
         })}
       </div>
+
+      <SectionAdd label="+ Add experience" disabled={isPending} onAdd={addExperience} mode="bottom" itemsCount={items.length} />
 
       <ActionRow
         isPending={isPending}

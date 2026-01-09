@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import type { TailorProjectDraft } from "../../../../model/edit-state";
 import { ActionRow } from "../shared/ActionRow";
 import { useAutoScrollOnAdd } from "../shared/useAutoScrollOnAdd";
+import { SectionAdd } from "../shared/SectionAdd";
 import { dirtyInputClass, normalizeKey, normalizeText, takeBestMatch } from "../shared/diffUtils";
 
 function normalizeTechText(value: string) {
@@ -95,22 +96,15 @@ export function ProjectsEditor({
       technologies: p.technologiesText.split(",").map((t) => t.trim()).filter(Boolean),
     }));
 
+  const addProject = () => {
+    markAdded();
+    setItems((prev) => [...prev, { id: undefined, title: "", description: "", link: "", technologiesText: "" }]);
+  };
+
   return (
     <div>
       <div className="flex justify-end">
-        <button
-          type="button"
-          className="text-xs font-semibold text-[var(--accent)] sm:text-sm"
-          onClick={() => {
-            markAdded();
-            setItems((prev) => [
-              ...prev,
-              { id: undefined, title: "", description: "", link: "", technologiesText: "" },
-            ]);
-          }}
-        >
-          + Add project
-        </button>
+        <SectionAdd label="+ Add project" disabled={isPending} onAdd={addProject} mode="top" />
       </div>
 
       <div ref={listRef} className="mt-3 grid gap-4">
@@ -187,6 +181,8 @@ export function ProjectsEditor({
           </div>
         ))}
       </div>
+
+      <SectionAdd label="+ Add project" disabled={isPending} onAdd={addProject} mode="bottom" itemsCount={items.length} />
 
       <ActionRow
         isPending={isPending}
