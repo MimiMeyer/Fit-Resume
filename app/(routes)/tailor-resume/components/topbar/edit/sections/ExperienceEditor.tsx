@@ -6,6 +6,8 @@ import { ActionRow } from "../shared/ActionRow";
 import { useAutoScrollOnAdd } from "../shared/useAutoScrollOnAdd";
 import { SectionAdd } from "../shared/SectionAdd";
 import { BulletTextarea } from "@/app/components/BulletTextarea";
+import { ReorderButtons } from "@/app/components/ReorderButtons";
+import { moveArrayItem } from "@/lib/moveArrayItem";
 import { dirtyInputClass, normalizeKey, normalizeText, takeBestMatch } from "../shared/diffUtils";
 
 function normalizeBullets(items: string[]) {
@@ -32,15 +34,20 @@ export function ExperienceEditor({
   const [items, setItems] = useState<TailorExperienceDraft[]>(initial);
   const { listRef, markAdded } = useAutoScrollOnAdd(items.length);
 
+  const moveItem = (fromIndex: number, toIndex: number) =>
+    setItems((prev) => moveArrayItem(prev, fromIndex, toIndex));
+
   const diffs = useMemo(() => {
     const remaining = [...(baseline || [])];
 
     const scoreMatch = (current: TailorExperienceDraft, candidate: TailorExperienceDraft) => {
       let score = 0;
-      if (normalizeKey(current.company) && normalizeKey(current.company) === normalizeKey(candidate.company)) score += 6;
+      if (normalizeKey(current.company) && normalizeKey(current.company) === normalizeKey(candidate.company))
+        score += 6;
       if (normalizeKey(current.role) && normalizeKey(current.role) === normalizeKey(candidate.role)) score += 5;
       if (normalizeKey(current.period) && normalizeKey(current.period) === normalizeKey(candidate.period)) score += 2;
-      if (normalizeKey(current.location) && normalizeKey(current.location) === normalizeKey(candidate.location)) score += 1;
+      if (normalizeKey(current.location) && normalizeKey(current.location) === normalizeKey(candidate.location))
+        score += 1;
 
       const currentBullets = new Set(normalizeBullets(current.impactBullets || []));
       const candidateBullets = normalizeBullets(candidate.impactBullets || []);
@@ -103,89 +110,104 @@ export function ExperienceEditor({
           return (
             <div key={idx} className="rounded-xl border border-zinc-200 bg-white p-3">
               <div className="flex items-center justify-end gap-2">
-              <button
-                type="button"
-                className="text-xs font-semibold text-red-600 sm:text-sm"
-                onClick={() => setItems((prev) => prev.filter((_, i) => i !== idx))}
-              >
-                Delete
-              </button>
+                <ReorderButtons
+                  upDisabled={idx === 0}
+                  downDisabled={idx === items.length - 1}
+                  onUp={() => moveItem(idx, idx - 1)}
+                  onDown={() => moveItem(idx, idx + 1)}
+                  buttonClassName="rounded-full border border-zinc-200 bg-white px-2 py-1 text-xs font-semibold text-zinc-700 shadow-sm transition hover:bg-zinc-50 disabled:opacity-50 sm:text-sm"
+                  upAriaLabel="Move experience up"
+                  downAriaLabel="Move experience down"
+                />
+                <button
+                  type="button"
+                  className="text-xs font-semibold text-red-600 sm:text-sm"
+                  onClick={() => setItems((prev) => prev.filter((_, i) => i !== idx))}
+                >
+                  Delete
+                </button>
               </div>
 
-            <div className="mt-3 grid gap-3">
-              <div className="grid gap-2 sm:grid-cols-2">
-                <label className="grid gap-1 text-xs sm:text-sm">
-                  <span className="font-semibold text-zinc-800">Role</span>
-                  <input
-                    className={dirtyInputClass(!!rowDiff?.roleDirty)}
-                    value={exp.role}
-                    onChange={(e) =>
-                      setItems((prev) =>
-                        prev.map((p, i) => (i === idx ? { ...p, role: e.target.value } : p)),
-                      )
-                    }
-                  />
-                </label>
-                <label className="grid gap-1 text-xs sm:text-sm">
-                  <span className="font-semibold text-zinc-800">Company</span>
-                  <input
-                    className={dirtyInputClass(!!rowDiff?.companyDirty)}
-                    value={exp.company}
-                    onChange={(e) =>
-                      setItems((prev) =>
-                        prev.map((p, i) => (i === idx ? { ...p, company: e.target.value } : p)),
-                      )
-                    }
-                  />
-                </label>
-              </div>
+              <div className="mt-3 grid gap-3">
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <label className="grid gap-1 text-xs sm:text-sm">
+                    <span className="font-semibold text-zinc-800">Role</span>
+                    <input
+                      className={dirtyInputClass(!!rowDiff?.roleDirty)}
+                      value={exp.role}
+                      onChange={(e) =>
+                        setItems((prev) =>
+                          prev.map((p, i) => (i === idx ? { ...p, role: e.target.value } : p)),
+                        )
+                      }
+                    />
+                  </label>
+                  <label className="grid gap-1 text-xs sm:text-sm">
+                    <span className="font-semibold text-zinc-800">Company</span>
+                    <input
+                      className={dirtyInputClass(!!rowDiff?.companyDirty)}
+                      value={exp.company}
+                      onChange={(e) =>
+                        setItems((prev) =>
+                          prev.map((p, i) => (i === idx ? { ...p, company: e.target.value } : p)),
+                        )
+                      }
+                    />
+                  </label>
+                </div>
 
-              <div className="grid gap-2 sm:grid-cols-2">
-                <label className="grid gap-1 text-xs sm:text-sm">
-                  <span className="font-semibold text-zinc-800">Location</span>
-                  <input
-                    className={dirtyInputClass(!!rowDiff?.locationDirty)}
-                    value={exp.location}
-                    onChange={(e) =>
-                      setItems((prev) =>
-                        prev.map((p, i) => (i === idx ? { ...p, location: e.target.value } : p)),
-                      )
-                    }
-                  />
-                </label>
-                <label className="grid gap-1 text-xs sm:text-sm">
-                  <span className="font-semibold text-zinc-800">Period</span>
-                  <input
-                    className={dirtyInputClass(!!rowDiff?.periodDirty)}
-                    value={exp.period}
-                    onChange={(e) =>
-                      setItems((prev) =>
-                        prev.map((p, i) => (i === idx ? { ...p, period: e.target.value } : p)),
-                      )
-                    }
-                  />
-                </label>
-              </div>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <label className="grid gap-1 text-xs sm:text-sm">
+                    <span className="font-semibold text-zinc-800">Location</span>
+                    <input
+                      className={dirtyInputClass(!!rowDiff?.locationDirty)}
+                      value={exp.location}
+                      onChange={(e) =>
+                        setItems((prev) =>
+                          prev.map((p, i) => (i === idx ? { ...p, location: e.target.value } : p)),
+                        )
+                      }
+                    />
+                  </label>
+                  <label className="grid gap-1 text-xs sm:text-sm">
+                    <span className="font-semibold text-zinc-800">Period</span>
+                    <input
+                      className={dirtyInputClass(!!rowDiff?.periodDirty)}
+                      value={exp.period}
+                      onChange={(e) =>
+                        setItems((prev) =>
+                          prev.map((p, i) => (i === idx ? { ...p, period: e.target.value } : p)),
+                        )
+                      }
+                    />
+                  </label>
+                </div>
 
-              <BulletTextarea
-                label="Impact"
-                bullets={exp.impactBullets}
-                onChange={(nextBullets) =>
-                  setItems((prev) =>
-                    prev.map((p, i) => (i === idx ? { ...p, impactBullets: nextBullets } : p)),
-                  )
-                }
-                rows={5}
-                className={dirtyInputClass(impactDirty)}
-                placeholder="• Impact bullet"
-              />
+                <BulletTextarea
+                  label="Impact"
+                  bullets={exp.impactBullets}
+                  onChange={(nextBullets) =>
+                    setItems((prev) =>
+                      prev.map((p, i) => (i === idx ? { ...p, impactBullets: nextBullets } : p)),
+                    )
+                  }
+                  rows={5}
+                  className={dirtyInputClass(impactDirty)}
+                  placeholder="Impact bullet"
+                />
+              </div>
             </div>
-          </div>
           );
         })}
       </div>
 
-      <SectionAdd label="+ Add experience" disabled={isPending} onAdd={addExperience} mode="bottom" itemsCount={items.length} />
+      <SectionAdd
+        label="+ Add experience"
+        disabled={isPending}
+        onAdd={addExperience}
+        mode="bottom"
+        itemsCount={items.length}
+      />
 
       <ActionRow
         isPending={isPending}
@@ -197,3 +219,4 @@ export function ExperienceEditor({
     </div>
   );
 }
+

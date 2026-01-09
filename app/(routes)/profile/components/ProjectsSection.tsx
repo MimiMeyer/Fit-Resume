@@ -5,6 +5,7 @@ import { PenIcon } from "@/app/icons/pen";
 import { styles } from "../style-constants";
 import type { Project } from "@/types/project";
 import { Modal } from "../Modal";
+import { ReorderButtons } from "@/app/components/ReorderButtons";
 
 const dangerButton =
   "rounded border border-red-100 px-3 py-1 text-xs font-semibold text-red-700 transition hover:bg-red-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-500";
@@ -15,6 +16,7 @@ type Props = {
   onEdit: (project: Project) => void;
   onAdd: (input: Omit<Project, "id">) => void;
   onDelete: (id: number) => void;
+  onMove: (id: number, direction: "up" | "down") => void;
 };
 
 function AddProjectModal({ profileId, onAdd }: { profileId: number; onAdd: Props["onAdd"] }) {
@@ -83,7 +85,7 @@ function AddProjectModal({ profileId, onAdd }: { profileId: number; onAdd: Props
   );
 }
 
-export function ProjectsSection({ profileId, projects, onEdit, onAdd, onDelete }: Props) {
+export function ProjectsSection({ profileId, projects, onEdit, onAdd, onDelete, onMove }: Props) {
   if (!projects.length) {
     return (
       <section className={styles.sectionCardMd}>
@@ -93,9 +95,7 @@ export function ProjectsSection({ profileId, projects, onEdit, onAdd, onDelete }
           </div>
           <AddProjectModal profileId={profileId} onAdd={onAdd} />
         </div>
-        <p className={styles.bodyText}>
-          No projects yet.
-        </p>
+        <p className={styles.bodyText}>No projects yet.</p>
       </section>
     );
   }
@@ -109,13 +109,11 @@ export function ProjectsSection({ profileId, projects, onEdit, onAdd, onDelete }
         <AddProjectModal profileId={profileId} onAdd={onAdd} />
       </div>
       <div className={styles.stackMd}>
-        {projects.map((project) => (
+        {projects.map((project, idx) => (
           <article key={project.id} className={styles.itemCard}>
             <div className={styles.stackSmFlex}>
               <p className={styles.sectionTitle}>{project.title}</p>
-              {project.description && (
-                <p className={styles.bodyText}>{project.description}</p>
-              )}
+              {project.description && <p className={styles.bodyText}>{project.description}</p>}
               {project.technologies?.length ? (
                 <div className={styles.tagWrap}>
                   {(project.technologies ?? []).map((tech: string) => (
@@ -126,22 +124,22 @@ export function ProjectsSection({ profileId, projects, onEdit, onAdd, onDelete }
                 </div>
               ) : null}
               {project.link ? (
-                <a
-                  href={project.link}
-                  className={styles.accentLink}
-                  target="_blank"
-                  rel="noreferrer"
-                >
+                <a href={project.link} className={styles.accentLink} target="_blank" rel="noreferrer">
                   View
                 </a>
               ) : null}
             </div>
             <div className={styles.actionsRow}>
-              <button
-                onClick={() => onEdit(project)}
-                className={styles.editButton}
-                aria-label="Edit project"
-              >
+              <ReorderButtons
+                upDisabled={idx === 0}
+                downDisabled={idx === projects.length - 1}
+                onUp={() => onMove(project.id, "up")}
+                onDown={() => onMove(project.id, "down")}
+                buttonClassName={styles.editButton}
+                upAriaLabel="Move project up"
+                downAriaLabel="Move project down"
+              />
+              <button onClick={() => onEdit(project)} className={styles.editButton} aria-label="Edit project">
                 <PenIcon className={styles.iconSm} />
               </button>
               <button type="button" className={dangerButton} onClick={() => onDelete(project.id)}>

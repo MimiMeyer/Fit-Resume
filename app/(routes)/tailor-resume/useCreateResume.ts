@@ -604,28 +604,26 @@ export function useCreateResume(
     return (profile.skills || []).map((s) => ({ id: s.id, name: s.name, category: s.category.name }));
   }, [draft?.skills, generated?.skillsByCategory, profile.skills]);
 
-  const groupedSkills = useMemo(() => {
-    const grouped: Record<string, string[]> = {};
+  const skillGroups: ResumeSkillGroup[] = useMemo(() => {
+    const groups = new Map<string, { category: string; items: string[]; seen: Set<string> }>();
+
     (skillsForEdit || [])
       .map((s) => normalizeTailorSkillDraft(s))
       .filter((s) => s.name && s.category)
       .forEach((s) => {
         const category = s.category.toUpperCase();
-        if (!grouped[category]) grouped[category] = [];
-        grouped[category].push(s.name);
+        const entry =
+          groups.get(category) ?? { category, items: [], seen: new Set<string>() };
+        const key = s.name.trim().toLowerCase();
+        if (key && !entry.seen.has(key)) {
+          entry.seen.add(key);
+          entry.items.push(s.name);
+        }
+        groups.set(category, entry);
       });
 
-    for (const cat of Object.keys(grouped)) {
-      grouped[cat] = Array.from(new Set(grouped[cat])).sort((a, b) => a.localeCompare(b));
-    }
-
-    return grouped;
+    return Array.from(groups.values()).map(({ category, items }) => ({ category, items }));
   }, [skillsForEdit]);
-
-  const skillGroups: ResumeSkillGroup[] = useMemo(
-    () => Object.entries(groupedSkills).map(([category, items]) => ({ category, items })),
-    [groupedSkills],
-  );
 
   const certificationsForEdit: TailorCertificationDraft[] = useMemo(() => {
     if (draft?.certifications !== undefined) return draft.certifications;

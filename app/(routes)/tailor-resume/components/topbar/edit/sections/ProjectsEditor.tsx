@@ -5,6 +5,8 @@ import type { TailorProjectDraft } from "../../../../model/edit-state";
 import { ActionRow } from "../shared/ActionRow";
 import { useAutoScrollOnAdd } from "../shared/useAutoScrollOnAdd";
 import { SectionAdd } from "../shared/SectionAdd";
+import { ReorderButtons } from "@/app/components/ReorderButtons";
+import { moveArrayItem } from "@/lib/moveArrayItem";
 import { dirtyInputClass, normalizeKey, normalizeText, takeBestMatch } from "../shared/diffUtils";
 
 function normalizeTechText(value: string) {
@@ -45,6 +47,9 @@ export function ProjectsEditor({
   );
   const { listRef, markAdded } = useAutoScrollOnAdd(items.length);
 
+  const moveItem = (fromIndex: number, toIndex: number) =>
+    setItems((prev) => moveArrayItem(prev, fromIndex, toIndex));
+
   const diffs = useMemo(() => {
     const remaining = [...(baseline || [])];
 
@@ -52,7 +57,11 @@ export function ProjectsEditor({
       let score = 0;
       if (normalizeKey(current.title) && normalizeKey(current.title) === normalizeKey(candidate.title)) score += 5;
       if (normalizeKey(current.link) && normalizeKey(current.link) === normalizeKey(candidate.link || "")) score += 4;
-      if (normalizeText(current.description) && normalizeText(current.description) === normalizeText(candidate.description || "")) score += 2;
+      if (
+        normalizeText(current.description) &&
+        normalizeText(current.description) === normalizeText(candidate.description || "")
+      )
+        score += 2;
 
       const currentTech = new Set(normalizeTechText(current.technologiesText).split(",").filter(Boolean));
       const candidateTech = normalizeTechText((candidate.technologies || []).join(", ")).split(",").filter(Boolean);
@@ -111,6 +120,15 @@ export function ProjectsEditor({
         {items.map((proj, idx) => (
           <div key={idx} className="rounded-xl border border-zinc-200 bg-white p-3">
             <div className="flex items-center justify-end gap-2">
+              <ReorderButtons
+                upDisabled={idx === 0}
+                downDisabled={idx === items.length - 1}
+                onUp={() => moveItem(idx, idx - 1)}
+                onDown={() => moveItem(idx, idx + 1)}
+                buttonClassName="rounded-full border border-zinc-200 bg-white px-2 py-1 text-xs font-semibold text-zinc-700 shadow-sm transition hover:bg-zinc-50 disabled:opacity-50 sm:text-sm"
+                upAriaLabel="Move project up"
+                downAriaLabel="Move project down"
+              />
               <button
                 type="button"
                 className="text-xs font-semibold text-red-600 sm:text-sm"
@@ -122,14 +140,12 @@ export function ProjectsEditor({
 
             <div className="mt-3 grid gap-3">
               <label className="grid gap-1 text-xs sm:text-sm">
-                  <span className="font-semibold text-zinc-800">Title</span>
-                  <input
+                <span className="font-semibold text-zinc-800">Title</span>
+                <input
                   className={dirtyInputClass(!!diffs[idx]?.titleDirty)}
                   value={proj.title}
                   onChange={(e) =>
-                    setItems((prev) =>
-                      prev.map((p, i) => (i === idx ? { ...p, title: e.target.value } : p)),
-                    )
+                    setItems((prev) => prev.map((p, i) => (i === idx ? { ...p, title: e.target.value } : p)))
                   }
                 />
               </label>
@@ -155,9 +171,7 @@ export function ProjectsEditor({
                     className={dirtyInputClass(!!diffs[idx]?.linkDirty)}
                     value={proj.link}
                     onChange={(e) =>
-                      setItems((prev) =>
-                        prev.map((p, i) => (i === idx ? { ...p, link: e.target.value } : p)),
-                      )
+                      setItems((prev) => prev.map((p, i) => (i === idx ? { ...p, link: e.target.value } : p)))
                     }
                   />
                 </label>
@@ -169,9 +183,7 @@ export function ProjectsEditor({
                     value={proj.technologiesText}
                     onChange={(e) =>
                       setItems((prev) =>
-                        prev.map((p, i) =>
-                          i === idx ? { ...p, technologiesText: e.target.value } : p,
-                        ),
+                        prev.map((p, i) => (i === idx ? { ...p, technologiesText: e.target.value } : p)),
                       )
                     }
                   />
@@ -194,3 +206,4 @@ export function ProjectsEditor({
     </div>
   );
 }
+

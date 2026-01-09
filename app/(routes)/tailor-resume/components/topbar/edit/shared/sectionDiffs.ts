@@ -6,7 +6,7 @@ import type {
   TailorProjectDraft,
   TailorSkillDraft,
 } from "../../../../model/edit-state";
-import { equalStringSets, normalizeKey, normalizeText } from "./diffUtils";
+import { normalizeKey, normalizeText } from "./diffUtils";
 
 export function headerEquals(a: TailorHeaderDraft, b: TailorHeaderDraft) {
   return (
@@ -39,7 +39,10 @@ export function experienceKeys(items: TailorExperienceDraft[]) {
 }
 
 export function experiencesEqual(a: TailorExperienceDraft[], b: TailorExperienceDraft[]) {
-  return equalStringSets(experienceKeys(a), experienceKeys(b));
+  const aKeys = experienceKeys(a);
+  const bKeys = experienceKeys(b);
+  if (aKeys.length !== bKeys.length) return false;
+  return aKeys.every((val, idx) => val === bKeys[idx]);
 }
 
 export function projectKeys(items: TailorProjectDraft[]) {
@@ -54,7 +57,10 @@ export function projectKeys(items: TailorProjectDraft[]) {
 }
 
 export function projectsEqual(a: TailorProjectDraft[], b: TailorProjectDraft[]) {
-  return equalStringSets(projectKeys(a), projectKeys(b));
+  const aKeys = projectKeys(a);
+  const bKeys = projectKeys(b);
+  if (aKeys.length !== bKeys.length) return false;
+  return aKeys.every((val, idx) => val === bKeys[idx]);
 }
 
 export function skillKeys(items: TailorSkillDraft[]) {
@@ -62,7 +68,33 @@ export function skillKeys(items: TailorSkillDraft[]) {
 }
 
 export function skillsEqual(a: TailorSkillDraft[], b: TailorSkillDraft[]) {
-  return equalStringSets(skillKeys(a), skillKeys(b));
+  const signature = (items: TailorSkillDraft[]) => {
+    const order: string[] = [];
+    const byCategory = new Map<string, string[]>();
+
+    for (const item of items) {
+      const category = normalizeKey(item.category);
+      const name = normalizeKey(item.name);
+      if (!category || !name) continue;
+      const existing = byCategory.get(category);
+      if (!existing) {
+        byCategory.set(category, [name]);
+        order.push(category);
+        continue;
+      }
+      existing.push(name);
+    }
+
+    return order.map((category) => {
+      const skills = byCategory.get(category) ?? [];
+      return `${category}:${skills.join(",")}`;
+    });
+  };
+
+  const aSig = signature(a);
+  const bSig = signature(b);
+  if (aSig.length !== bSig.length) return false;
+  return aSig.every((val, idx) => val === bSig[idx]);
 }
 
 export function educationKeys(items: TailorEducationDraft[]) {
@@ -79,7 +111,10 @@ export function educationKeys(items: TailorEducationDraft[]) {
 }
 
 export function educationsEqual(a: TailorEducationDraft[], b: TailorEducationDraft[]) {
-  return equalStringSets(educationKeys(a), educationKeys(b));
+  const aKeys = educationKeys(a);
+  const bKeys = educationKeys(b);
+  if (aKeys.length !== bKeys.length) return false;
+  return aKeys.every((val, idx) => val === bKeys[idx]);
 }
 
 export function certificationKeys(items: TailorCertificationDraft[]) {
@@ -94,5 +129,8 @@ export function certificationKeys(items: TailorCertificationDraft[]) {
 }
 
 export function certificationsEqual(a: TailorCertificationDraft[], b: TailorCertificationDraft[]) {
-  return equalStringSets(certificationKeys(a), certificationKeys(b));
+  const aKeys = certificationKeys(a);
+  const bKeys = certificationKeys(b);
+  if (aKeys.length !== bKeys.length) return false;
+  return aKeys.every((val, idx) => val === bKeys[idx]);
 }

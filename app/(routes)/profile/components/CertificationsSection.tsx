@@ -5,6 +5,7 @@ import { PenIcon } from "@/app/icons/pen";
 import { styles } from "../style-constants";
 import type { Certification } from "@/types/certification";
 import { Modal } from "../Modal";
+import { ReorderButtons } from "@/app/components/ReorderButtons";
 
 const dangerButton =
   "rounded border border-red-100 px-3 py-1 text-xs font-semibold text-red-700 transition hover:bg-red-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-500";
@@ -15,6 +16,7 @@ type Props = {
   onEdit: (cert: Certification) => void;
   onAdd: (input: Omit<Certification, "id">) => void;
   onDelete: (id: number) => void;
+  onMove: (id: number, direction: "up" | "down") => void;
 };
 
 function AddCertificationModal({ profileId, onAdd }: { profileId: number; onAdd: Props["onAdd"] }) {
@@ -80,7 +82,7 @@ function AddCertificationModal({ profileId, onAdd }: { profileId: number; onAdd:
   );
 }
 
-export function CertificationsSection({ profileId, certs, onEdit, onAdd, onDelete }: Props) {
+export function CertificationsSection({ profileId, certs, onEdit, onAdd, onDelete, onMove }: Props) {
   return (
     <section className={styles.sectionCard}>
       <div className={styles.sectionHeader}>
@@ -91,7 +93,7 @@ export function CertificationsSection({ profileId, certs, onEdit, onAdd, onDelet
       </div>
       {certs.length ? (
         <div className={styles.sectionBody}>
-          {certs.map((cert) => (
+          {certs.map((cert, idx) => (
             <div key={cert.id} className={styles.listRow}>
               <div className={styles.flex1}>
                 <p className={styles.strongText}>{cert.name}</p>
@@ -101,11 +103,16 @@ export function CertificationsSection({ profileId, certs, onEdit, onAdd, onDelet
                 </p>
               </div>
               <div className={styles.actionsRow}>
-                <button
-                  onClick={() => onEdit(cert)}
-                  className={styles.editButton}
-                  aria-label="Edit certification"
-                >
+                <ReorderButtons
+                  upDisabled={idx === 0}
+                  downDisabled={idx === certs.length - 1}
+                  onUp={() => onMove(cert.id, "up")}
+                  onDown={() => onMove(cert.id, "down")}
+                  buttonClassName={styles.editButton}
+                  upAriaLabel="Move certification up"
+                  downAriaLabel="Move certification down"
+                />
+                <button onClick={() => onEdit(cert)} className={styles.editButton} aria-label="Edit certification">
                   <PenIcon className={styles.iconSm} />
                 </button>
                 <button type="button" className={dangerButton} onClick={() => onDelete(cert.id)}>
@@ -116,9 +123,7 @@ export function CertificationsSection({ profileId, certs, onEdit, onAdd, onDelet
           ))}
         </div>
       ) : (
-        <p className={styles.bodyText}>
-          No certifications yet.
-        </p>
+        <p className={styles.bodyText}>No certifications yet.</p>
       )}
     </section>
   );

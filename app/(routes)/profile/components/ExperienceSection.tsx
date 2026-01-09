@@ -7,6 +7,7 @@ import type { Experience } from "@/types/experience";
 import { Modal } from "../Modal";
 import { BulletTextarea } from "@/app/components/BulletTextarea";
 import { normalizeBullets } from "@/lib/normalizeBullets";
+import { ReorderButtons } from "@/app/components/ReorderButtons";
 
 const dangerButton =
   "rounded border border-red-100 px-3 py-1 text-xs font-semibold text-red-700 transition hover:bg-red-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-500";
@@ -17,6 +18,7 @@ type Props = {
   onEdit: (exp: Experience) => void;
   onAdd: (input: Omit<Experience, "id">) => void;
   onDelete: (id: number) => void;
+  onMove: (id: number, direction: "up" | "down") => void;
 };
 
 function AddExperienceModal({ profileId, onAdd }: { profileId: number; onAdd: Props["onAdd"] }) {
@@ -101,7 +103,7 @@ function AddExperienceModal({ profileId, onAdd }: { profileId: number; onAdd: Pr
   );
 }
 
-export function ExperienceSection({ profileId, experiences, onEdit, onAdd, onDelete }: Props) {
+export function ExperienceSection({ profileId, experiences, onEdit, onAdd, onDelete, onMove }: Props) {
   if (!experiences.length) {
     return (
       <section className={styles.sectionCardMd}>
@@ -125,7 +127,7 @@ export function ExperienceSection({ profileId, experiences, onEdit, onAdd, onDel
         <AddExperienceModal profileId={profileId} onAdd={onAdd} />
       </div>
       <div className={styles.stackMd}>
-        {experiences.map((exp) => (
+        {experiences.map((exp, idx) => (
           <article key={exp.id} className={styles.itemCard}>
             <div className={styles.stackSmFlex}>
               <p className={styles.sectionTitle}>{exp.role}</p>
@@ -146,6 +148,15 @@ export function ExperienceSection({ profileId, experiences, onEdit, onAdd, onDel
               )}
             </div>
             <div className={styles.actionsRow}>
+              <ReorderButtons
+                upDisabled={idx === 0}
+                downDisabled={idx === experiences.length - 1}
+                onUp={() => onMove(exp.id, "up")}
+                onDown={() => onMove(exp.id, "down")}
+                buttonClassName={styles.editButton}
+                upAriaLabel="Move experience up"
+                downAriaLabel="Move experience down"
+              />
               <button onClick={() => onEdit(exp)} className={styles.editButton} aria-label="Edit experience">
                 <PenIcon className={styles.iconSm} />
               </button>
@@ -159,4 +170,3 @@ export function ExperienceSection({ profileId, experiences, onEdit, onAdd, onDel
     </section>
   );
 }
-

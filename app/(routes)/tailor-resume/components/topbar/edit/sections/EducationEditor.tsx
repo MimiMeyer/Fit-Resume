@@ -5,6 +5,8 @@ import type { TailorEducationDraft } from "../../../../model/edit-state";
 import { ActionRow } from "../shared/ActionRow";
 import { useAutoScrollOnAdd } from "../shared/useAutoScrollOnAdd";
 import { SectionAdd } from "../shared/SectionAdd";
+import { ReorderButtons } from "@/app/components/ReorderButtons";
+import { moveArrayItem } from "@/lib/moveArrayItem";
 import { dirtyInputClass, normalizeText, takeBestMatch } from "../shared/diffUtils";
 
 function eduKey(edu: TailorEducationDraft) {
@@ -38,6 +40,9 @@ export function EducationEditor({
   const [items, setItems] = useState<TailorEducationDraft[]>(initial);
   const { listRef, markAdded } = useAutoScrollOnAdd(items.length);
 
+  const moveItem = (fromIndex: number, toIndex: number) =>
+    setItems((prev) => moveArrayItem(prev, fromIndex, toIndex));
+
   const diffs = useMemo(() => {
     const remaining = [...(baseline || [])];
 
@@ -49,11 +54,23 @@ export function EducationEditor({
       ) {
         score += 6;
       }
-      if (normalizeText(current.degree).toLowerCase() && normalizeText(current.degree).toLowerCase() === normalizeText(candidate.degree).toLowerCase()) score += 2;
-      if (normalizeText(current.field).toLowerCase() && normalizeText(current.field).toLowerCase() === normalizeText(candidate.field).toLowerCase()) score += 2;
+      if (
+        normalizeText(current.degree).toLowerCase() &&
+        normalizeText(current.degree).toLowerCase() === normalizeText(candidate.degree).toLowerCase()
+      )
+        score += 2;
+      if (
+        normalizeText(current.field).toLowerCase() &&
+        normalizeText(current.field).toLowerCase() === normalizeText(candidate.field).toLowerCase()
+      )
+        score += 2;
       if ((current.startYear ?? null) === (candidate.startYear ?? null) && current.startYear != null) score += 1;
       if ((current.endYear ?? null) === (candidate.endYear ?? null) && current.endYear != null) score += 1;
-      if (normalizeText(current.details).toLowerCase() && normalizeText(current.details).toLowerCase() === normalizeText(candidate.details).toLowerCase()) score += 1;
+      if (
+        normalizeText(current.details).toLowerCase() &&
+        normalizeText(current.details).toLowerCase() === normalizeText(candidate.details).toLowerCase()
+      )
+        score += 1;
       return score;
     };
 
@@ -117,6 +134,15 @@ export function EducationEditor({
         {items.map((edu, idx) => (
           <div key={idx} className="rounded-xl border border-zinc-200 bg-white p-3">
             <div className="flex items-center justify-end gap-2">
+              <ReorderButtons
+                upDisabled={idx === 0}
+                downDisabled={idx === items.length - 1}
+                onUp={() => moveItem(idx, idx - 1)}
+                onDown={() => moveItem(idx, idx + 1)}
+                buttonClassName="rounded-full border border-zinc-200 bg-white px-2 py-1 text-xs font-semibold text-zinc-700 shadow-sm transition hover:bg-zinc-50 disabled:opacity-50 sm:text-sm"
+                upAriaLabel="Move education up"
+                downAriaLabel="Move education down"
+              />
               <button
                 type="button"
                 className="text-xs font-semibold text-red-600 sm:text-sm"
@@ -147,9 +173,7 @@ export function EducationEditor({
                     className={dirtyInputClass(!!diffs[idx]?.degreeDirty)}
                     value={edu.degree}
                     onChange={(e) =>
-                      setItems((prev) =>
-                        prev.map((p, i) => (i === idx ? { ...p, degree: e.target.value } : p)),
-                      )
+                      setItems((prev) => prev.map((p, i) => (i === idx ? { ...p, degree: e.target.value } : p)))
                     }
                   />
                 </label>
@@ -159,13 +183,12 @@ export function EducationEditor({
                     className={dirtyInputClass(!!diffs[idx]?.fieldDirty)}
                     value={edu.field}
                     onChange={(e) =>
-                      setItems((prev) =>
-                        prev.map((p, i) => (i === idx ? { ...p, field: e.target.value } : p)),
-                      )
+                      setItems((prev) => prev.map((p, i) => (i === idx ? { ...p, field: e.target.value } : p)))
                     }
                   />
                 </label>
               </div>
+
               <div className="grid gap-2 sm:grid-cols-2">
                 <label className="grid gap-1 text-xs sm:text-sm">
                   <span className="font-semibold text-zinc-800">Start year</span>
@@ -175,9 +198,7 @@ export function EducationEditor({
                     value={edu.startYear ?? ""}
                     onChange={(e) => {
                       const next = e.target.value ? Number(e.target.value) : null;
-                      setItems((prev) =>
-                        prev.map((p, i) => (i === idx ? { ...p, startYear: next } : p)),
-                      );
+                      setItems((prev) => prev.map((p, i) => (i === idx ? { ...p, startYear: next } : p)));
                     }}
                   />
                 </label>
@@ -189,13 +210,12 @@ export function EducationEditor({
                     value={edu.endYear ?? ""}
                     onChange={(e) => {
                       const next = e.target.value ? Number(e.target.value) : null;
-                      setItems((prev) =>
-                        prev.map((p, i) => (i === idx ? { ...p, endYear: next } : p)),
-                      );
+                      setItems((prev) => prev.map((p, i) => (i === idx ? { ...p, endYear: next } : p)));
                     }}
                   />
                 </label>
               </div>
+
               <label className="grid gap-1 text-xs sm:text-sm">
                 <span className="font-semibold text-zinc-800">Details</span>
                 <textarea
@@ -226,3 +246,4 @@ export function EducationEditor({
     </div>
   );
 }
+
