@@ -1,10 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
-import { buildResumeStyles } from "./components/preview/render/css";
-import { buildPagesHtml, buildSectionHtml } from "./components/preview/render/html";
+import { useEffect, useMemo, useState } from "react";
 import { buildDefaultResumePdfFileName, sanitizePdfFileName } from "./components/preview/render/pdf";
-import { measureSections, paginateByMeasurement } from "./components/preview/render/pagination";
 import {
   DEFAULT_BORDERS,
   DEFAULT_FONT_FAMILIES,
@@ -28,7 +25,6 @@ import type {
 import type { GeneratedResume } from "@/types/resume-agent";
 import type { Profile } from "@/types/profile";
 import { normalizeBullets } from "@/lib/normalizeBullets";
-import { escapeAttr, escapeHtml, sanitizeHref } from "@/lib/htmlSanitize";
 import type {
   TailorCertificationDraft,
   TailorEducationDraft,
@@ -39,9 +35,6 @@ import type {
   TailorSkillDraft,
 } from "./model/edit-state";
 import type { TailorResumePdfRequest } from "@/app/api/tailor-resume/pdf/types";
-
-const PAGE_WIDTH_PX = 794; // A4 width at 96 DPI
-const PAGE_HEIGHT_PX = 1123; // A4 height at 96 DPI
 
 const SECTION_ORDER: ResumeSectionId[] = [
   "experience",
@@ -268,20 +261,6 @@ function normalizeTailorCertificationDraft(input: TailorCertificationDraft): Tai
   };
 }
 
-function linkifyContact(part: string) {
-  const trimmed = part.trim();
-  if (!trimmed) return "";
-  const isEmail = trimmed.includes("@");
-  if (isEmail) return escapeHtml(trimmed);
-  const hasProtocol = /^https?:\/\//i.test(trimmed);
-  const isUrlLike = trimmed.includes(".") || trimmed.includes("/");
-  const hrefRaw = hasProtocol ? trimmed : isUrlLike ? `https://${trimmed.replace(/^\/+/, "")}` : "";
-  if (!hrefRaw) return escapeHtml(trimmed);
-  const safeHref = sanitizeHref(hrefRaw);
-  if (!safeHref) return escapeHtml(trimmed);
-  return `<a href="${escapeAttr(safeHref)}" class="resume-link" target="_blank" rel="noreferrer">${escapeHtml(trimmed)}</a>`;
-}
-
 function applyAlpha(hex: string, alpha: number) {
   const norm = hex.trim();
   if (alpha >= 1) return norm;
@@ -345,9 +324,7 @@ export function useCreateResume(
   const [accentColor, setAccentColor] = useState("#0c6d82");
   const [accentOpacity, setAccentOpacity] = useState(1);
   const [layoutMode, setLayoutMode] = useState<ResumeLayoutMode>("two");
-
-  const resumeRef = useRef<HTMLDivElement>(null);
-  const resumeWrapperRef = useRef<HTMLDivElement>(null);
+  const paginatedSections = useMemo<ResumeSectionId[][]>(() => [SECTION_ORDER], []);
 
   const setAccentColorPersisted = (color: string) => {
     setAccentColor(color);
@@ -503,28 +480,6 @@ export function useCreateResume(
     profile.title,
     profile.websiteUrl,
   ]);
-
-  const contactParts = useMemo(
-    () =>
-      [
-        headerForEdit.location,
-        headerForEdit.phone,
-        headerForEdit.email,
-        headerForEdit.websiteUrl,
-        headerForEdit.githubUrl,
-        headerForEdit.linkedinUrl,
-      ].filter(Boolean) as string[],
-    [
-      headerForEdit.email,
-      headerForEdit.githubUrl,
-      headerForEdit.linkedinUrl,
-      headerForEdit.location,
-      headerForEdit.phone,
-      headerForEdit.websiteUrl,
-    ],
-  );
-
-  const summaryForView = headerForEdit.summary;
 
   const experiencesForEdit: TailorExperienceDraft[] = useMemo(() => {
     if (draft?.experiences !== undefined) return draft.experiences;
@@ -698,78 +653,7 @@ export function useCreateResume(
     [certificationsForEdit],
   );
 
-  const [paginatedSections, setPaginatedSections] = useState<ResumeSectionId[][]>([
-    SECTION_ORDER,
-  ]);
-
-  useEffect(() => {
-    setPaginatedSections([SECTION_ORDER]);
-  }, [
-    educationForView.length,
-    experiencesForView,
-    groupedSkills,
-    projectsForView.length,
-    layoutMode,
-  ]);
-
-  const { resumeStyles, pagesHtml: basePagesHtml } = useMemo(() => {
-    const sectionHtml = buildSectionHtml({
-      experiencesForView,
-      skillGroups,
-      educationForView,
-      projectsForView,
-      certs: certsForView,
-      layoutMode,
-    });
-
-    const showPageNumbers = paginatedSections.length > 1;
-
-    const pagesHtml = buildPagesHtml({
-      paginatedSections,
-      sectionHtml,
-      showPageNumbers,
-      layoutMode,
-      profile: {
-        fullName: headerForEdit.fullName || emptyProfileFallback.fullName,
-        title: headerForEdit.title || emptyProfileFallback.title,
-        summary: summaryForView || emptyProfileFallback.summary,
-      },
-      contactParts: contactParts.map((part) => linkifyContact(part)),
-    });
-
-    const resumeStyles = buildResumeStyles({
-      pageWidth: PAGE_WIDTH_PX,
-      pageHeight: PAGE_HEIGHT_PX,
-      palette,
-      fontSizes,
-      fontFamilies,
-      borders,
-      accentIsNone: accentColor.toLowerCase() === "#ffffff",
-      accentOpacity,
-      spacing,
-    });
-
-    return { resumeStyles, pagesHtml };
-  }, [
-    accentColor,
-    accentOpacity,
-    contactParts,
-    educationForView,
-    experiencesForView,
-    fontFamilies,
-    borders,
-    layoutMode,
-    paginatedSections,
-    palette,
-    certsForView,
-    headerForEdit.fullName,
-    headerForEdit.title,
-    projectsForView,
-    skillGroups,
-    summaryForView,
-    fontSizes,
-    spacing,
-  ]);
+  // Client-side HTML measurement/pagination was removed. The iframe previews the PDF bytes we generate.
 
   const handleGenerate = async () => {
     const trimmedJd = jobDescription.trim();
@@ -917,61 +801,7 @@ export function useCreateResume(
     }
   };
 
-  useEffect(() => {
-    const root = resumeRef.current;
-    if (!root) return;
-
-    const recalc = () => {
-      const { heights, limit } = measureSections(root, SECTION_ORDER, PAGE_HEIGHT_PX);
-      const gap = layoutMode === "two" ? 10 : 8;
-      const nextPages = paginateByMeasurement(
-        SECTION_ORDER,
-        heights,
-        layoutMode,
-        limit,
-        gap,
-      );
-
-      const same =
-        nextPages.length === paginatedSections.length &&
-        nextPages.every(
-          (p, i) =>
-            p.length === paginatedSections[i]?.length &&
-            p.every((id, j) => id === paginatedSections[i][j]),
-        );
-
-      if (!same) {
-        setPaginatedSections(nextPages);
-      }
-    };
-
-    const raf = requestAnimationFrame(recalc);
-    return () => cancelAnimationFrame(raf);
-  }, [fontSizes, spacing, layoutMode, basePagesHtml, paginatedSections]);
-
-  const pageStyle = useMemo(
-    () =>
-      ({
-        margin: "0 auto",
-        width: `${PAGE_WIDTH_PX}px`,
-        "--page-width": `${PAGE_WIDTH_PX}px`,
-        "--page-height": `${PAGE_HEIGHT_PX}px`,
-        "--accent": palette.accent,
-        "--accent-fill": palette.accentFill,
-        "--accent-light": palette.accentLight,
-        "--accent-soft": palette.accentSoft,
-        "--accent-border": palette.accentBorder,
-        "--accent-text": palette.accentText,
-      }) as CSSProperties,
-    [
-      palette.accent,
-      palette.accentFill,
-      palette.accentBorder,
-      palette.accentLight,
-      palette.accentSoft,
-      palette.accentText,
-    ],
-  );
+  // Client-side HTML measurement/pagination was removed.
 
   const resetGenerated = () => {
     setGenerated(null);
@@ -1168,15 +998,9 @@ export function useCreateResume(
     },
     layoutMode,
     setLayoutMode: setLayoutModePersisted,
-    resumeStyles,
-    pagesHtml: basePagesHtml,
-    pageStyle,
-    paginatedSectionsCount: paginatedSections.length,
     pdfLiveUrl,
     pdfLiveGenerating,
     pdfLiveError,
-    resumeRef,
-    resumeWrapperRef,
     handleGenerate,
     handleDownloadPdf,
     resetGenerated,
