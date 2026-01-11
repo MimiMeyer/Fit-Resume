@@ -30,6 +30,7 @@ export function sanitizeHref(raw: string | null | undefined): string | null {
   // Allow absolute http(s), mailto, tel. Also allow protocol-relative inputs by normalizing to https.
   if (lower.startsWith("mailto:") || lower.startsWith("tel:")) return trimmed;
   if (lower.startsWith("//")) return `https:${trimmed}`;
+  if (/^[a-z0-9.-]+\.[a-z]{2,}(?:[/:?#]|$)/i.test(trimmed)) return `https://${trimmed}`;
 
   try {
     const url = new URL(trimmed);

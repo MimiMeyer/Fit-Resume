@@ -2,6 +2,7 @@ import React from "react";
 import { Document, renderToBuffer } from "@react-pdf/renderer";
 import { ResumePdfDocument } from "./ResumePdfDocument";
 import type { TailorResumePdfRequest } from "./types";
+import { enforceRateLimit, readJsonWithLimit } from "@/app/api/_lib/request-guards";
 
 export const runtime = "nodejs";
 
@@ -17,8 +18,18 @@ function safePdfFileName(fileName: string | null | undefined) {
 }
 
 export async function POST(req: Request) {
-  const payload = (await req.json().catch(() => null)) as TailorResumePdfRequest | null;
-  if (!payload) return jsonError("Invalid JSON payload.");
+  const rate = enforceRateLimit(req, { keyPrefix: "tailor-resume-pdf", limit: 30, windowMs: 10 * 60 * 1000 });
+  if (!rate.ok) {
+    return Response.json(
+      { error: rate.error },
+      { status: rate.status, headers: { "Retry-After": String(rate.retryAfterSec) } },
+    );
+  }
+
+  const parsed = await readJsonWithLimit<TailorResumePdfRequest>(req, { maxBytes: 500_000 });
+  if (!parsed.ok) return jsonError(parsed.error, parsed.status);
+  const payload = parsed.value;
+
   if (!payload.layoutMode) return jsonError("Missing layoutMode.");
   if (!payload.palette) return jsonError("Missing palette.");
   if (typeof payload.accentOpacity !== "number") return jsonError("Missing accentOpacity.");

@@ -26,7 +26,7 @@ function normalizeBullets(items: string[]) {
   return items.map((b) => normalizeText(b)).filter(Boolean);
 }
 
-export function experienceKeys(items: TailorExperienceDraft[]) {
+function experienceKeys(items: TailorExperienceDraft[]) {
   return items.map((e) =>
     [
       normalizeKey(e.role),
@@ -45,7 +45,7 @@ export function experiencesEqual(a: TailorExperienceDraft[], b: TailorExperience
   return aKeys.every((val, idx) => val === bKeys[idx]);
 }
 
-export function projectKeys(items: TailorProjectDraft[]) {
+function projectKeys(items: TailorProjectDraft[]) {
   return items.map((p) =>
     [
       normalizeKey(p.title),
@@ -61,10 +61,6 @@ export function projectsEqual(a: TailorProjectDraft[], b: TailorProjectDraft[]) 
   const bKeys = projectKeys(b);
   if (aKeys.length !== bKeys.length) return false;
   return aKeys.every((val, idx) => val === bKeys[idx]);
-}
-
-export function skillKeys(items: TailorSkillDraft[]) {
-  return items.map((s) => `${normalizeKey(s.category)}|${normalizeKey(s.name)}`);
 }
 
 export function skillsEqual(a: TailorSkillDraft[], b: TailorSkillDraft[]) {
@@ -97,7 +93,7 @@ export function skillsEqual(a: TailorSkillDraft[], b: TailorSkillDraft[]) {
   return aSig.every((val, idx) => val === bSig[idx]);
 }
 
-export function educationKeys(items: TailorEducationDraft[]) {
+function educationKeys(items: TailorEducationDraft[]) {
   return items.map((e) =>
     [
       normalizeKey(e.institution),
@@ -117,7 +113,7 @@ export function educationsEqual(a: TailorEducationDraft[], b: TailorEducationDra
   return aKeys.every((val, idx) => val === bKeys[idx]);
 }
 
-export function certificationKeys(items: TailorCertificationDraft[]) {
+function certificationKeys(items: TailorCertificationDraft[]) {
   return items.map((c) =>
     [
       normalizeKey(c.name),

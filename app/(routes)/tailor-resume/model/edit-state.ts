@@ -1,5 +1,3 @@
-import type { ResumeSectionId } from "../types";
-
 export type TailorHeaderDraft = {
   fullName: string;
   title: string;
@@ -64,7 +62,3 @@ export type TailorResumeDraft = {
   certifications?: TailorCertificationDraft[];
 };
 
-export type TailorDraftSection =
-  | "header"
-  | Exclude<ResumeSectionId, "certifications">
-  | "certifications";

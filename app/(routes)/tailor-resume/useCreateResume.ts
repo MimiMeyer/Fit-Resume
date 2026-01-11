@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { buildDefaultResumePdfFileName, sanitizePdfFileName } from "./components/preview/render/pdf";
+import { buildDefaultResumePdfFileName, sanitizePdfFileName } from "./components/preview/pdf";
 import {
   DEFAULT_BORDERS,
   DEFAULT_FONT_FAMILIES,
@@ -35,6 +35,7 @@ import type {
   TailorSkillDraft,
 } from "./model/edit-state";
 import type { TailorResumePdfRequest } from "@/app/api/tailor-resume/pdf/types";
+import { normalizeKey } from "./utils/text";
 
 const SECTION_ORDER: ResumeSectionId[] = [
   "experience",
@@ -60,10 +61,6 @@ const RESUME_ACCENT_OPACITY_CACHE_KEY = "fitresume.tailorResumeAccentOpacity.v1"
 const RESUME_SPACING_CACHE_KEY = "fitresume.tailorResumeSpacing.v1";
 const RESUME_LAYOUT_MODE_CACHE_KEY = "fitresume.tailorResumeLayoutMode.v1";
 const RESUME_SHOW_JD_CACHE_KEY = "fitresume.tailorResumeShowJobDescription.v1";
-
-function normalizeKey(value: string) {
-  return value.trim().toLowerCase();
-}
 
 function safeParseDraft(raw: string | null): TailorResumeDraft | null {
   if (!raw) return null;
@@ -808,8 +805,6 @@ export function useCreateResume(
       setIsGenerating(false);
     }
   };
-
-  // Client-side HTML measurement/pagination was removed.
 
   const resetGenerated = () => {
     setGenerated(null);

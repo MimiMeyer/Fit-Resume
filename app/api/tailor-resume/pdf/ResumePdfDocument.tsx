@@ -457,7 +457,7 @@ function InlineContact({ contactItems, linkStyle }: { contactItems: ContactItem[
     <>
       {contactItems.map((item, idx) => (
         <React.Fragment key={`${item.kind}:${item.value}`}>
-          {idx ? <Text> • </Text> : null}
+          {idx ? <Text>{" • "}</Text> : null}
           <ContactInlineItem item={item} linkStyle={linkStyle} />
         </React.Fragment>
       ))}

@@ -6,6 +6,7 @@ import { styles } from "../style-constants";
 import type { Project } from "@/types/project";
 import { Modal } from "../Modal";
 import { ReorderButtons } from "@/app/components/ReorderButtons";
+import { sanitizeHref } from "@/lib/htmlSanitize";
 
 const dangerButton =
   "rounded border border-red-100 px-3 py-1 text-xs font-semibold text-red-700 transition hover:bg-red-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-500";
@@ -123,11 +124,15 @@ export function ProjectsSection({ profileId, projects, onEdit, onAdd, onDelete, 
                   ))}
                 </div>
               ) : null}
-              {project.link ? (
-                <a href={project.link} className={styles.accentLink} target="_blank" rel="noreferrer">
-                  View
-                </a>
-              ) : null}
+              {(() => {
+                const href = project.link ? sanitizeHref(project.link) : null;
+                if (!href) return null;
+                return (
+                  <a href={href} className={styles.accentLink} target="_blank" rel="noreferrer noopener">
+                    View
+                  </a>
+                );
+              })()}
             </div>
             <div className={styles.actionsRow}>
               <ReorderButtons

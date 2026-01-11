@@ -185,7 +185,6 @@ export function profileFromBackup(backup: ProfileBackup, base?: Profile): Profil
         id: newId(),
         name: s.name,
         category: { name: normalizeCategoryName(s.category) },
-      }))
-      .sort((a, b) => a.name.localeCompare(b.name)),
+      })),
   };
 }
