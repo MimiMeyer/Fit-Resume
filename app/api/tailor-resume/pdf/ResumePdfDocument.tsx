@@ -359,12 +359,13 @@ function normalizeUrl(value: string) {
 }
 
 function resolvePdfFonts(props: TailorResumePdfRequest) {
-  // React-PDF can't use system fonts like Calibri/Segoe UI on Vercel unless we embed font files.
-  // Map the selected CSS families to the closest built-in PDF fonts.
   const resolveOne = (cssFamily: string | null | undefined) => {
     const value = (cssFamily || "").toLowerCase();
     if (value.includes("courier") || value.includes("mono")) {
       return "Courier";
+    }
+    if (value.includes("sans-serif")) {
+      return "Helvetica";
     }
     if (value.includes("times") || value.includes("georgia") || value.includes("serif")) {
       return "Times-Roman";

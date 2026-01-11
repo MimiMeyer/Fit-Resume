@@ -160,6 +160,7 @@ function safeParseFontFamilies(raw: string | null): ResumeFontFamilies | null {
 function normalizePdfFontFamily(value: string) {
   const v = value.toLowerCase();
   if (v.includes("courier") || v.includes("mono")) return '"Courier New", Courier, monospace';
+  if (v.includes("sans-serif")) return "Arial, Helvetica, sans-serif";
   if (v.includes("times") || v.includes("georgia") || v.includes("serif"))
     return '"Times New Roman", Times, serif';
   return "Arial, Helvetica, sans-serif";
