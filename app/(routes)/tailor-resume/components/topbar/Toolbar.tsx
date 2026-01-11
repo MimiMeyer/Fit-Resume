@@ -41,7 +41,7 @@ const accentOptions = [
   { name: "None", value: "#ffffff" },
 ];
 const fontFamilyOptions = [
-  { name: "Helvetica / Arial (Sans)", value: "Arial, Helvetica, sans-serif" },
+  { name: "Arial (Sans)", value: "Arial, Helvetica, sans-serif" },
   { name: "Times New Roman (Serif)", value: '"Times New Roman", Times, serif' },
   { name: "Courier New (Monospace)", value: '"Courier New", Courier, monospace' },
 ];

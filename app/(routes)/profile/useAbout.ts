@@ -17,8 +17,8 @@ import type { Project } from "@/types/project";
 import type { Skill } from "@/types/skill";
 import {
   deleteSkillCategory as deleteSkillCategoryLocal,
+  moveSkill as moveSkillLocal,
   renameSkillCategory as renameSkillCategoryLocal,
-  updateSkill as updateSkillLocal,
 } from "@/app/local/profile-store";
 
 export type AboutLogic = {
@@ -51,7 +51,8 @@ export type AboutLogic = {
   setEditingCategoryName: Dispatch<SetStateAction<string>>;
   skills: Skill[];
   groupedSkills: Record<string, Skill[]>;
-  sortedCategories: string[];
+  categoryOrder: string[];
+  moveCategory: (categoryName: string, direction: "up" | "down") => void;
   handleDeleteCategory: (cat: Category) => Promise<void>;
   startEditCategory: (category: Category) => void;
   saveCategoryEdit: () => Promise<void>;
@@ -59,7 +60,7 @@ export type AboutLogic = {
   draggingSkill: Skill | null;
   handleSkillDragStart: (skill: Skill) => void;
   handleSkillDragEnd: () => void;
-  handleSkillDrop: (targetCategory: string) => void;
+  handleSkillDrop: (targetCategory: string, opts?: { beforeId?: number }) => void;
 };
 
 function categoryIdFromName(name: string): number {
@@ -70,6 +71,33 @@ function categoryIdFromName(name: string): number {
     hash = Math.imul(hash, 16777619);
   }
   return Math.abs(hash);
+}
+
+function reorderCategoriesInSkills(
+  skills: Skill[],
+  categoryOrder: string[],
+): Skill[] {
+  const buckets = new Map<string, Skill[]>();
+  for (const skill of skills) {
+    const category = skill.category.name;
+    const list = buckets.get(category) ?? [];
+    list.push(skill);
+    buckets.set(category, list);
+  }
+
+  const ordered: Skill[] = [];
+  for (const category of categoryOrder) {
+    const list = buckets.get(category);
+    if (!list?.length) continue;
+    ordered.push(...list);
+    buckets.delete(category);
+  }
+
+  for (const list of buckets.values()) {
+    ordered.push(...list);
+  }
+
+  return ordered;
 }
 
 export function useAbout(
@@ -93,7 +121,7 @@ export function useAbout(
   const [editingCategoryName, setEditingCategoryName] = useState("");
   const [draggingSkill, setDraggingSkill] = useState<Skill | null>(null);
 
-  const skills = [...(profile.skills || [])].sort((a, b) => a.name.localeCompare(b.name));
+  const skills = [...(profile.skills || [])];
 
   const groupedSkills = skills.reduce<Record<string, Skill[]>>((acc, skill) => {
     const category = skill.category.name;
@@ -104,13 +132,49 @@ export function useAbout(
     return acc;
   }, {});
 
-  const sortedCategories = Object.keys(groupedSkills).sort();
+  const categoryOrder = (() => {
+    const order: string[] = [];
+    const seen = new Set<string>();
+    for (const skill of skills) {
+      const category = skill.category.name;
+      if (!category || seen.has(category)) continue;
+      seen.add(category);
+      order.push(category);
+    }
+    return order;
+  })();
 
-  const categories: Category[] = sortedCategories.map((name) => ({
+  const categories: Category[] = categoryOrder.map((name) => ({
     id: categoryIdFromName(name),
     name,
     count: groupedSkills[name]?.length ?? 0,
   }));
+
+  const moveCategory = (categoryName: string, direction: "up" | "down") => {
+    updateProfile((current) => {
+      const currentSkills = [...(current.skills || [])];
+      const order: string[] = [];
+      const seen = new Set<string>();
+      for (const s of currentSkills) {
+        const cat = s.category.name;
+        if (!cat || seen.has(cat)) continue;
+        seen.add(cat);
+        order.push(cat);
+      }
+
+      const idx = order.findIndex((c) => c === categoryName);
+      if (idx === -1) return current;
+      const nextIdx = direction === "up" ? idx - 1 : idx + 1;
+      if (nextIdx < 0 || nextIdx >= order.length) return current;
+
+      const nextOrder = [...order];
+      const [picked] = nextOrder.splice(idx, 1);
+      if (!picked) return current;
+      nextOrder.splice(nextIdx, 0, picked);
+
+      return { ...current, skills: reorderCategoriesInSkills(currentSkills, nextOrder) };
+    });
+  };
 
   useEffect(() => {
     if (editingSkill) {
@@ -183,18 +247,13 @@ export function useAbout(
     setDraggingSkill(null);
   };
 
-  const handleSkillDrop = (targetCategory: string) => {
+  const handleSkillDrop = (targetCategory: string, opts?: { beforeId?: number }) => {
     if (!draggingSkill) return;
-    const currentCategory = draggingSkill.category.name;
-    if (currentCategory === targetCategory) {
-      setDraggingSkill(null);
-      return;
-    }
     startTransition(async () => {
       updateProfile((current) =>
-        updateSkillLocal(current, draggingSkill.id, {
-          name: draggingSkill.name,
+        moveSkillLocal(current, draggingSkill.id, {
           categoryName: targetCategory,
+          beforeId: opts?.beforeId,
         }),
       );
       setDraggingSkill(null);
@@ -231,7 +290,8 @@ export function useAbout(
     setEditingCategoryName,
     skills,
     groupedSkills,
-    sortedCategories,
+    categoryOrder,
+    moveCategory,
     handleDeleteCategory,
     startEditCategory,
     saveCategoryEdit,

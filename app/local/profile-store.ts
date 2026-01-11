@@ -6,6 +6,7 @@ import type { Education } from "@/types/education";
 import type { Experience } from "@/types/experience";
 import type { Project } from "@/types/project";
 import type { Skill } from "@/types/skill";
+import { moveArrayItem } from "@/lib/moveArrayItem";
 
 type StoredProfileEnvelope = {
   savedAt: string;
@@ -53,6 +54,14 @@ async function kvSet<T>(key: string, value: T): Promise<void> {
 
 function newId(): number {
   return Date.now() + Math.floor(Math.random() * 1000);
+}
+
+function moveItemById<T extends { id: number }>(items: T[], id: number, direction: "up" | "down") {
+  const idx = items.findIndex((item) => item.id === id);
+  if (idx === -1) return items;
+  const targetIdx = direction === "up" ? idx - 1 : idx + 1;
+  if (targetIdx < 0 || targetIdx >= items.length) return items;
+  return moveArrayItem(items, idx, targetIdx);
 }
 
 export function createEmptyProfile(): Profile {
@@ -123,6 +132,10 @@ export function deleteExperience(profile: Profile, id: number): Profile {
   return { ...profile, experiences: profile.experiences.filter((e) => e.id !== id) };
 }
 
+export function moveExperience(profile: Profile, id: number, direction: "up" | "down"): Profile {
+  return { ...profile, experiences: moveItemById(profile.experiences, id, direction) };
+}
+
 export function addProject(profile: Profile, input: Omit<Project, "id">): Profile {
   return { ...profile, projects: [...profile.projects, { id: newId(), ...input }] };
 }
@@ -133,6 +146,10 @@ export function updateProject(profile: Profile, id: number, input: Omit<Project,
 
 export function deleteProject(profile: Profile, id: number): Profile {
   return { ...profile, projects: profile.projects.filter((p) => p.id !== id) };
+}
+
+export function moveProject(profile: Profile, id: number, direction: "up" | "down"): Profile {
+  return { ...profile, projects: moveItemById(profile.projects, id, direction) };
 }
 
 export function addEducation(profile: Profile, input: Omit<Education, "id">): Profile {
@@ -150,6 +167,10 @@ export function deleteEducation(profile: Profile, id: number): Profile {
   return { ...profile, educations: profile.educations.filter((e) => e.id !== id) };
 }
 
+export function moveEducation(profile: Profile, id: number, direction: "up" | "down"): Profile {
+  return { ...profile, educations: moveItemById(profile.educations, id, direction) };
+}
+
 export function addCertification(profile: Profile, input: Omit<Certification, "id">): Profile {
   return { ...profile, certs: [...profile.certs, { id: newId(), ...input }] };
 }
@@ -160,6 +181,10 @@ export function updateCertification(profile: Profile, id: number, input: Omit<Ce
 
 export function deleteCertification(profile: Profile, id: number): Profile {
   return { ...profile, certs: profile.certs.filter((c) => c.id !== id) };
+}
+
+export function moveCertification(profile: Profile, id: number, direction: "up" | "down"): Profile {
+  return { ...profile, certs: moveItemById(profile.certs, id, direction) };
 }
 
 export function addSkill(profile: Profile, input: { name: string; categoryName: string }): Profile {
@@ -173,7 +198,7 @@ export function addSkill(profile: Profile, input: { name: string; categoryName: 
   const next: Skill = { id: newId(), name: normalizedName, category: { name: category } };
   return {
     ...profile,
-    skills: [...profile.skills, next].sort((a, b) => a.name.localeCompare(b.name)),
+    skills: [...profile.skills, next],
   };
 }
 
@@ -184,14 +209,48 @@ export function updateSkill(profile: Profile, id: number, input: { name: string;
 
   return {
     ...profile,
-    skills: profile.skills
-      .map((s) => (s.id === id ? { ...s, name: normalizedName, category: { name: category } } : s))
-      .sort((a, b) => a.name.localeCompare(b.name)),
+    skills: profile.skills.map((s) =>
+      s.id === id ? { ...s, name: normalizedName, category: { name: category } } : s,
+    ),
   };
 }
 
 export function deleteSkill(profile: Profile, id: number): Profile {
   return { ...profile, skills: profile.skills.filter((s) => s.id !== id) };
+}
+
+export function moveSkill(
+  profile: Profile,
+  id: number,
+  opts: { categoryName?: string; beforeId?: number } = {},
+): Profile {
+  const skills = [...(profile.skills || [])];
+  const fromIdx = skills.findIndex((s) => s.id === id);
+  if (fromIdx === -1) return profile;
+
+  const [picked] = skills.splice(fromIdx, 1);
+  if (!picked) return profile;
+
+  const targetCategory = (opts.categoryName ?? picked.category.name).trim().toUpperCase();
+  if (targetCategory) {
+    picked.category = { name: targetCategory };
+  }
+
+  const beforeId = opts.beforeId ?? null;
+  const beforeIdx = beforeId != null ? skills.findIndex((s) => s.id === beforeId) : -1;
+
+  const insertIdx = (() => {
+    if (beforeIdx !== -1) return beforeIdx;
+    // Append to end of target category group; if category doesn't exist yet, append to end.
+    let lastInCategory = -1;
+    for (let i = 0; i < skills.length; i += 1) {
+      if (skills[i]?.category.name.toUpperCase() === targetCategory) lastInCategory = i;
+    }
+    return lastInCategory !== -1 ? lastInCategory + 1 : skills.length;
+  })();
+
+  skills.splice(insertIdx, 0, picked);
+  return { ...profile, skills };
 }
 
 export function renameSkillCategory(profile: Profile, from: string, to: string): Profile {

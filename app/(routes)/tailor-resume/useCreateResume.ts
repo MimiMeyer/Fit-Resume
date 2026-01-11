@@ -1,10 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
-import { buildResumeStyles } from "./components/preview/render/css";
-import { buildPagesHtml, buildSectionHtml } from "./components/preview/render/html";
-import { buildDefaultResumePdfFileName, sanitizePdfFileName } from "./components/preview/render/pdf";
-import { measureSections, paginateByMeasurement } from "./components/preview/render/pagination";
+import { useEffect, useMemo, useState } from "react";
+import { buildDefaultResumePdfFileName, sanitizePdfFileName } from "./components/preview/pdf";
 import {
   DEFAULT_BORDERS,
   DEFAULT_FONT_FAMILIES,
@@ -28,7 +25,6 @@ import type {
 import type { GeneratedResume } from "@/types/resume-agent";
 import type { Profile } from "@/types/profile";
 import { normalizeBullets } from "@/lib/normalizeBullets";
-import { escapeAttr, escapeHtml, sanitizeHref } from "@/lib/htmlSanitize";
 import type {
   TailorCertificationDraft,
   TailorEducationDraft,
@@ -39,9 +35,7 @@ import type {
   TailorSkillDraft,
 } from "./model/edit-state";
 import type { TailorResumePdfRequest } from "@/app/api/tailor-resume/pdf/types";
-
-const PAGE_WIDTH_PX = 794; // A4 width at 96 DPI
-const PAGE_HEIGHT_PX = 1123; // A4 height at 96 DPI
+import { normalizeKey } from "./utils/text";
 
 const SECTION_ORDER: ResumeSectionId[] = [
   "experience",
@@ -67,10 +61,6 @@ const RESUME_ACCENT_OPACITY_CACHE_KEY = "fitresume.tailorResumeAccentOpacity.v1"
 const RESUME_SPACING_CACHE_KEY = "fitresume.tailorResumeSpacing.v1";
 const RESUME_LAYOUT_MODE_CACHE_KEY = "fitresume.tailorResumeLayoutMode.v1";
 const RESUME_SHOW_JD_CACHE_KEY = "fitresume.tailorResumeShowJobDescription.v1";
-
-function normalizeKey(value: string) {
-  return value.trim().toLowerCase();
-}
 
 function safeParseDraft(raw: string | null): TailorResumeDraft | null {
   if (!raw) return null;
@@ -167,6 +157,7 @@ function safeParseFontFamilies(raw: string | null): ResumeFontFamilies | null {
 function normalizePdfFontFamily(value: string) {
   const v = value.toLowerCase();
   if (v.includes("courier") || v.includes("mono")) return '"Courier New", Courier, monospace';
+  if (v.includes("sans-serif")) return "Arial, Helvetica, sans-serif";
   if (v.includes("times") || v.includes("georgia") || v.includes("serif"))
     return '"Times New Roman", Times, serif';
   return "Arial, Helvetica, sans-serif";
@@ -268,20 +259,6 @@ function normalizeTailorCertificationDraft(input: TailorCertificationDraft): Tai
   };
 }
 
-function linkifyContact(part: string) {
-  const trimmed = part.trim();
-  if (!trimmed) return "";
-  const isEmail = trimmed.includes("@");
-  if (isEmail) return escapeHtml(trimmed);
-  const hasProtocol = /^https?:\/\//i.test(trimmed);
-  const isUrlLike = trimmed.includes(".") || trimmed.includes("/");
-  const hrefRaw = hasProtocol ? trimmed : isUrlLike ? `https://${trimmed.replace(/^\/+/, "")}` : "";
-  if (!hrefRaw) return escapeHtml(trimmed);
-  const safeHref = sanitizeHref(hrefRaw);
-  if (!safeHref) return escapeHtml(trimmed);
-  return `<a href="${escapeAttr(safeHref)}" class="resume-link" target="_blank" rel="noreferrer">${escapeHtml(trimmed)}</a>`;
-}
-
 function applyAlpha(hex: string, alpha: number) {
   const norm = hex.trim();
   if (alpha >= 1) return norm;
@@ -344,10 +321,8 @@ export function useCreateResume(
 
   const [accentColor, setAccentColor] = useState("#0c6d82");
   const [accentOpacity, setAccentOpacity] = useState(1);
-  const [layoutMode, setLayoutMode] = useState<ResumeLayoutMode>("two");
-
-  const resumeRef = useRef<HTMLDivElement>(null);
-  const resumeWrapperRef = useRef<HTMLDivElement>(null);
+  const [layoutMode, setLayoutMode] = useState<ResumeLayoutMode>("single");
+  const paginatedSections = useMemo<ResumeSectionId[][]>(() => [SECTION_ORDER], []);
 
   const setAccentColorPersisted = (color: string) => {
     setAccentColor(color);
@@ -504,28 +479,6 @@ export function useCreateResume(
     profile.websiteUrl,
   ]);
 
-  const contactParts = useMemo(
-    () =>
-      [
-        headerForEdit.location,
-        headerForEdit.phone,
-        headerForEdit.email,
-        headerForEdit.websiteUrl,
-        headerForEdit.githubUrl,
-        headerForEdit.linkedinUrl,
-      ].filter(Boolean) as string[],
-    [
-      headerForEdit.email,
-      headerForEdit.githubUrl,
-      headerForEdit.linkedinUrl,
-      headerForEdit.location,
-      headerForEdit.phone,
-      headerForEdit.websiteUrl,
-    ],
-  );
-
-  const summaryForView = headerForEdit.summary;
-
   const experiencesForEdit: TailorExperienceDraft[] = useMemo(() => {
     if (draft?.experiences !== undefined) return draft.experiences;
 
@@ -585,8 +538,17 @@ export function useCreateResume(
         .filter((edu) => edu.institution)
         .map((edu) => ({
           degree: edu.degree || "",
+          field: edu.field || "",
           school: edu.institution,
-          period: edu.startYear && edu.endYear ? `${edu.startYear} - ${edu.endYear}` : "",
+          period:
+            edu.startYear && edu.endYear
+              ? `${edu.startYear} - ${edu.endYear}`
+              : edu.startYear
+                ? String(edu.startYear)
+                : edu.endYear
+                  ? String(edu.endYear)
+                  : "",
+          details: edu.details || "",
         })),
     [educationsForEdit],
   );
@@ -649,28 +611,26 @@ export function useCreateResume(
     return (profile.skills || []).map((s) => ({ id: s.id, name: s.name, category: s.category.name }));
   }, [draft?.skills, generated?.skillsByCategory, profile.skills]);
 
-  const groupedSkills = useMemo(() => {
-    const grouped: Record<string, string[]> = {};
+  const skillGroups: ResumeSkillGroup[] = useMemo(() => {
+    const groups = new Map<string, { category: string; items: string[]; seen: Set<string> }>();
+
     (skillsForEdit || [])
       .map((s) => normalizeTailorSkillDraft(s))
       .filter((s) => s.name && s.category)
       .forEach((s) => {
         const category = s.category.toUpperCase();
-        if (!grouped[category]) grouped[category] = [];
-        grouped[category].push(s.name);
+        const entry =
+          groups.get(category) ?? { category, items: [], seen: new Set<string>() };
+        const key = s.name.trim().toLowerCase();
+        if (key && !entry.seen.has(key)) {
+          entry.seen.add(key);
+          entry.items.push(s.name);
+        }
+        groups.set(category, entry);
       });
 
-    for (const cat of Object.keys(grouped)) {
-      grouped[cat] = Array.from(new Set(grouped[cat])).sort((a, b) => a.localeCompare(b));
-    }
-
-    return grouped;
+    return Array.from(groups.values()).map(({ category, items }) => ({ category, items }));
   }, [skillsForEdit]);
-
-  const skillGroups: ResumeSkillGroup[] = useMemo(
-    () => Object.entries(groupedSkills).map(([category, items]) => ({ category, items })),
-    [groupedSkills],
-  );
 
   const certificationsForEdit: TailorCertificationDraft[] = useMemo(() => {
     if (draft?.certifications !== undefined) return draft.certifications;
@@ -698,78 +658,7 @@ export function useCreateResume(
     [certificationsForEdit],
   );
 
-  const [paginatedSections, setPaginatedSections] = useState<ResumeSectionId[][]>([
-    SECTION_ORDER,
-  ]);
-
-  useEffect(() => {
-    setPaginatedSections([SECTION_ORDER]);
-  }, [
-    educationForView.length,
-    experiencesForView,
-    groupedSkills,
-    projectsForView.length,
-    layoutMode,
-  ]);
-
-  const { resumeStyles, pagesHtml: basePagesHtml } = useMemo(() => {
-    const sectionHtml = buildSectionHtml({
-      experiencesForView,
-      skillGroups,
-      educationForView,
-      projectsForView,
-      certs: certsForView,
-      layoutMode,
-    });
-
-    const showPageNumbers = paginatedSections.length > 1;
-
-    const pagesHtml = buildPagesHtml({
-      paginatedSections,
-      sectionHtml,
-      showPageNumbers,
-      layoutMode,
-      profile: {
-        fullName: headerForEdit.fullName || emptyProfileFallback.fullName,
-        title: headerForEdit.title || emptyProfileFallback.title,
-        summary: summaryForView || emptyProfileFallback.summary,
-      },
-      contactParts: contactParts.map((part) => linkifyContact(part)),
-    });
-
-    const resumeStyles = buildResumeStyles({
-      pageWidth: PAGE_WIDTH_PX,
-      pageHeight: PAGE_HEIGHT_PX,
-      palette,
-      fontSizes,
-      fontFamilies,
-      borders,
-      accentIsNone: accentColor.toLowerCase() === "#ffffff",
-      accentOpacity,
-      spacing,
-    });
-
-    return { resumeStyles, pagesHtml };
-  }, [
-    accentColor,
-    accentOpacity,
-    contactParts,
-    educationForView,
-    experiencesForView,
-    fontFamilies,
-    borders,
-    layoutMode,
-    paginatedSections,
-    palette,
-    certsForView,
-    headerForEdit.fullName,
-    headerForEdit.title,
-    projectsForView,
-    skillGroups,
-    summaryForView,
-    fontSizes,
-    spacing,
-  ]);
+  // Client-side HTML measurement/pagination was removed. The iframe previews the PDF bytes we generate.
 
   const handleGenerate = async () => {
     const trimmedJd = jobDescription.trim();
@@ -917,62 +806,6 @@ export function useCreateResume(
     }
   };
 
-  useEffect(() => {
-    const root = resumeRef.current;
-    if (!root) return;
-
-    const recalc = () => {
-      const { heights, limit } = measureSections(root, SECTION_ORDER, PAGE_HEIGHT_PX);
-      const gap = layoutMode === "two" ? 10 : 8;
-      const nextPages = paginateByMeasurement(
-        SECTION_ORDER,
-        heights,
-        layoutMode,
-        limit,
-        gap,
-      );
-
-      const same =
-        nextPages.length === paginatedSections.length &&
-        nextPages.every(
-          (p, i) =>
-            p.length === paginatedSections[i]?.length &&
-            p.every((id, j) => id === paginatedSections[i][j]),
-        );
-
-      if (!same) {
-        setPaginatedSections(nextPages);
-      }
-    };
-
-    const raf = requestAnimationFrame(recalc);
-    return () => cancelAnimationFrame(raf);
-  }, [fontSizes, spacing, layoutMode, basePagesHtml, paginatedSections]);
-
-  const pageStyle = useMemo(
-    () =>
-      ({
-        margin: "0 auto",
-        width: `${PAGE_WIDTH_PX}px`,
-        "--page-width": `${PAGE_WIDTH_PX}px`,
-        "--page-height": `${PAGE_HEIGHT_PX}px`,
-        "--accent": palette.accent,
-        "--accent-fill": palette.accentFill,
-        "--accent-light": palette.accentLight,
-        "--accent-soft": palette.accentSoft,
-        "--accent-border": palette.accentBorder,
-        "--accent-text": palette.accentText,
-      }) as CSSProperties,
-    [
-      palette.accent,
-      palette.accentFill,
-      palette.accentBorder,
-      palette.accentLight,
-      palette.accentSoft,
-      palette.accentText,
-    ],
-  );
-
   const resetGenerated = () => {
     setGenerated(null);
     setGenerateError(null);
@@ -995,7 +828,7 @@ export function useCreateResume(
     sessionStorage.removeItem(RESUME_ACCENT_OPACITY_CACHE_KEY);
     setSpacing(DEFAULT_SPACING);
     sessionStorage.removeItem(RESUME_SPACING_CACHE_KEY);
-    setLayoutModePersisted("two");
+    setLayoutModePersisted("single");
     sessionStorage.removeItem(RESUME_LAYOUT_MODE_CACHE_KEY);
     sessionStorage.removeItem(RESUME_SHOW_JD_CACHE_KEY);
   };
@@ -1028,6 +861,7 @@ export function useCreateResume(
     certifications: certsForView.map((c) => ({
       name: c.name,
       issuer: c.issuer,
+      issuedYear: c.issuedYear ?? null,
       credentialUrl: c.credentialUrl,
     })),
   });
@@ -1168,15 +1002,9 @@ export function useCreateResume(
     },
     layoutMode,
     setLayoutMode: setLayoutModePersisted,
-    resumeStyles,
-    pagesHtml: basePagesHtml,
-    pageStyle,
-    paginatedSectionsCount: paginatedSections.length,
     pdfLiveUrl,
     pdfLiveGenerating,
     pdfLiveError,
-    resumeRef,
-    resumeWrapperRef,
     handleGenerate,
     handleDownloadPdf,
     resetGenerated,

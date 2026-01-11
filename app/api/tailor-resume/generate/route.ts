@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { runResumeAgents } from "@/server/resume/resumeAgents";
 import type { Profile } from "@/types/profile";
 import type { AgentProfileInput } from "@/types/resume-agent";
+import { enforceRateLimit, readJsonWithLimit } from "@/app/api/_lib/request-guards";
 
 export const dynamic = "force-dynamic";
 
@@ -38,15 +39,26 @@ function toAgentProfileInput(profile: Profile): AgentProfileInput {
 
 export async function POST(req: Request) {
   try {
+    const rate = enforceRateLimit(req, { keyPrefix: "tailor-resume-generate", limit: 10, windowMs: 10 * 60 * 1000 });
+    if (!rate.ok) {
+      return NextResponse.json(
+        { error: rate.error },
+        { status: rate.status, headers: { "Retry-After": String(rate.retryAfterSec) } },
+      );
+    }
+
     const apiKey = req.headers.get("x-claude-api-key")?.trim() || "";
     if (!apiKey) {
       return NextResponse.json({ error: "Claude API key is required." }, { status: 400 });
     }
 
-    const body = (await req.json().catch(() => null)) as null | {
-      profile?: Profile;
-      jobDescription?: string;
-    };
+    const parsed = await readJsonWithLimit<{ profile?: Profile; jobDescription?: string }>(req, {
+      maxBytes: 250_000,
+    });
+    if (!parsed.ok) {
+      return NextResponse.json({ error: parsed.error }, { status: parsed.status });
+    }
+    const body = parsed.value;
 
     const profile = body?.profile;
     const trimmedJd = (body?.jobDescription || "").trim();

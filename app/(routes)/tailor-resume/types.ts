@@ -38,8 +38,8 @@ export type ResumeFontSizes = typeof DEFAULT_FONT_SIZES;
 export type ResumeFontFamilies = typeof DEFAULT_FONT_FAMILIES;
 export type ResumeSpacing = typeof DEFAULT_SPACING;
 
-export type ResumeBorderStyle = "solid" | "dashed" | "dotted";
-export type ResumeBorderRadius = "sharp" | "rounded";
+type ResumeBorderStyle = "solid" | "dashed" | "dotted";
+type ResumeBorderRadius = "sharp" | "rounded";
 export type ResumeBorderTargetKey = "page" | "summary" | "section" | "content";
 export type ResumeBorders = {
   widthPx: number;
@@ -58,8 +58,10 @@ export type ResumeExperienceForView = {
 
 export type ResumeEducationForView = {
   degree: string;
+  field: string;
   school: string;
   period: string;
+  details: string;
 };
 
 export type ResumeProjectForView = {

@@ -3,6 +3,7 @@
 import type { Profile } from "@/types/profile";
 import { PenIcon } from "@/app/icons/pen";
 import { styles } from "../style-constants";
+import { sanitizeHref } from "@/lib/htmlSanitize";
 
 type Props = {
   profile: Profile;
@@ -10,6 +11,10 @@ type Props = {
 };
 
 export function ProfileHeader({ profile, onEdit }: Props) {
+  const linkedInHref = profile.linkedinUrl ? sanitizeHref(profile.linkedinUrl) : null;
+  const githubHref = profile.githubUrl ? sanitizeHref(profile.githubUrl) : null;
+  const websiteHref = profile.websiteUrl ? sanitizeHref(profile.websiteUrl) : null;
+
   return (
     <section className={styles.aboutCard}>
       <div className={styles.headerRow}>
@@ -23,24 +28,34 @@ export function ProfileHeader({ profile, onEdit }: Props) {
             {profile.location && <span className={styles.pill}>{profile.location}</span>}
             {profile.email && <span className={styles.pill}>{profile.email}</span>}
             {profile.phone && <span className={styles.pill}>{profile.phone}</span>}
-            {profile.linkedinUrl && (
+            {linkedInHref && (
               <a
                 className={styles.linkPill}
-                href={profile.linkedinUrl}
+                href={linkedInHref}
                 target="_blank"
-                rel="noreferrer"
+                rel="noreferrer noopener"
               >
                 LinkedIn
               </a>
             )}
-            {profile.githubUrl && (
+            {githubHref && (
               <a
                 className={styles.linkPill}
-                href={profile.githubUrl}
+                href={githubHref}
                 target="_blank"
-                rel="noreferrer"
+                rel="noreferrer noopener"
               >
                 GitHub
+              </a>
+            )}
+            {websiteHref && (
+              <a
+                className={styles.linkPill}
+                href={websiteHref}
+                target="_blank"
+                rel="noreferrer noopener"
+              >
+                Website
               </a>
             )}
           </div>

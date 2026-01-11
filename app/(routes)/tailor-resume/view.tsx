@@ -1,7 +1,6 @@
 "use client";
 
 import { JobDescriptionPanel } from "./components/job-description/JobDescriptionPanel";
-import { Preview } from "./components/preview/Preview";
 import { Toolbar } from "./components/topbar/Toolbar";
 import { EditSections } from "./components/topbar/edit/EditSections";
 import type { Profile } from "@/types/profile";
@@ -42,15 +41,9 @@ export function CreateResumeView({
     setSpacing,
     layoutMode,
     setLayoutMode,
-    resumeStyles,
-    pagesHtml,
-    pageStyle,
-    paginatedSectionsCount,
     pdfLiveUrl,
     pdfLiveGenerating,
     pdfLiveError,
-    resumeRef,
-    resumeWrapperRef,
     handleGenerate,
     handleDownloadPdf,
     resetToProfile,
@@ -218,30 +211,6 @@ export function CreateResumeView({
                 ) : null}
               </div>
             </div>
-          </div>
-
-          {/* Offscreen HTML render used only for measurement/pagination. */}
-          <div
-            aria-hidden="true"
-            style={{
-              position: "fixed",
-              left: -100000,
-              top: 0,
-              width: 900,
-              pointerEvents: "none",
-              opacity: 0,
-            }}
-          >
-            <Preview
-              resumeStyles={resumeStyles}
-              pagesHtml={pagesHtml}
-              pageStyle={pageStyle}
-              paginatedSectionsCount={paginatedSectionsCount}
-              resumeRef={resumeRef}
-              resumeWrapperRef={resumeWrapperRef}
-              maxHeight={"none"}
-              showFooter={false}
-            />
           </div>
         </div>
       </div>

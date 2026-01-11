@@ -25,6 +25,10 @@ import {
   deleteExperience,
   deleteProject,
   deleteSkill,
+  moveCertification,
+  moveEducation,
+  moveExperience,
+  moveProject,
   updateCertification,
   updateEducation,
   updateExperience,
@@ -193,7 +197,8 @@ export function AboutLayout({ profile, isPending, startTransition, updateProfile
     setEditingCategoryName,
     skills,
     groupedSkills,
-    sortedCategories,
+    categoryOrder,
+    moveCategory,
     handleDeleteCategory,
     startEditCategory,
     saveCategoryEdit,
@@ -234,6 +239,9 @@ export function AboutLayout({ profile, isPending, startTransition, updateProfile
         }}
         onAdd={(input) => updateProfile((current) => addExperience(current, input), { flush: true })}
         onDelete={(id) => updateProfile((current) => deleteExperience(current, id), { flush: true })}
+        onMove={(id, direction) =>
+          updateProfile((current) => moveExperience(current, id, direction), { flush: true })
+        }
       />
 
       <EducationSection
@@ -242,6 +250,9 @@ export function AboutLayout({ profile, isPending, startTransition, updateProfile
         onEdit={setEditingEdu}
         onAdd={(input) => updateProfile((current) => addEducation(current, input), { flush: true })}
         onDelete={(id) => updateProfile((current) => deleteEducation(current, id), { flush: true })}
+        onMove={(id, direction) =>
+          updateProfile((current) => moveEducation(current, id, direction), { flush: true })
+        }
       />
 
       <CertificationsSection
@@ -250,6 +261,9 @@ export function AboutLayout({ profile, isPending, startTransition, updateProfile
         onEdit={setEditingCert}
         onAdd={(input) => updateProfile((current) => addCertification(current, input), { flush: true })}
         onDelete={(id) => updateProfile((current) => deleteCertification(current, id), { flush: true })}
+        onMove={(id, direction) =>
+          updateProfile((current) => moveCertification(current, id, direction), { flush: true })
+        }
       />
 
       <ProjectsSection
@@ -258,6 +272,9 @@ export function AboutLayout({ profile, isPending, startTransition, updateProfile
         onEdit={setEditingProject}
         onAdd={(input) => updateProfile((current) => addProject(current, input), { flush: true })}
         onDelete={(id) => updateProfile((current) => deleteProject(current, id), { flush: true })}
+        onMove={(id, direction) =>
+          updateProfile((current) => moveProject(current, id, direction), { flush: true })
+        }
       />
 
       <SkillsSection
@@ -265,7 +282,7 @@ export function AboutLayout({ profile, isPending, startTransition, updateProfile
         skills={skills}
         categories={categories}
         groupedSkills={groupedSkills}
-        sortedCategories={sortedCategories}
+        sortedCategories={categoryOrder}
         openCategories={openCategories}
         setOpenCategories={setOpenCategories}
         categoryBusy={categoryBusy}
@@ -280,6 +297,7 @@ export function AboutLayout({ profile, isPending, startTransition, updateProfile
         handleSkillDragStart={handleSkillDragStart}
         handleSkillDragEnd={handleSkillDragEnd}
         handleSkillDrop={handleSkillDrop}
+        moveCategory={moveCategory}
         onEditSkill={setEditingSkill}
         onAddSkill={(name, categoryName) =>
           updateProfile((current) => addSkill(current, { name, categoryName }), { flush: true })

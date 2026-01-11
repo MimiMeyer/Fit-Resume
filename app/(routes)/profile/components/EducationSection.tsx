@@ -5,6 +5,7 @@ import { PenIcon } from "@/app/icons/pen";
 import { styles } from "../style-constants";
 import type { Education } from "@/types/education";
 import { Modal } from "../Modal";
+import { ReorderButtons } from "@/app/components/ReorderButtons";
 
 const dangerButton =
   "rounded border border-red-100 px-3 py-1 text-xs font-semibold text-red-700 transition hover:bg-red-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-500";
@@ -15,6 +16,7 @@ type Props = {
   onEdit: (edu: Education) => void;
   onAdd: (input: Omit<Education, "id">) => void;
   onDelete: (id: number) => void;
+  onMove: (id: number, direction: "up" | "down") => void;
 };
 
 function AddEducationModal({ profileId, onAdd }: { profileId: number; onAdd: Props["onAdd"] }) {
@@ -95,7 +97,7 @@ function AddEducationModal({ profileId, onAdd }: { profileId: number; onAdd: Pro
   );
 }
 
-export function EducationSection({ profileId, educations, onEdit, onAdd, onDelete }: Props) {
+export function EducationSection({ profileId, educations, onEdit, onAdd, onDelete, onMove }: Props) {
   return (
     <section className={styles.sectionCard}>
       <div className={styles.sectionHeader}>
@@ -106,7 +108,7 @@ export function EducationSection({ profileId, educations, onEdit, onAdd, onDelet
       </div>
       {educations.length ? (
         <div className={styles.sectionBody}>
-          {educations.map((edu) => (
+          {educations.map((edu, idx) => (
             <div key={edu.id} className={styles.listRow}>
               <div className={styles.flex1}>
                 <p className={styles.strongText}>{edu.institution}</p>
@@ -121,11 +123,16 @@ export function EducationSection({ profileId, educations, onEdit, onAdd, onDelet
                 )}
               </div>
               <div className={styles.actionsRow}>
-                <button
-                  onClick={() => onEdit(edu)}
-                  className={styles.editButton}
-                  aria-label="Edit education"
-                >
+                <ReorderButtons
+                  upDisabled={idx === 0}
+                  downDisabled={idx === educations.length - 1}
+                  onUp={() => onMove(edu.id, "up")}
+                  onDown={() => onMove(edu.id, "down")}
+                  buttonClassName={styles.editButton}
+                  upAriaLabel="Move education up"
+                  downAriaLabel="Move education down"
+                />
+                <button onClick={() => onEdit(edu)} className={styles.editButton} aria-label="Edit education">
                   <PenIcon className={styles.iconSm} />
                 </button>
                 <button type="button" className={dangerButton} onClick={() => onDelete(edu.id)}>
@@ -136,9 +143,7 @@ export function EducationSection({ profileId, educations, onEdit, onAdd, onDelet
           ))}
         </div>
       ) : (
-        <p className={styles.bodyText}>
-          No education yet.
-        </p>
+        <p className={styles.bodyText}>No education yet.</p>
       )}
     </section>
   );

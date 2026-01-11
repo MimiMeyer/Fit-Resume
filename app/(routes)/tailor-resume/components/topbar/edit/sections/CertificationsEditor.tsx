@@ -4,6 +4,9 @@ import { useMemo, useState } from "react";
 import type { TailorCertificationDraft } from "../../../../model/edit-state";
 import { ActionRow } from "../shared/ActionRow";
 import { useAutoScrollOnAdd } from "../shared/useAutoScrollOnAdd";
+import { SectionAdd } from "../shared/SectionAdd";
+import { ReorderButtons } from "@/app/components/ReorderButtons";
+import { moveArrayItem } from "@/lib/moveArrayItem";
 import { dirtyInputClass, normalizeText, takeBestMatch } from "../shared/diffUtils";
 
 export function CertificationsEditor({
@@ -26,6 +29,9 @@ export function CertificationsEditor({
   const [items, setItems] = useState<TailorCertificationDraft[]>(initial);
   const { listRef, markAdded } = useAutoScrollOnAdd(items.length);
 
+  const moveItem = (fromIndex: number, toIndex: number) =>
+    setItems((prev) => moveArrayItem(prev, fromIndex, toIndex));
+
   const fieldDiffs = useMemo(() => {
     const remaining = [...(baseline || [])];
 
@@ -33,8 +39,7 @@ export function CertificationsEditor({
       let score = 0;
       if (
         normalizeText(current.credentialUrl).toLowerCase() &&
-        normalizeText(current.credentialUrl).toLowerCase() ===
-          normalizeText(candidate.credentialUrl).toLowerCase()
+        normalizeText(current.credentialUrl).toLowerCase() === normalizeText(candidate.credentialUrl).toLowerCase()
       ) {
         score += 6;
       }
@@ -69,28 +74,30 @@ export function CertificationsEditor({
     });
   }, [baseline, items]);
 
+  const addCertification = () => {
+    markAdded();
+    setItems((prev) => [...prev, { id: undefined, name: "", issuer: "", issuedYear: null, credentialUrl: "" }]);
+  };
+
   return (
     <div>
       <div className="flex justify-end">
-        <button
-          type="button"
-          className="text-xs font-semibold text-[var(--accent)] sm:text-sm"
-          onClick={() => {
-            markAdded();
-            setItems((prev) => [
-              ...prev,
-              { id: undefined, name: "", issuer: "", issuedYear: null, credentialUrl: "" },
-            ]);
-          }}
-        >
-          + Add certification
-        </button>
+        <SectionAdd label="+ Add certification" disabled={isPending} onAdd={addCertification} mode="top" />
       </div>
 
       <div ref={listRef} className="mt-3 grid gap-4">
         {items.map((c, idx) => (
           <div key={idx} className="rounded-xl border border-zinc-200 bg-white p-3">
             <div className="flex items-center justify-end gap-2">
+              <ReorderButtons
+                upDisabled={idx === 0}
+                downDisabled={idx === items.length - 1}
+                onUp={() => moveItem(idx, idx - 1)}
+                onDown={() => moveItem(idx, idx + 1)}
+                buttonClassName="rounded-full border border-zinc-200 bg-white px-2 py-1 text-xs font-semibold text-zinc-700 shadow-sm transition hover:bg-zinc-50 disabled:opacity-50 sm:text-sm"
+                upAriaLabel="Move certification up"
+                downAriaLabel="Move certification down"
+              />
               <button
                 type="button"
                 className="text-xs font-semibold text-red-600 sm:text-sm"
@@ -108,9 +115,7 @@ export function CertificationsEditor({
                     className={dirtyInputClass(!!fieldDiffs[idx]?.nameDirty)}
                     value={c.name}
                     onChange={(e) =>
-                      setItems((prev) =>
-                        prev.map((p, i) => (i === idx ? { ...p, name: e.target.value } : p)),
-                      )
+                      setItems((prev) => prev.map((p, i) => (i === idx ? { ...p, name: e.target.value } : p)))
                     }
                   />
                 </label>
@@ -120,9 +125,7 @@ export function CertificationsEditor({
                     className={dirtyInputClass(!!fieldDiffs[idx]?.issuerDirty)}
                     value={c.issuer}
                     onChange={(e) =>
-                      setItems((prev) =>
-                        prev.map((p, i) => (i === idx ? { ...p, issuer: e.target.value } : p)),
-                      )
+                      setItems((prev) => prev.map((p, i) => (i === idx ? { ...p, issuer: e.target.value } : p)))
                     }
                   />
                 </label>
@@ -136,9 +139,7 @@ export function CertificationsEditor({
                     value={c.issuedYear ?? ""}
                     onChange={(e) => {
                       const next = e.target.value ? Number(e.target.value) : null;
-                      setItems((prev) =>
-                        prev.map((p, i) => (i === idx ? { ...p, issuedYear: next } : p)),
-                      );
+                      setItems((prev) => prev.map((p, i) => (i === idx ? { ...p, issuedYear: next } : p)));
                     }}
                   />
                 </label>
@@ -160,6 +161,14 @@ export function CertificationsEditor({
         ))}
       </div>
 
+      <SectionAdd
+        label="+ Add certification"
+        disabled={isPending}
+        onAdd={addCertification}
+        mode="bottom"
+        itemsCount={items.length}
+      />
+
       <ActionRow
         isPending={isPending}
         onSavePreview={() => onSavePreview(items)}
@@ -170,3 +179,4 @@ export function CertificationsEditor({
     </div>
   );
 }
+

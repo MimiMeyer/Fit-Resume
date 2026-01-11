@@ -408,8 +408,7 @@ export function EditSections({
                 id: s.id ?? newId(),
                 name: s.name,
                 category: { name: s.category.trim().toUpperCase() || "UNCATEGORIZED" },
-              }))
-              .sort((a, b) => a.name.localeCompare(b.name)),
+              })),
           }),
           { flush: true },
         );

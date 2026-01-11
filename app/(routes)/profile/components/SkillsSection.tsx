@@ -7,6 +7,7 @@ import { styles } from "../style-constants";
 import type { Category } from "@/types/category";
 import type { Skill } from "@/types/skill";
 import { Modal } from "../Modal";
+import { ReorderButtons } from "@/app/components/ReorderButtons";
 
 function skillChipClass(isDragging: boolean) {
   return isDragging
@@ -20,6 +21,7 @@ type Props = {
   categories: Category[];
   groupedSkills: Record<string, Skill[]>;
   sortedCategories: string[];
+  moveCategory: (categoryName: string, direction: "up" | "down") => void;
   openCategories: Record<string, boolean>;
   setOpenCategories: Dispatch<SetStateAction<Record<string, boolean>>>;
   categoryBusy: boolean;
@@ -33,7 +35,7 @@ type Props = {
   draggingSkill: Skill | null;
   handleSkillDragStart: (skill: Skill) => void;
   handleSkillDragEnd: () => void;
-  handleSkillDrop: (category: string) => void;
+  handleSkillDrop: (category: string, opts?: { beforeId?: number }) => void;
   onEditSkill: (skill: Skill) => void;
   onAddSkill: (name: string, categoryName: string) => void;
   onDeleteSkill: (id: number) => void;
@@ -260,6 +262,7 @@ export function SkillsSection({
   categories,
   groupedSkills,
   sortedCategories,
+  moveCategory,
   openCategories,
   setOpenCategories,
   categoryBusy,
@@ -346,8 +349,18 @@ export function SkillsSection({
                   {(() => {
                     const cat = categories.find((c) => c.name === category);
                     if (!cat) return null;
+                    const idx = sortedCategories.findIndex((c) => c === category);
                     return (
                       <>
+                        <ReorderButtons
+                          upDisabled={categoryBusy || idx <= 0}
+                          downDisabled={categoryBusy || idx === -1 || idx >= sortedCategories.length - 1}
+                          onUp={() => moveCategory(category, "up")}
+                          onDown={() => moveCategory(category, "down")}
+                          buttonClassName={styles.editButton}
+                          upAriaLabel={`Move category ${category} up`}
+                          downAriaLabel={`Move category ${category} down`}
+                        />
                         <AddSkillModal
                           profileId={profileId}
                           categories={categories}
@@ -388,6 +401,15 @@ export function SkillsSection({
                       draggable
                       onDragStart={() => handleSkillDragStart(skill)}
                       onDragEnd={handleSkillDragEnd}
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                      }}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleSkillDrop(category, { beforeId: skill.id });
+                      }}
                     >
                       <span className={styles.skillName}>{skill.name}</span>
                       <div className={styles.hoverReveal}>

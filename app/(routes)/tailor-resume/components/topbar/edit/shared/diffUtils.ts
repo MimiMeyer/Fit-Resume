@@ -1,17 +1,4 @@
-export function normalizeText(value: string) {
-  return value.trim().replace(/\s+/g, " ");
-}
-
-export function normalizeKey(value: string) {
-  return normalizeText(value).toLowerCase();
-}
-
-export function equalStringSets(a: string[], b: string[]) {
-  if (a.length !== b.length) return false;
-  const sortedA = [...a].sort();
-  const sortedB = [...b].sort();
-  return sortedA.every((val, idx) => val === sortedB[idx]);
-}
+export { normalizeKey, normalizeText } from "../../../../utils/text";
 
 export function dirtyInputClass(isDirty: boolean) {
   return [
