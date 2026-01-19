@@ -32,6 +32,66 @@ type ModelInput = {
 
 const ANTHROPIC_MODEL = "claude-sonnet-4-5-20250929";
 
+function normalizeSkillToken(value: string) {
+  return value.trim().replace(/\s+/g, " ").toLowerCase();
+}
+
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function tokenAppearsInText(token: string, text: string) {
+  const t = token.trim();
+  if (!t) return false;
+  const escaped = escapeRegExp(t.toLowerCase());
+  const pattern = new RegExp(`(^|[^a-z0-9])${escaped}([^a-z0-9]|$)`, "i");
+  return pattern.test(` ${text.toLowerCase()} `);
+}
+
+function stripCodeFences(raw: string) {
+  return raw.trim().replace(/^```(?:json)?\s*/i, "").replace(/```$/i, "").trim();
+}
+
+function tryParseJsonObject<T>(raw: string): T | null {
+  const trimmed = stripCodeFences(raw);
+  if (!trimmed) return null;
+  try {
+    return JSON.parse(trimmed) as T;
+  } catch {
+    const start = trimmed.indexOf("{");
+    const end = trimmed.lastIndexOf("}");
+    if (start >= 0 && end > start) {
+      try {
+        return JSON.parse(trimmed.slice(start, end + 1)) as T;
+      } catch {
+        return null;
+      }
+    }
+    return null;
+  }
+}
+
+function tryParseJsonArray<T>(raw: string): T[] | null {
+  const trimmed = stripCodeFences(raw);
+  if (!trimmed) return null;
+  try {
+    const parsed = JSON.parse(trimmed);
+    return Array.isArray(parsed) ? (parsed as T[]) : null;
+  } catch {
+    const start = trimmed.indexOf("[");
+    const end = trimmed.lastIndexOf("]");
+    if (start >= 0 && end > start) {
+      try {
+        const parsed = JSON.parse(trimmed.slice(start, end + 1));
+        return Array.isArray(parsed) ? (parsed as T[]) : null;
+      } catch {
+        return null;
+      }
+    }
+    return null;
+  }
+}
+
 function getAnthropicModel(apiKey?: string) {
   const trimmed = apiKey?.trim();
   if (!trimmed) {
@@ -296,7 +356,7 @@ async function skillsAgent(
   jd: string,
   apiKey?: string,
 ): Promise<Record<string, string[]>> {
-  const skillsByCategory = input.skillsByCategory;
+  const skillsByCategory = input.skillsByCategory; // required; must always be preserved
   const experiences = input.experiences;
   const projects = input.projects;
 
@@ -316,68 +376,200 @@ async function skillsAgent(
     .join("\n\n")
     .trim();
 
-  const { text } = await generateText({
-    model: getAnthropicModel(apiKey),
-    temperature: 0.1,
-    maxOutputTokens: 200,
-    system: `
-You produce skills grouped by category for a resume.
+  const categories = Object.keys(skillsByCategory);
 
-Goals:
-- Keep all provided skills, reordered by relevance to the job description.
-- Add only skills that appear in BOTH the job description AND the user's projects/experience text, placing them into existing categories.
-- Present concise, readable category groupings for a recruiter audience.
+  const requiredSkillsByCategory: Record<string, string[]> = {};
+  for (const cat of categories) {
+    requiredSkillsByCategory[cat] = (skillsByCategory[cat] ?? []).slice();
+  }
+
+  const requiredAll = new Set<string>();
+  for (const cat of categories) {
+    (requiredSkillsByCategory[cat] ?? []).forEach((s) => requiredAll.add(normalizeSkillToken(s)));
+  }
+
+  const profileEvidenceText = [expText, projectText].filter(Boolean).join("\n\n");
+  const profileEvidenceLines = profileEvidenceText
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter(Boolean);
+  const profileEvidenceLinesWithIndex = profileEvidenceLines.map((text, index) => ({ index, text }));
+
+  type ExtractedExtraSkill = { skill: string; evidenceIndex: number };
+
+  // 1) Extract optional skills that are present in profile evidence but not already in required skills.
+  const { text: extractRaw } = await generateText({
+    model: getAnthropicModel(apiKey),
+    temperature: 0,
+    maxOutputTokens: 400,
+    system: `
+You extract optional resume skills from PROFILE_EVIDENCE_LINES.
+
+Output JSON ONLY: an array of objects:
+{ "skill": string, "evidenceIndex": number }
 
 Hard Rules:
-1) Do NOT drop any provided skills; you may reorder them based on JD relevance.
-2) Do NOT invent new skills, tools, or technologies.
-3) Do NOT introduce new categories; use only existing categories from the profile.
-4) Only add skills that appear in BOTH the JD AND the user's projects/experience text.
-5) Output plain text grouped by category in the format:
-   CATEGORY: skill1, skill2, skill3
-6) Include all original categories (even if some end up with only original skills).
+1) The skill text must appear in the chosen evidence line (by index).
+2) Do NOT include any skill already present in REQUIRED_SKILLS (case-insensitive match).
+3) Do NOT include generic words like "engineering", "stakeholders", "testing", "workflows", etc.
+4) Keep the list short (<= 20).
+5) Output compact JSON on a single line. No markdown, no commentary.
 `.trim(),
     messages: [
       {
         role: "user",
         content: [
-          { type: "text", text: `JOB DESCRIPTION:\n${jd}` },
-          {
-            type: "text",
-            text: `PROFILE SKILLS BY CATEGORY:\n${JSON.stringify(skillsByCategory, null, 2)}`,
-          },
-          { type: "text", text: `EXPERIENCES TEXT:\n${expText}` },
-          { type: "text", text: `PROJECTS TEXT:\n${projectText}` },
-          {
-            type: "text",
-            text: "Return grouped skills as plain text per the format. Keep all provided skills; you may reorder and add only JD + experience/project overlaps.",
-          },
+          { type: "text", text: `REQUIRED_SKILLS:\n${JSON.stringify(Array.from(requiredAll))}` },
+          { type: "text", text: `PROFILE_EVIDENCE_LINES:\n${JSON.stringify(profileEvidenceLinesWithIndex, null, 2)}` },
+          { type: "text", text: "Return JSON array now." },
         ],
       },
     ],
   });
 
-  const grouped: Record<string, string[]> = {};
-  text
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .forEach((line) => {
-      const [cat, skillsRaw] = line.split(":").map((s) => s.trim());
-      if (!cat) return;
-      const items = (skillsRaw || "")
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean);
-      grouped[cat] = items;
-    });
+  const extracted = tryParseJsonArray<ExtractedExtraSkill>(extractRaw) ?? [];
 
-  // ensure we keep original categories even if empty
-  Object.keys(skillsByCategory).forEach((cat) => {
-    if (!grouped[cat]) grouped[cat] = skillsByCategory[cat];
+  const extraSkills: ExtractedExtraSkill[] = [];
+  const extraByNormalized = new Map<string, ExtractedExtraSkill>();
+  for (const item of extracted) {
+    const skill = item?.skill?.trim();
+    const evidenceIndex = item?.evidenceIndex;
+    if (!skill || typeof evidenceIndex !== "number") continue;
+    const line = profileEvidenceLines[evidenceIndex];
+    if (!line) continue;
+    if (!line.toLowerCase().includes(skill.toLowerCase())) continue;
+
+    const normalized = normalizeSkillToken(skill);
+    if (requiredAll.has(normalized)) continue;
+    if (extraByNormalized.has(normalized)) continue;
+
+    const cleaned: ExtractedExtraSkill = { skill, evidenceIndex };
+    extraSkills.push(cleaned);
+    extraByNormalized.set(normalized, cleaned);
+  }
+
+  // 2) Main skills agent: reorder required skills + optionally add from extracted extras based on JD.
+  type MainSkillsOutput = {
+    skillsByCategory: Record<string, string[]>;
+    additions?: Array<{ skill: string; category: string }>;
+  };
+
+  const { text: mainRaw } = await generateText({
+    model: getAnthropicModel(apiKey),
+    temperature: 0,
+    maxOutputTokens: 500,
+    system: `
+You produce the final resume SKILLS grouped by category for a specific job.
+
+Inputs:
+- REQUIRED_SKILLS_BY_CATEGORY: these MUST all be kept (you may reorder).
+- EXTRACTED_OPTIONAL_SKILLS: optional skills found elsewhere in the profile (projects/bullets). You may choose to add some.
+- JOB_DESCRIPTION: use this to decide relevance and ordering.
+
+Output JSON ONLY with this shape:
+{
+  "skillsByCategory": { "CATEGORY": ["..."] },
+  "additions": [ { "skill": "X", "category": "CATEGORY" } ]
+}
+
+Hard Rules:
+1) Include EVERY required skill (no dropping). Reorder allowed.
+2) You MAY create new categories if needed (e.g. "APIS", "BACKEND", "OBSERVABILITY") when no existing category fits.
+3) Only add skills that appear in EXTRACTED_OPTIONAL_SKILLS (exact skill string).
+4) Additions must be justified by the JD (favor JD-mentioned skills; avoid adding unrelated skills).
+5) Keep additions minimal: add 0-5 max.
+6) Output compact JSON on a single line. No markdown, no commentary.
+`.trim(),
+    messages: [
+      {
+        role: "user",
+        content: [
+          { type: "text", text: `CATEGORIES:\n${JSON.stringify(categories)}` },
+          { type: "text", text: `JOB_DESCRIPTION:\n${jd}` },
+          { type: "text", text: `REQUIRED_SKILLS_BY_CATEGORY:\n${JSON.stringify(requiredSkillsByCategory, null, 2)}` },
+          { type: "text", text: `EXTRACTED_OPTIONAL_SKILLS:\n${JSON.stringify(extraSkills, null, 2)}` },
+          { type: "text", text: "Return JSON now." },
+        ],
+      },
+    ],
   });
 
-  return grouped;
+  const parsed = tryParseJsonObject<MainSkillsOutput>(mainRaw);
+  if (!parsed?.skillsByCategory || typeof parsed.skillsByCategory !== "object") {
+    return requiredSkillsByCategory;
+  }
+
+  // 3) Deterministic merge + validation:
+  // - Preserve all required skills
+  // - Only accept additions that are in extraSkills (extractor is the only source of optional skills)
+  const finalByCategory: Record<string, string[]> = {};
+  for (const cat of categories) {
+    const required = requiredSkillsByCategory[cat] ?? [];
+    const requiredSet = new Set(required.map(normalizeSkillToken));
+
+    const proposed = (parsed.skillsByCategory[cat] ?? [])
+      .map((s) => s.trim())
+      .filter(Boolean);
+
+    const orderedRequired: string[] = [];
+    const seen = new Set<string>();
+    for (const s of proposed) {
+      const key = normalizeSkillToken(s);
+      if (!requiredSet.has(key)) continue;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      const canonical = required.find((r) => normalizeSkillToken(r) === key) ?? s;
+      orderedRequired.push(canonical);
+    }
+
+    const missing = required.filter((r) => !seen.has(normalizeSkillToken(r)));
+    finalByCategory[cat] = [...orderedRequired, ...missing];
+  }
+
+  const additions = Array.isArray(parsed.additions) ? parsed.additions : [];
+  const added: Array<{ skill: string; category: string }> = [];
+  const rejected: Record<string, number> = {};
+  const reject = (reason: string) => {
+    rejected[reason] = (rejected[reason] ?? 0) + 1;
+  };
+
+  for (const add of additions) {
+    const skill = add?.skill?.trim();
+    const category = (add?.category ?? "").trim();
+    if (!skill || !category) {
+      reject("missing-fields");
+      continue;
+    }
+
+    const normalized = normalizeSkillToken(skill);
+    const candidate = extraByNormalized.get(normalized);
+    if (!candidate) {
+      reject("not-in-extracted-optional");
+      continue;
+    }
+    if (!tokenAppearsInText(skill, jd)) {
+      reject("not-in-jd");
+      continue;
+    }
+
+    const catKey = category.toUpperCase();
+    const current = finalByCategory[catKey] ?? [];
+    const already = new Set(current.map(normalizeSkillToken));
+    if (already.has(normalized)) {
+      reject("already-present");
+      continue;
+    }
+
+    finalByCategory[catKey] = [...current, candidate.skill];
+    added.push({ skill: candidate.skill, category: catKey });
+  }
+
+  // Ensure required categories are present even if agent returns only new categories
+  categories.forEach((cat) => {
+    if (!finalByCategory[cat]) finalByCategory[cat] = requiredSkillsByCategory[cat] ?? [];
+  });
+
+  return finalByCategory;
 }
 
 export async function runResumeAgents(
