@@ -92,6 +92,88 @@ function tryParseJsonArray<T>(raw: string): T[] | null {
   }
 }
 
+function extractNumberTokens(text: string) {
+  // Match standalone numeric tokens, not digits embedded in words (e.g. "Auth0").
+  const tokens: string[] = [];
+  const pattern = /(^|[^A-Za-z])(-?\d+(?:\.\d+)?%?)(?![A-Za-z])/g;
+  let match: RegExpExecArray | null;
+  while ((match = pattern.exec(text)) !== null) {
+    const token = (match[2] ?? "").trim();
+    if (token) tokens.push(token);
+  }
+  return tokens;
+}
+
+function collectKnownTechTokens(input: ModelInput) {
+  const known = new Set<string>();
+  Object.values(input.skillsByCategory).forEach((skills) => {
+    (skills ?? []).forEach((s) => known.add(normalizeSkillToken(s)));
+  });
+  input.projects.forEach((p) => {
+    (p.technologies ?? []).forEach((t) => known.add(normalizeSkillToken(t)));
+  });
+  return known;
+}
+
+function looksLikeTechToken(token: string) {
+  const t = token.trim();
+  if (!t) return false;
+  if (t.length < 2 || t.length > 40) return false;
+  if (/[0-9#.+/]/.test(t)) return true;
+  if (/\b(?:node\.js|next\.js|\.net)\b/i.test(t)) return true;
+  if (/[A-Z].*[A-Z]/.test(t)) return true;
+  return false;
+}
+
+function extractTechTokens(text: string, knownTech: Set<string>) {
+  const tokens = new Set<string>();
+  const matches = text.match(/[A-Za-z0-9][A-Za-z0-9.#/+_-]{1,39}/g) ?? [];
+  for (const raw of matches) {
+    const cleaned = raw.replace(/^[^A-Za-z0-9]+|[^A-Za-z0-9]+$/g, "").trim();
+    if (!cleaned) continue;
+    const normalized = normalizeSkillToken(cleaned);
+    if (knownTech.has(normalized) || looksLikeTechToken(cleaned)) tokens.add(normalized);
+  }
+  return tokens;
+}
+
+function hasNewQualifier(original: string, rewritten: string) {
+  const o = original.toLowerCase();
+  const r = rewritten.toLowerCase();
+  const qualifiers = ["customer-facing", "consumer-facing", "client-facing", "public-facing", "end-user"];
+  return qualifiers.some((q) => r.includes(q) && !o.includes(q));
+}
+
+function hasNewBestPracticesClaim(original: string, rewritten: string) {
+  const o = original.toLowerCase();
+  const r = rewritten.toLowerCase();
+  const phrases = ["best practices", "guidelines", "standards"];
+  return phrases.some((p) => r.includes(p) && !o.includes(p));
+}
+
+function looksDownplayed(original: string, rewritten: string) {
+  const o = original.toLowerCase();
+  const r = rewritten.toLowerCase();
+  const strong = ["led", "owned", "drove", "designed", "built", "implemented", "delivered", "architected", "spearheaded"];
+  const weak = ["assisted", "supported", "helped", "contributed", "collaborated"];
+  const originalStrong = strong.some((v) => o.includes(v));
+  const rewrittenWeak = weak.some((v) => r.includes(v));
+  const originalWeak = weak.some((v) => o.includes(v));
+  return originalStrong && rewrittenWeak && !originalWeak;
+}
+
+function isValidPermutation(order: number[], length: number) {
+  if (order.length !== length) return false;
+  const seen = new Set<number>();
+  for (const value of order) {
+    if (!Number.isInteger(value)) return false;
+    if (value < 0 || value >= length) return false;
+    if (seen.has(value)) return false;
+    seen.add(value);
+  }
+  return true;
+}
+
 function getAnthropicModel(apiKey?: string) {
   const trimmed = apiKey?.trim();
   if (!trimmed) {
@@ -202,14 +284,14 @@ async function experienceAgent(
   const rendered: GeneratedExperience[] = [];
 
   for (const exp of experiences) {
-    const bullets = (exp.impactBullets || []).filter(Boolean);
+    const bulletsOriginal = (exp.impactBullets || []).filter(Boolean);
     const headerParts = [exp.role, exp.company].filter(Boolean);
     const metaParts = [exp.period, exp.location].filter(Boolean);
     const header =
       headerParts.join(" @ ") || "Experience";
     const meta = metaParts.length ? ` (${metaParts.join(" | ")})` : "";
 
-    if (!bullets.length) {
+    if (!bulletsOriginal.length) {
       rendered.push({
         role: exp.role,
         company: exp.company,
@@ -218,6 +300,43 @@ async function experienceAgent(
         bullets: ["(no bullet data)"],
       });
       continue;
+    }
+
+    // Reorder bullets by JD relevance, preserving bullet facts (rewrite step still validates per-bullet).
+    let bullets = bulletsOriginal;
+    if (bulletsOriginal.length > 1) {
+      const { text: orderRaw } = await generateText({
+        model,
+        temperature: 0,
+        maxOutputTokens: 80,
+        system: `
+You rank resume bullets by relevance to a job description.
+
+Return JSON ONLY: an array of 0-based indices representing the bullets in best-to-worst order.
+
+Hard Rules:
+1) Return a permutation of all indices 0..N-1 with no omissions/duplicates.
+2) Do NOT output any text besides valid JSON.
+`.trim(),
+        messages: [
+          {
+            role: "user",
+            content: [
+              { type: "text", text: `JOB DESCRIPTION:\n${jd}` },
+              { type: "text", text: `BULLETS (index: text):\n${bulletsOriginal.map((b, i) => `${i}: ${b}`).join("\n")}` },
+              { type: "text", text: "Return the JSON index order now." },
+            ],
+          },
+        ],
+      });
+
+      const parsedOrder = tryParseJsonArray<number>(orderRaw);
+      if (parsedOrder && isValidPermutation(parsedOrder, bulletsOriginal.length)) {
+        bullets = parsedOrder.map((i) => bulletsOriginal[i] as string);
+        // order applied
+      } else {
+        // ignore invalid order
+      }
     }
 
     const { text } = await generateText({
@@ -238,9 +357,15 @@ Hard Rules:
 3) Do NOT upgrade responsibility unless the verb appears in the original bullet.
 4) Keywords introduced from the JD must describe the same type of work.
 5) You MUST NOT introduce keywords that imply new domains, systems, or ownership.
-6) Do not change role/company/period/location; rewrite bullet text only.
-7) Output bullets, each prefixed with "- "; no headers or explanations.
-8) Keep tone professional and direct; avoid hype and buzzwords.
+6) Do NOT add new scope qualifiers (audience/users) unless present in the original bullet.
+7) Do NOT remove or generalize named tools/technologies mentioned in the original bullet.
+8) Do NOT downplay ownership; preserve leadership verbs when present.
+9) Do NOT mix or merge facts across bullets; each rewritten bullet must correspond to the same original bullet.
+10) Preserve numbers/percentages exactly; do not remove or change them.
+11) If you cannot rewrite a bullet without changing meaning, return the original bullet unchanged.
+12) Do not change role/company/period/location; rewrite bullet text only.
+13) Output bullets, each prefixed with "- "; no headers or explanations.
+14) Keep tone professional and direct; avoid hype and buzzwords.
 `.trim(),
       messages: [
         {
@@ -261,12 +386,58 @@ Hard Rules:
       .filter(Boolean)
       .map((line) => line.replace(/^[-\u2022]\s*/, "").trim());
 
+    const knownTech = collectKnownTechTokens(input);
+    const decisions: Array<{ index: number; kept: boolean; reason?: string }> = [];
+
+    const finalBullets =
+      cleanedBullets.length === bullets.length
+        ? cleanedBullets.map((candidate, index) => {
+            const original = bullets[index] ?? "";
+            const rewritten = candidate?.trim() || original;
+            if (!original) return rewritten;
+
+            if (hasNewQualifier(original, rewritten)) {
+              decisions.push({ index, kept: false, reason: "new-qualifier" });
+              return original;
+            }
+            if (hasNewBestPracticesClaim(original, rewritten)) {
+              decisions.push({ index, kept: false, reason: "new-best-practices-claim" });
+              return original;
+            }
+            if (looksDownplayed(original, rewritten)) {
+              decisions.push({ index, kept: false, reason: "downplayed-ownership" });
+              return original;
+            }
+
+            const originalNumbers = extractNumberTokens(original);
+            if (originalNumbers.length) {
+              const rewrittenNumbers = new Set(extractNumberTokens(rewritten));
+              if (originalNumbers.some((n) => !rewrittenNumbers.has(n))) {
+                decisions.push({ index, kept: false, reason: "dropped-number" });
+                return original;
+              }
+            }
+
+            const allowedTech = extractTechTokens(original, knownTech);
+            const rewrittenTech = extractTechTokens(rewritten, knownTech);
+            for (const token of rewrittenTech) {
+              if (!allowedTech.has(token)) {
+                decisions.push({ index, kept: false, reason: "new-tech-token" });
+                return original;
+              }
+            }
+
+            decisions.push({ index, kept: true });
+            return rewritten;
+          })
+        : bullets;
+
     rendered.push({
       role: exp.role,
       company: exp.company,
       location: exp.location || "",
       period: exp.period || "",
-      bullets: cleanedBullets.length ? cleanedBullets : ["(no bullet data)"],
+      bullets: finalBullets.length ? finalBullets : ["(no bullet data)"],
     });
   }
 

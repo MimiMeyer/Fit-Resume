@@ -743,13 +743,41 @@ export function useCreateResume(
         updatedAt: Date.now(),
       };
 
+      const draftExperiencesMatchLastGenerated = (() => {
+        const draftExps = draft?.experiences;
+        const prevGenExps = generated?.experiences;
+        if (!draftExps?.length || !prevGenExps?.length) return false;
+
+        const index = new Map(
+          prevGenExps.map((exp) => [
+            `${normalizeKey(exp.role)}|${normalizeKey(exp.company)}`,
+            normalizeBullets(exp.bullets || []).map((b) => b.trim()),
+          ]),
+        );
+
+        if (draftExps.length !== prevGenExps.length) return false;
+
+        for (const exp of draftExps) {
+          const key = `${normalizeKey(exp.role)}|${normalizeKey(exp.company)}`;
+          const candidate = index.get(key);
+          if (!candidate) return false;
+          const current = normalizeBullets(exp.impactBullets || []).map((b) => b.trim());
+          if (current.length !== candidate.length) return false;
+          for (let i = 0; i < current.length; i += 1) {
+            if (current[i] !== candidate[i]) return false;
+          }
+        }
+
+        return true;
+      })();
+
       const nextSummary = nextGenerated.summary.trim();
       const currentSummary = (profile.summary ?? "").trim();
       if (nextSummary && nextSummary !== currentSummary && merged.header?.summary === undefined) {
         merged.header = { ...(merged.header ?? {}), summary: nextSummary };
       }
 
-      if (merged.experiences === undefined && nextGenerated.experiences.length) {
+      if ((merged.experiences === undefined || draftExperiencesMatchLastGenerated) && nextGenerated.experiences.length) {
         merged.experiences = nextGenerated.experiences.map((exp) => {
           const match = expIndex.get(`${normalizeKey(exp.role)}|${normalizeKey(exp.company)}`);
           return {
