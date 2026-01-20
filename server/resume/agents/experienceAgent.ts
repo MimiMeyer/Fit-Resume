@@ -209,10 +209,14 @@ Hard Rules:
             if (hasNewBestPracticesClaim(original, rewritten)) return original;
             if (looksDownplayed(original, rewritten)) return original;
 
-            const originalNumbers = extractNumberTokens(original);
-            if (originalNumbers.length) {
-              const rewrittenNumbers = new Set(extractNumberTokens(rewritten));
-              if (originalNumbers.some((n) => !rewrittenNumbers.has(n))) return original;
+            const originalNumbers = new Set(extractNumberTokens(original));
+            const rewrittenNumbers = new Set(extractNumberTokens(rewritten));
+            // Preserve numbers exactly: no dropping originals and no introducing new ones.
+            for (const n of originalNumbers) {
+              if (!rewrittenNumbers.has(n)) return original;
+            }
+            for (const n of rewrittenNumbers) {
+              if (!originalNumbers.has(n)) return original;
             }
 
             const allowedTech = extractTechTokens(original, knownTech);
