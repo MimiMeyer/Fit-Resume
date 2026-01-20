@@ -1,6 +1,6 @@
 import { generateText } from "ai";
 import type { GeneratedExperience } from "@/types/resume-agent";
-import { normalizeToken, tryParseJsonArray } from "../utils";
+import { normalizeForComparison, parseJsonArrayFromModelOutput } from "../utils";
 import type { ModelInput, GetModel } from "./types";
 
 type Model = Parameters<typeof generateText>[0]["model"];
@@ -19,10 +19,10 @@ function extractNumberTokens(text: string) {
 function collectKnownTechTokens(input: ModelInput) {
   const known = new Set<string>();
   Object.values(input.skillsByCategory).forEach((skills) => {
-    (skills ?? []).forEach((s) => known.add(normalizeToken(s)));
+    (skills ?? []).forEach((s) => known.add(normalizeForComparison(s)));
   });
   input.projects.forEach((p) => {
-    (p.technologies ?? []).forEach((t) => known.add(normalizeToken(t)));
+    (p.technologies ?? []).forEach((t) => known.add(normalizeForComparison(t)));
   });
   return known;
 }
@@ -43,7 +43,7 @@ function extractTechTokens(text: string, knownTech: Set<string>) {
   for (const raw of matches) {
     const cleaned = raw.replace(/^[^A-Za-z0-9]+|[^A-Za-z0-9]+$/g, "").trim();
     if (!cleaned) continue;
-    const normalized = normalizeToken(cleaned);
+    const normalized = normalizeForComparison(cleaned);
     if (knownTech.has(normalized) || looksLikeTechToken(cleaned)) tokens.add(normalized);
   }
   return tokens;
@@ -144,7 +144,7 @@ Hard Rules:
         ],
       });
 
-      const parsedOrder = tryParseJsonArray<number>(orderRaw);
+      const parsedOrder = parseJsonArrayFromModelOutput<number>(orderRaw);
       if (parsedOrder && isValidPermutation(parsedOrder, bulletsOriginal.length)) {
         bullets = parsedOrder.map((i) => bulletsOriginal[i] as string);
       }

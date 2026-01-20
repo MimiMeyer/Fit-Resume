@@ -1,8 +1,46 @@
 import { generateText } from "ai";
-import { normalizeToken, tokenAppearsInText, tryParseJsonArray, tryParseJsonObject } from "../utils";
+import {
+  normalizeForComparison,
+  parseJsonArrayFromModelOutput,
+} from "../utils";
 import type { ModelInput, GetModel } from "./types";
 
 type Model = Parameters<typeof generateText>[0]["model"];
+
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function appearsAsWholeTokenInText(token: string, text: string) {
+  const t = token.trim();
+  if (!t) return false;
+  const escaped = escapeRegExp(t.toLowerCase());
+  const pattern = new RegExp(`(^|[^a-z0-9])${escaped}([^a-z0-9]|$)`, "i");
+  return pattern.test(` ${text.toLowerCase()} `);
+}
+
+function stripCodeFences(raw: string) {
+  return raw.trim().replace(/^```(?:json)?\s*/i, "").replace(/```$/i, "").trim();
+}
+
+function parseJsonObjectFromModelOutput<T>(raw: string): T | null {
+  const trimmed = stripCodeFences(raw);
+  if (!trimmed) return null;
+  try {
+    return JSON.parse(trimmed) as T;
+  } catch {
+    const start = trimmed.indexOf("{");
+    const end = trimmed.lastIndexOf("}");
+    if (start >= 0 && end > start) {
+      try {
+        return JSON.parse(trimmed.slice(start, end + 1)) as T;
+      } catch {
+        return null;
+      }
+    }
+    return null;
+  }
+}
 
 export async function skillsAgent(
   input: ModelInput,
@@ -40,7 +78,7 @@ export async function skillsAgent(
 
   const requiredAll = new Set<string>();
   for (const cat of categories) {
-    (requiredSkillsByCategory[cat] ?? []).forEach((s) => requiredAll.add(normalizeToken(s)));
+    (requiredSkillsByCategory[cat] ?? []).forEach((s) => requiredAll.add(normalizeForComparison(s)));
   }
 
   const profileEvidenceText = [expText, projectText].filter(Boolean).join("\n\n");
@@ -81,7 +119,7 @@ Hard Rules:
     ],
   });
 
-  const extracted = tryParseJsonArray<ExtractedExtraSkill>(extractRaw) ?? [];
+  const extracted = parseJsonArrayFromModelOutput<ExtractedExtraSkill>(extractRaw) ?? [];
 
   const extraSkills: ExtractedExtraSkill[] = [];
   const extraByNormalized = new Map<string, ExtractedExtraSkill>();
@@ -93,7 +131,7 @@ Hard Rules:
     if (!line) continue;
     if (!line.toLowerCase().includes(skill.toLowerCase())) continue;
 
-    const normalized = normalizeToken(skill);
+    const normalized = normalizeForComparison(skill);
     if (requiredAll.has(normalized)) continue;
     if (extraByNormalized.has(normalized)) continue;
 
@@ -147,7 +185,7 @@ Hard Rules:
     ],
   });
 
-  const parsed = tryParseJsonObject<MainSkillsOutput>(mainRaw);
+  const parsed = parseJsonObjectFromModelOutput<MainSkillsOutput>(mainRaw);
   if (!parsed?.skillsByCategory || typeof parsed.skillsByCategory !== "object") {
     return requiredSkillsByCategory;
   }
@@ -155,7 +193,7 @@ Hard Rules:
   const finalByCategory: Record<string, string[]> = {};
   for (const cat of categories) {
     const required = requiredSkillsByCategory[cat] ?? [];
-    const requiredSet = new Set(required.map(normalizeToken));
+    const requiredSet = new Set(required.map(normalizeForComparison));
 
     const proposed = (parsed.skillsByCategory[cat] ?? [])
       .map((s) => s.trim())
@@ -164,15 +202,15 @@ Hard Rules:
     const orderedRequired: string[] = [];
     const seen = new Set<string>();
     for (const s of proposed) {
-      const key = normalizeToken(s);
+      const key = normalizeForComparison(s);
       if (!requiredSet.has(key)) continue;
       if (seen.has(key)) continue;
       seen.add(key);
-      const canonical = required.find((r) => normalizeToken(r) === key) ?? s;
+      const canonical = required.find((r) => normalizeForComparison(r) === key) ?? s;
       orderedRequired.push(canonical);
     }
 
-    const missing = required.filter((r) => !seen.has(normalizeToken(r)));
+    const missing = required.filter((r) => !seen.has(normalizeForComparison(r)));
     finalByCategory[cat] = [...orderedRequired, ...missing];
   }
 
@@ -182,14 +220,14 @@ Hard Rules:
     const category = (add?.category ?? "").trim();
     if (!skill || !category) continue;
 
-    const normalized = normalizeToken(skill);
+    const normalized = normalizeForComparison(skill);
     const candidate = extraByNormalized.get(normalized);
     if (!candidate) continue;
-    if (!tokenAppearsInText(skill, jd)) continue;
+    if (!appearsAsWholeTokenInText(skill, jd)) continue;
 
     const catKey = category.toUpperCase();
     const current = finalByCategory[catKey] ?? [];
-    const already = new Set(current.map(normalizeToken));
+    const already = new Set(current.map(normalizeForComparison));
     if (already.has(normalized)) continue;
 
     finalByCategory[catKey] = [...current, candidate.skill];
