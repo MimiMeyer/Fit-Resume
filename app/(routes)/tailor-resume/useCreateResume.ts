@@ -748,23 +748,20 @@ export function useCreateResume(
         const prevGenExps = generated?.experiences;
         if (!draftExps?.length || !prevGenExps?.length) return false;
 
-        const index = new Map(
-          prevGenExps.map((exp) => [
-            `${normalizeKey(exp.role)}|${normalizeKey(exp.company)}`,
-            normalizeBullets(exp.bullets || []).map((b) => b.trim()),
-          ]),
-        );
-
         if (draftExps.length !== prevGenExps.length) return false;
 
-        for (const exp of draftExps) {
-          const key = `${normalizeKey(exp.role)}|${normalizeKey(exp.company)}`;
-          const candidate = index.get(key);
-          if (!candidate) return false;
-          const current = normalizeBullets(exp.impactBullets || []).map((b) => b.trim());
-          if (current.length !== candidate.length) return false;
-          for (let i = 0; i < current.length; i += 1) {
-            if (current[i] !== candidate[i]) return false;
+        for (let i = 0; i < draftExps.length; i += 1) {
+          const draftExp = draftExps[i];
+          const prevGenExp = prevGenExps[i];
+          const draftKey = `${normalizeKey(draftExp.role)}|${normalizeKey(draftExp.company)}`;
+          const prevKey = `${normalizeKey(prevGenExp.role)}|${normalizeKey(prevGenExp.company)}`;
+          if (draftKey !== prevKey) return false;
+
+          const current = normalizeBullets(draftExp.impactBullets || []).map((b) => b.trim());
+          const previous = normalizeBullets(prevGenExp.bullets || []).map((b) => b.trim());
+          if (current.length !== previous.length) return false;
+          for (let j = 0; j < current.length; j += 1) {
+            if (current[j] !== previous[j]) return false;
           }
         }
 
